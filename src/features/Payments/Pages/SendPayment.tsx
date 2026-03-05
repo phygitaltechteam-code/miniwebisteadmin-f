@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useRef} from 'react';
+import React, {useState, useCallback, useRef, useEffect} from 'react';
 import {ArrowLeft, Lock, Camera} from 'lucide-react';
 import {useNavigate} from '@tanstack/react-router';
 import toast from 'react-hot-toast';
@@ -11,8 +11,17 @@ import {
   walletAmmount,
 } from './PaymentWrapper';
 import {Keypad} from '@/components/Profilehub/ui/Keypad';
+import {unAuthenticatedApi} from '@/utils/axios';
 
 export type WalletType = 'E_PRIVATEACCOUNT' | 'E_TEMPORYACCOUNT';
+
+interface ExchangeRates {
+  base: string;
+  rates: {
+    INR: number;
+  };
+  ts: number;
+}
 
 type Props = StepProps & {
   paymentData: PaymentData;
@@ -35,10 +44,60 @@ const PaymentSend: React.FC<Props> = ({
   const [isInputActive, setIsInputActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [inrAmount, setInrAmount] = useState<string>('');
+  const [rates, setRates] = useState<ExchangeRates | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const selectedWalletBalance = walletAmmount?.[selectedWalletType] ?? 0;
   const enteredAmount = Number(paymentData.amount || 0);
   const isInsufficientBalance = enteredAmount > selectedWalletBalance;
+
+  // Fetch exchange rates
+  const fetchRates = async () => {
+    try {
+      setLoading(true);
+      const res = await unAuthenticatedApi.get(
+        'https://api.exchangerate-api.com/v4/latest/USD',
+      );
+      setRates(res.data);
+      setError(null);
+    } catch (err) {
+      setError('Unable to fetch exchange rates');
+      console.error('Error fetching rates:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRates();
+    const interval = setInterval(fetchRates, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate INR equivalent whenever USD amount changes
+  useEffect(() => {
+    if (
+      !rates ||
+      !paymentData.amount ||
+      paymentData.amount === '0' ||
+      paymentData.amount === ''
+    ) {
+      setInrAmount('');
+      return;
+    }
+
+    const numAmount = parseFloat(paymentData.amount.replace(/,/g, ''));
+    if (isNaN(numAmount) || numAmount < 0) {
+      setInrAmount('');
+      return;
+    }
+
+    const usdToInr = rates.rates.INR;
+    const inrValue = numAmount * usdToInr;
+    setInrAmount(inrValue.toFixed(2));
+  }, [paymentData.amount, rates]);
 
   // Format amount with commas (same as TopUpScreen)
   const formattedValue = () => {
@@ -199,19 +258,28 @@ const PaymentSend: React.FC<Props> = ({
           {/* Amount Display Section */}
           <div className="flex flex-1 flex-col items-center justify-center px-4 md:px-8">
             <div className="w-full max-w-xs md:max-w-sm">
+              {/* Live Rate Indicator */}
+              {/* {rates && !loading && !error && (
+                <div className="mb-2 text-center">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    1 USD = {rates.rates.INR.toFixed(2)} INR
+                  </p>
+                </div>
+              )} */}
+
               {/* Available balance hint */}
               <p className="mb-1 text-center text-xs font-medium text-slate-500 dark:text-slate-400">
-                Available: ₹{selectedWalletBalance.toLocaleString('en-IN')}
+                Available: ${selectedWalletBalance.toLocaleString('en-IN')}
               </p>
 
               <p className="mb-2 text-center text-sm font-medium text-slate-500 dark:text-slate-400 md:mb-3 md:text-base">
-                Enter Amount
+                Enter Amount (USD)
               </p>
 
               <div className="mb-4 flex flex-col items-center justify-center md:mb-6">
                 <div className="relative flex items-center justify-center">
                   <span className="mr-1 text-2xl font-bold text-[#0d131c] dark:text-white md:text-3xl">
-                    ₹
+                    $
                   </span>
                   <div className="relative min-w-0 max-w-full overflow-visible">
                     <div
@@ -233,6 +301,31 @@ const PaymentSend: React.FC<Props> = ({
                     <div className="absolute bottom-[-6px] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-slate-600" />
                   </div>
                 </div>
+
+                {/* INR Equivalent Display - Shows when USD amount is entered */}
+                {inrAmount &&
+                  paymentData.amount &&
+                  paymentData.amount !== '0' && (
+                    <div className="mt-2 text-center">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        ≈ ₹{' '}
+                        {parseFloat(inrAmount).toLocaleString('en-IN', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}{' '}
+                        INR
+                      </p>
+                    </div>
+                  )}
+
+                {/* Error Display - If rates fail to load */}
+                {error && (
+                  <div className="mt-2 text-center">
+                    <p className="text-xs text-red-500">
+                      {error}. Using cached rates.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Attach Receipt (same as TopUpScreen) */}

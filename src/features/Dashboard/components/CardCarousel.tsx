@@ -60,7 +60,7 @@ export const CardCarousel: React.FC<CardCarouselProps> = ({cards}) => {
                 >
                   {new Intl.NumberFormat('en-IN', {
                     style: 'currency',
-                    currency: 'INR',
+                    currency: 'USD',
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   }).format(card.balance)}

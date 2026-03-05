@@ -1,7 +1,16 @@
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {ArrowLeft, Lock, Camera} from 'lucide-react';
 import {useNavigate} from '@tanstack/react-router';
 import {Keypad} from '../Profilehub/ui/Keypad';
+import {unAuthenticatedApi} from '@/utils/axios';
+
+interface ExchangeRates {
+  base: string;
+  rates: {
+    INR: number;
+  };
+  ts: number;
+}
 
 interface TopUpScreenProps {
   onBack?: () => void;
@@ -22,7 +31,54 @@ const TopUpScreen: React.FC<TopUpScreenProps> = ({onBack, onContinue}) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Exchange rate states
+  const [rates, setRates] = useState<ExchangeRates | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [inrAmount, setInrAmount] = useState<string>('');
+
   const MAX_AMOUNT = 999999999999.99;
+
+  // Fetch exchange rates
+  const fetchRates = async () => {
+    try {
+      setLoading(true);
+      const res = await unAuthenticatedApi.get(
+        'https://api.exchangerate-api.com/v4/latest/USD',
+      );
+      setRates(res.data);
+      setError(null);
+    } catch (err) {
+      setError('Unable to fetch exchange rates');
+      console.error('Error fetching rates:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRates();
+    const interval = setInterval(fetchRates, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate INR equivalent whenever USD amount changes
+  useEffect(() => {
+    if (!rates || !inputValue || inputValue === '0') {
+      setInrAmount('');
+      return;
+    }
+
+    const numAmount = parseFloat(inputValue.replace(/,/g, ''));
+    if (isNaN(numAmount) || numAmount < 0) {
+      setInrAmount('');
+      return;
+    }
+
+    const usdToInr = rates.rates.INR;
+    const inrValue = numAmount * usdToInr;
+    setInrAmount(inrValue.toFixed(2));
+  }, [inputValue, rates]);
 
   // Handle keypad button press
   const handleKeyPress = (key: string) => {
@@ -42,7 +98,7 @@ const TopUpScreen: React.FC<TopUpScreenProps> = ({onBack, onContinue}) => {
 
     const parts = currentValue.split('.');
 
-    // Allow up to 9 digits for integer part (for 10 crores: 100,000,000 has 9 digits)
+    // Allow up to 9 digits for integer part
     if (parts[0].length >= 12 && key !== '.' && !parts[1]) {
       return;
     }
@@ -196,13 +252,22 @@ const TopUpScreen: React.FC<TopUpScreenProps> = ({onBack, onContinue}) => {
           {/* Amount Display Section - Reduced spacing for tablet */}
           <div className="flex flex-1 flex-col items-center justify-center px-4 md:px-8">
             <div className="w-full max-w-xs md:max-w-sm">
+              {/* Live Rate Indicator - Added from currency converter */}
+              {/* {rates && !loading && !error && (
+                <div className="mb-3 text-center">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    1 USD = {rates.rates.INR.toFixed(2)} INR
+                  </p>
+                </div>
+              )} */}
+
               <p className="mb-2 text-center text-sm font-medium text-slate-500 dark:text-slate-400 md:mb-3 md:text-base">
                 Enter Amount
               </p>
               <div className="mb-4 flex flex-col items-center justify-center md:mb-6">
                 <div className="relative flex items-center justify-center">
                   <span className="mr-1 text-2xl font-bold text-[#0d131c] dark:text-white md:text-3xl">
-                    ₹
+                    $
                   </span>
                   <div className="relative min-w-0 max-w-full overflow-visible">
                     {/* Amount display as a div, not input - shows full amount */}
@@ -225,15 +290,20 @@ const TopUpScreen: React.FC<TopUpScreenProps> = ({onBack, onContinue}) => {
                     <div className="absolute bottom-[-6px] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-slate-600" />
                   </div>
                 </div>
-                {/* <button className="dark:bg-navy-light flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">
-                  <span
-                    className="material-symbols-outlined text-sm text-primary md:text-base"
-                    // style="font-size: 18px;"
-                  >
-                    add_a_photo
-                  </span>
-                  Attach Receipt
-                </button> */}
+
+                {/* INR Equivalent Display - Added below the amount */}
+                {inrAmount && inputValue !== '0' && (
+                  <div className="mt-2 text-center">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      ≈ ₹{' '}
+                      {parseFloat(inrAmount).toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{' '}
+                      INR
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Attach Receipt Button - Reduced spacing */}
@@ -276,6 +346,15 @@ const TopUpScreen: React.FC<TopUpScreenProps> = ({onBack, onContinue}) => {
                   Secure 256-bit SSL Encryption
                 </p>
               </div>
+
+              {/* Error Display - If rates fail to load */}
+              {error && (
+                <div className="mt-2 text-center">
+                  <p className="text-xs text-red-500">
+                    {error}. Using cached rates.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

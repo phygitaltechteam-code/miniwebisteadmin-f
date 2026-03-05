@@ -1,10 +1,19 @@
-import React, {useState, useCallback, useRef} from 'react';
+import React, {useState, useCallback, useRef, useEffect} from 'react';
 import {ArrowLeft, Lock} from 'lucide-react';
 import {useNavigate} from '@tanstack/react-router';
 import toast from 'react-hot-toast';
 
 import {PaymentData, WalletAmount} from './TopupWithdrawlFlow'; // adjust import path
 import {Keypad} from '../Profilehub/ui/Keypad';
+import {unAuthenticatedApi} from '@/utils/axios';
+
+interface ExchangeRates {
+  base: string;
+  rates: {
+    INR: number;
+  };
+  ts: number;
+}
 
 type Props = {
   paymentData: PaymentData;
@@ -28,6 +37,12 @@ const WithdrawScreen: React.FC<Props> = ({
   const navigate = useNavigate();
   const [isInputActive, setIsInputActive] = useState(false);
 
+  // Exchange rate states
+  const [rates, setRates] = useState<ExchangeRates | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [usdAmount, setUsdAmount] = useState<string>('');
+
   const selectedBalance =
     accountType === 'E_PRIVATEACCOUNT'
       ? (walletAmmount.E_PRIVATEACCOUNT ?? 0)
@@ -35,6 +50,52 @@ const WithdrawScreen: React.FC<Props> = ({
 
   const enteredAmount = Number(paymentData.amount || 0);
   const isInsufficientBalance = enteredAmount > selectedBalance;
+
+  // Fetch exchange rates
+  const fetchRates = async () => {
+    try {
+      setLoading(true);
+      const res = await unAuthenticatedApi.get(
+        'https://api.exchangerate-api.com/v4/latest/USD',
+      );
+      setRates(res.data);
+      setError(null);
+    } catch (err) {
+      setError('Unable to fetch exchange rates');
+      console.error('Error fetching rates:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRates();
+    const interval = setInterval(fetchRates, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate USD equivalent whenever INR amount changes
+  useEffect(() => {
+    if (
+      !rates ||
+      !paymentData.amount ||
+      paymentData.amount === '0' ||
+      paymentData.amount === ''
+    ) {
+      setUsdAmount('');
+      return;
+    }
+
+    const numAmount = parseFloat(paymentData.amount.replace(/,/g, ''));
+    if (isNaN(numAmount) || numAmount < 0) {
+      setUsdAmount('');
+      return;
+    }
+
+    const inrToUsd = 1 / rates.rates.INR;
+    const usdValue = numAmount * inrToUsd;
+    setUsdAmount(usdValue.toFixed(4));
+  }, [paymentData.amount, rates]);
 
   // ----- Keypad handlers (same logic as before) -----
   const handleKeyPress = useCallback(
@@ -173,6 +234,15 @@ const WithdrawScreen: React.FC<Props> = ({
           {/* Amount Display Section */}
           <div className="flex flex-1 flex-col items-center justify-center px-4 md:px-8">
             <div className="w-full max-w-xs md:max-w-sm">
+              {/* Live Rate Indicator - Added */}
+              {/* {rates && !loading && !error && (
+                <div className="mb-2 text-center">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    1 USD = {rates.rates.INR.toFixed(2)} INR • 1 INR = {(1/rates.rates.INR).toFixed(4)} USD
+                  </p>
+                </div>
+              )} */}
+
               {/* Available balance hint */}
               <p className="mb-1 text-center text-xs font-medium text-slate-500 dark:text-slate-400">
                 Available: ₹{selectedBalance.toLocaleString('en-IN')}
@@ -207,6 +277,26 @@ const WithdrawScreen: React.FC<Props> = ({
                     <div className="absolute bottom-[-6px] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-slate-600" />
                   </div>
                 </div>
+
+                {/* USD Equivalent Display - Added below the amount */}
+                {usdAmount &&
+                  paymentData.amount &&
+                  paymentData.amount !== '0' && (
+                    <div className="mt-2 text-center">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        ≈ $ {parseFloat(usdAmount).toFixed(2)} USD
+                      </p>
+                    </div>
+                  )}
+
+                {/* Error Display - If rates fail to load */}
+                {error && (
+                  <div className="mt-2 text-center">
+                    <p className="text-xs text-red-500">
+                      {error}. Using cached rates.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Security Notice (same as TopUpScreen) */}
