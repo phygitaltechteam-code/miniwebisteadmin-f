@@ -58,7 +58,7 @@ const TopUpScreen: React.FC<TopUpScreenProps> = ({onBack, onContinue}) => {
 
   useEffect(() => {
     fetchRates();
-    const interval = setInterval(fetchRates, 60000); // Update every minute
+    const interval = setInterval(fetchRates, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -203,172 +203,164 @@ const TopUpScreen: React.FC<TopUpScreenProps> = ({onBack, onContinue}) => {
   };
 
   return (
-    <div className="font-inter flex h-screen flex-col bg-[#f8f6f5] text-[#0d131c] dark:bg-[#221610] dark:text-white">
-      {/* Header - Fixed with reduced padding for tablet */}
-      <div className="shrink-0 border-b border-slate-200/50 bg-[#f8f6f5] px-4 pb-2 pt-4 dark:border-slate-800/50 dark:bg-[#221610] md:pt-6">
+    <div className="font-inter flex h-screen flex-col overflow-hidden bg-[#f8f6f5] text-[#0d131c] dark:bg-[#221610] dark:text-white">
+      {/* Header - Fixed height */}
+      <div className="flex-shrink-0 border-b border-slate-200/50 bg-[#f8f6f5] px-4 py-3 dark:border-slate-800/50 dark:bg-[#221610] sm:px-6 sm:py-4 md:px-8 md:py-5">
         <div className="flex items-center justify-between">
           <button
             onClick={() => navigate({to: '/dashboard'})}
-            className="flex size-10 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-slate-200 dark:hover:bg-slate-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-slate-200 dark:hover:bg-slate-800 sm:h-11 sm:w-11 md:h-12 md:w-12"
+            aria-label="Go back"
           >
-            <ArrowLeft className="h-5 w-5 text-[#0d131c] dark:text-white" />
+            <ArrowLeft className="h-5 w-5 text-[#0d131c] dark:text-white sm:h-5.5 sm:w-5.5 md:h-6 md:w-6" />
           </button>
-          <h2 className="text-center text-lg font-bold leading-tight md:text-xl">
+          <h1 className="text-center text-lg font-bold leading-tight sm:text-xl md:text-2xl">
             Top Up Wallet
-          </h2>
-          <div className="w-10" /> {/* Spacer for balance */}
+          </h1>
+          <div className="w-10 sm:w-11 md:w-12" /> {/* Spacer for balance */}
         </div>
       </div>
 
-      {/* Main Content - No scrolling, fixed layout */}
-      <div className="flex-1 overflow-hidden">
-        <div className="flex h-full flex-col">
-          {/* Account Type Toggle - Reduced spacing for tablet */}
-          <div className="shrink-0 px-4 pt-3 md:pt-4">
-            <div className="flex w-full items-stretch rounded-xl bg-slate-200/50 p-1 dark:bg-[#1a2533]/50">
-              <button
-                onClick={() => setAccountType('private')}
-                className={`flex-1 rounded-lg border py-2.5 text-xs font-bold leading-tight transition-all md:py-3 md:text-sm ${
-                  accountType === 'private'
-                    ? 'border-slate-100 bg-white text-[#F57F3d] shadow-sm dark:border-slate-700 dark:bg-[#1a2533]'
-                    : 'border-transparent text-slate-500 hover:text-[#0d131c] dark:text-slate-400 dark:hover:text-white'
-                }`}
-              >
-                E Private Account
-              </button>
-              <button
-                onClick={() => setAccountType('virtual')}
-                className={`flex-1 rounded-lg border py-2.5 text-xs font-bold leading-tight transition-all md:py-3 md:text-sm ${
-                  accountType === 'virtual'
-                    ? 'border-slate-100 bg-white text-[#F57F3d] shadow-sm dark:border-slate-700 dark:bg-[#1a2533]'
-                    : 'border-transparent text-slate-500 hover:text-[#0d131c] dark:text-slate-400 dark:hover:text-white'
-                }`}
-              >
-                Temporarily Virtual Account
-              </button>
-            </div>
+      {/* Main Content - Flex column with fixed proportions */}
+      <div className="flex flex-1 flex-col overflow-hidden px-4 sm:px-6 md:px-8">
+        {/* Account Type Toggle - Fixed proportion */}
+        <div className="flex-shrink-0 pt-4 sm:pt-5 md:pt-6">
+          <div className="flex w-full items-stretch rounded-xl bg-slate-200/50 p-1 dark:bg-[#1a2533]/50">
+            <button
+              onClick={() => setAccountType('private')}
+              className={`flex-1 rounded-lg border py-2.5 text-xs font-bold leading-tight transition-all sm:py-3 sm:text-sm md:py-3.5 md:text-base ${
+                accountType === 'private'
+                  ? 'border-slate-100 bg-white text-[#F57F3d] shadow-sm dark:border-slate-700 dark:bg-[#1a2533]'
+                  : 'border-transparent text-slate-500 hover:text-[#0d131c] dark:text-slate-400 dark:hover:text-white'
+              }`}
+            >
+              E Private Account
+            </button>
+            <button
+              onClick={() => setAccountType('virtual')}
+              className={`flex-1 rounded-lg border py-2.5 text-xs font-bold leading-tight transition-all sm:py-3 sm:text-sm md:py-3.5 md:text-base ${
+                accountType === 'virtual'
+                  ? 'border-slate-100 bg-white text-[#F57F3d] shadow-sm dark:border-slate-700 dark:bg-[#1a2533]'
+                  : 'border-transparent text-slate-500 hover:text-[#0d131c] dark:text-slate-400 dark:hover:text-white'
+              }`}
+            >
+              Temporarily Virtual Account
+            </button>
           </div>
+        </div>
 
-          {/* Amount Display Section - Reduced spacing for tablet */}
-          <div className="flex flex-1 flex-col items-center justify-center px-4 md:px-8">
-            <div className="w-full max-w-xs md:max-w-sm">
-              {/* Live Rate Indicator - Added from currency converter */}
-              {/* {rates && !loading && !error && (
-                <div className="mb-3 text-center">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    1 USD = {rates.rates.INR.toFixed(2)} INR
-                  </p>
-                </div>
-              )} */}
+        {/* Amount Display Section - Flexible to take remaining space */}
+        <div className="flex flex-1 flex-col items-center justify-center">
+          <div className="w-full max-w-xs sm:max-w-sm md:max-w-md">
+            <p className="mb-1 text-center text-sm font-medium text-slate-500 dark:text-slate-400 sm:mb-2 sm:text-base md:text-lg">
+              Enter Amount
+            </p>
 
-              <p className="mb-2 text-center text-sm font-medium text-slate-500 dark:text-slate-400 md:mb-3 md:text-base">
-                Enter Amount
-              </p>
-              <div className="mb-4 flex flex-col items-center justify-center md:mb-6">
-                <div className="relative flex items-center justify-center">
-                  <span className="mr-1 text-2xl font-bold text-[#0d131c] dark:text-white md:text-3xl">
-                    $
-                  </span>
-                  <div className="relative min-w-0 max-w-full overflow-visible">
-                    {/* Amount display as a div, not input - shows full amount */}
-                    <div
-                      className={`min-w-0 max-w-full overflow-visible border-none bg-transparent p-0 text-center font-bold text-[#0d131c] dark:text-white ${
-                        formattedValue().length > 12
-                          ? 'text-2xl md:text-3xl'
-                          : 'text-3xl md:text-4xl'
-                      }`}
-                    >
-                      {formattedValue()}
-                    </div>
-                    <div
-                      className={`absolute bottom-[-4px] left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#F57F3d] to-transparent transition-all duration-300 ${
-                        isInputActive
-                          ? 'scale-x-100 opacity-100'
-                          : 'scale-x-0 opacity-0'
-                      }`}
-                    />
-                    <div className="absolute bottom-[-6px] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-slate-600" />
-                  </div>
-                </div>
-
-                {/* INR Equivalent Display - Added below the amount */}
-                {inrAmount && inputValue !== '0' && (
-                  <div className="mt-2 text-center">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      ≈ ₹{' '}
-                      {parseFloat(inrAmount).toLocaleString('en-IN', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}{' '}
-                      INR
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Attach Receipt Button - Reduced spacing */}
-              <div className="mb-4 flex w-full flex-col items-center md:mb-6">
-                {selectedFile ? (
-                  <div className="flex w-full items-center justify-between gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-700 dark:bg-[#1a2533] dark:text-slate-300 md:py-2.5">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <Camera className="h-4 w-4 shrink-0 text-[#F57F3d]" />
-                      <span className="truncate">{selectedFile.name}</span>
-                    </div>
-                    <button
-                      onClick={handleRemoveFile}
-                      className="ml-2 shrink-0 text-sm text-red-500 hover:text-red-600"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleAttachReceipt}
-                    className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-[#1a2533] dark:text-slate-300 dark:hover:bg-slate-700 md:py-2.5"
+            <div className="mb-3 flex flex-col items-center justify-center sm:mb-4 md:mb-5">
+              <div className="relative flex items-center justify-center">
+                <span className="mr-1 text-2xl font-bold text-[#0d131c] dark:text-white sm:text-3xl md:text-4xl">
+                  $
+                </span>
+                <div className="relative min-w-0 max-w-full overflow-visible">
+                  <div
+                    className={`min-w-0 max-w-full overflow-visible border-none bg-transparent p-0 text-center font-bold text-[#0d131c] dark:text-white ${
+                      formattedValue().length > 12
+                        ? 'text-2xl sm:text-3xl md:text-4xl'
+                        : 'text-3xl sm:text-4xl md:text-5xl'
+                    }`}
                   >
-                    <Camera className="h-4 w-4 text-[#F57F3d]" />
-                    Attach Receipt (Optional)
-                  </button>
-                )}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/*,application/pdf,.doc,.docx"
-                  onChange={handleFileSelect}
-                />
+                    {formattedValue()}
+                  </div>
+                  <div
+                    className={`absolute bottom-[-4px] left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#F57F3d] to-transparent transition-all duration-300 ${
+                      isInputActive
+                        ? 'scale-x-100 opacity-100'
+                        : 'scale-x-0 opacity-0'
+                    }`}
+                  />
+                  <div className="absolute bottom-[-6px] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-slate-600" />
+                </div>
               </div>
 
-              {/* Security Notice - Reduced spacing */}
-              <div className="flex items-center justify-center gap-1.5 py-1 opacity-70 md:py-2">
-                <Lock className="h-3 w-3 text-slate-400 dark:text-slate-500 md:h-3.5 md:w-3.5" />
-                <p className="text-xs font-medium text-slate-400 dark:text-slate-500">
-                  Secure 256-bit SSL Encryption
-                </p>
-              </div>
-
-              {/* Error Display - If rates fail to load */}
-              {error && (
-                <div className="mt-2 text-center">
-                  <p className="text-xs text-red-500">
-                    {error}. Using cached rates.
+              {/* INR Equivalent Display */}
+              {inrAmount && inputValue !== '0' && (
+                <div className="mt-1 text-center sm:mt-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm md:text-base">
+                    ≈ ₹{' '}
+                    {parseFloat(inrAmount).toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{' '}
+                    INR
                   </p>
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Keypad - Fixed at bottom with reduced height for tablet */}
-          <div className="shrink-0">
-            <Keypad
-              onKeyPress={handleKeyPress}
-              onDelete={handleBackspace}
-              onSubmit={handleContinue}
-              showBiometric={false}
-              submitIcon="arrow"
-            />
+            {/* Attach Receipt Button */}
+            <div className="mb-3 sm:mb-4 md:mb-5">
+              {selectedFile ? (
+                <div className="flex w-full items-center justify-between gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-700 dark:bg-[#1a2533] dark:text-slate-300 sm:px-5 sm:py-2.5 sm:text-base md:px-6 md:py-3">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <Camera className="h-4 w-4 shrink-0 text-[#F57F3d] sm:h-5 sm:w-5" />
+                    <span className="truncate text-xs sm:text-sm md:text-base">
+                      {selectedFile.name}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleRemoveFile}
+                    className="ml-2 shrink-0 text-xs text-red-500 hover:text-red-600 sm:text-sm md:text-base"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleAttachReceipt}
+                  className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-[#1a2533] dark:text-slate-300 dark:hover:bg-slate-700 sm:px-5 sm:py-2.5 sm:text-base md:px-6 md:py-3"
+                >
+                  <Camera className="h-4 w-4 text-[#F57F3d] sm:h-5 sm:w-5" />
+                  Attach Receipt (Optional)
+                </button>
+              )}
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*,application/pdf,.doc,.docx"
+                onChange={handleFileSelect}
+              />
+            </div>
+
+            {/* Security Notice */}
+            <div className="flex items-center justify-center gap-1.5 py-1 opacity-70 sm:py-1.5 md:py-2">
+              <Lock className="h-3 w-3 text-slate-400 dark:text-slate-500 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+              <p className="text-xs font-medium text-slate-400 dark:text-slate-500 sm:text-sm md:text-base">
+                Secure 256-bit SSL Encryption
+              </p>
+            </div>
+
+            {/* Error Display */}
+            {error && (
+              <div className="mt-1 text-center">
+                <p className="text-xs text-red-500 sm:text-sm md:text-base">
+                  {error}. Using cached rates.
+                </p>
+              </div>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Keypad - Fixed at bottom */}
+      <div className="w-full flex-shrink-0">
+        <Keypad
+          onKeyPress={handleKeyPress}
+          onDelete={handleBackspace}
+          onSubmit={handleContinue}
+          showBiometric={false}
+          submitIcon="arrow"
+        />
       </div>
     </div>
   );

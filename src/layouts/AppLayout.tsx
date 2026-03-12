@@ -35,6 +35,7 @@ const AppLayout = () => {
     '/eprivate/statement',
     '/beneficiary/addbeneficiaryy',
     // '/updatebeneficiary/$id',
+    '/beneficiary/statusrejected',
   ];
 
   const showFooter =

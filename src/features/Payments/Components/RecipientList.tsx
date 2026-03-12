@@ -99,6 +99,33 @@ const RecipientList: React.FC<RecipientListProps> = ({searchQuery}) => {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
+  const handleRecipientClick = (recipient: any) => {
+    const {status} = getStatusInfo(recipient);
+
+    switch (status) {
+      case 'approved':
+        navigate({
+          to: `/payment/send/${recipient.id}`,
+          state: {recipient},
+        });
+        break;
+      case 'pending':
+        navigate({
+          to: '/beneficiary/statuspending',
+          state: {recipient},
+        });
+        break;
+      case 'rejected':
+        navigate({
+          to: '/beneficiary/statusrejected',
+          state: {recipient},
+        });
+        break;
+      default:
+        navigate({to: `/updatebeneficiary/${recipient?.id}`});
+    }
+  };
+
   return (
     <div className="mt-2 min-h-[500px] rounded-t-3xl bg-white pb-24 shadow-sm lg:rounded-lg lg:pb-6">
       <div className="px-5 pb-2 pt-6 lg:px-6">
@@ -165,22 +192,7 @@ const RecipientList: React.FC<RecipientListProps> = ({searchQuery}) => {
             return (
               <div
                 key={recipient?.id}
-                onClick={() => {
-                  const {status} = getStatusInfo(recipient);
-                  if (status === 'approved') {
-                    navigate({
-                      to: `/payment/send/${recipient.id}`,
-                      state: {recipient},
-                    });
-                  } else if (status === 'pending') {
-                    navigate({
-                      to: '/beneficiary/statuspending',
-                      state: {recipient},
-                    });
-                  } else {
-                    navigate({to: `/updatebeneficiary/${recipient?.id}`});
-                  }
-                }}
+                onClick={() => handleRecipientClick(recipient)}
                 className="hover:bg-gray-50 active:bg-gray-100 flex cursor-pointer items-center justify-between border-b border-stroke p-4 transition-colors last:border-0 lg:p-5"
               >
                 <div className="flex items-center gap-4 lg:gap-5">
@@ -200,15 +212,15 @@ const RecipientList: React.FC<RecipientListProps> = ({searchQuery}) => {
                       <h3 className="text-gray-900 text-base font-bold lg:text-lg">
                         {recipient?.fullName}
                       </h3>
-                      {/* <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium lg:px-2.5 lg:py-1 lg:text-xs ${statusColor}`}
-                      >
-                        {statusText}
-                      </span> */}
                     </div>
                     <p className="text-gray-500 text-sm lg:text-base">
                       {recipient?.accountNumber}
                     </p>
+                    {status === 'rejected' && recipient?.rejectionReason && (
+                      <p className="mt-1 text-xs text-red-500">
+                        Reason: {recipient.rejectionReason}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
