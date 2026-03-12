@@ -1,6 +1,6 @@
 /*eslint-disable*/
 import React, {useState} from 'react';
-import {Receipt, Star, Clock, XCircle, CheckCircle} from 'lucide-react';
+import {Receipt, Star, Clock, XCircle, CheckCircle, Edit} from 'lucide-react';
 import {useGetBeneficiary} from '@/lib/react-query/beneficiary';
 import {useNavigate} from '@tanstack/react-router';
 
@@ -126,6 +126,22 @@ const RecipientList: React.FC<RecipientListProps> = ({searchQuery}) => {
     }
   };
 
+  const handleEditClick = (e: React.MouseEvent, recipient: any) => {
+    e.stopPropagation(); // Prevent triggering the parent row click
+    navigate({
+      to: `/updatebeneficiary/${recipient.id}`,
+      state: {recipient},
+    });
+  };
+
+  const handleAvatarClick = (e: React.MouseEvent, recipient: any) => {
+    e.stopPropagation(); // Prevent triggering the parent row click
+    navigate({
+      to: `/updatebeneficiary/${recipient.id}`,
+      state: {recipient},
+    });
+  };
+
   return (
     <div className="mt-2 min-h-[500px] rounded-t-3xl bg-white pb-24 shadow-sm lg:rounded-lg lg:pb-6">
       <div className="px-5 pb-2 pt-6 lg:px-6">
@@ -192,13 +208,21 @@ const RecipientList: React.FC<RecipientListProps> = ({searchQuery}) => {
             return (
               <div
                 key={recipient?.id}
-                onClick={() => handleRecipientClick(recipient)}
-                className="hover:bg-gray-50 active:bg-gray-100 flex cursor-pointer items-center justify-between border-b border-stroke p-4 transition-colors last:border-0 lg:p-5"
+                className="hover:bg-gray-50 active:bg-gray-100 group flex cursor-pointer items-center justify-between border-b border-stroke p-4 transition-colors last:border-0 lg:p-5"
               >
-                <div className="flex items-center gap-4 lg:gap-5">
-                  <div className="relative">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-transparent bg-blue-100 text-xl font-bold text-blue-600 group-hover:border-primary/10 lg:h-12 lg:w-12 lg:text-2xl">
+                <div className="flex flex-1 items-center gap-4 lg:gap-5">
+                  {/* Avatar - Clickable for Edit */}
+                  <div
+                    className="relative cursor-pointer"
+                    onClick={(e) => handleAvatarClick(e, recipient)}
+                    title="Click to edit beneficiary"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-transparent bg-blue-100 text-xl font-bold text-blue-600 transition-all hover:border-blue-300 hover:shadow-md lg:h-12 lg:w-12 lg:text-2xl">
                       {getInitials(recipient?.fullName)}
+                    </div>
+                    {/* Edit overlay on hover */}
+                    <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 transition-all hover:bg-black/40 group-hover:opacity-100">
+                      <Edit className="h-4 w-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
                     </div>
                     {/* Status icon overlay */}
                     <div
@@ -207,7 +231,12 @@ const RecipientList: React.FC<RecipientListProps> = ({searchQuery}) => {
                       {icon}
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1">
+
+                  {/* Main content - Clickable for Status */}
+                  <div
+                    className="flex flex-1 flex-col gap-1"
+                    onClick={() => handleRecipientClick(recipient)}
+                  >
                     <div className="flex items-center gap-2 lg:gap-3">
                       <h3 className="text-gray-900 text-base font-bold lg:text-lg">
                         {recipient?.fullName}
@@ -216,13 +245,23 @@ const RecipientList: React.FC<RecipientListProps> = ({searchQuery}) => {
                     <p className="text-gray-500 text-sm lg:text-base">
                       {recipient?.accountNumber}
                     </p>
-                    {status === 'rejected' && recipient?.rejectionReason && (
-                      <p className="mt-1 text-xs text-red-500">
-                        Reason: {recipient.rejectionReason}
-                      </p>
-                    )}
+                    {statusText === 'Rejected' &&
+                      recipient?.rejectionReason && (
+                        <p className="mt-1 text-xs text-red-500">
+                          Reason: {recipient.rejectionReason}
+                        </p>
+                      )}
                   </div>
                 </div>
+
+                {/* Edit Button */}
+                <button
+                  onClick={(e) => handleEditClick(e, recipient)}
+                  className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-500 opacity-0 transition-all hover:bg-blue-50 hover:text-blue-600 group-hover:opacity-100 lg:h-9 lg:w-9"
+                  title="Edit beneficiary"
+                >
+                  <Edit className="h-4 w-4 lg:h-5 lg:w-5" />
+                </button>
               </div>
             );
           })
