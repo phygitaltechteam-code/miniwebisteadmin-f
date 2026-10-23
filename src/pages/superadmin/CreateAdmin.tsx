@@ -17,7 +17,7 @@ import { z } from 'zod';
 
 const formSchema = z
   .object({
-    adminCategoryId: z.string().min(1, 'Category is required'),
+   
     fullname: z.string().min(1, 'Name is required').trim(),
     email: z.string().min(1, 'Email is required').email('Invalid email address').trim(),
     phoneNumber: z.string().min(1, 'Phone Number is required').trim(),
@@ -54,13 +54,18 @@ type AdminRow = {
   address: string;
   startDate: string;
   endDate: string;
+  raw?: any;
 };
 
-const CreateAdmin: React.FC = () => {
+export interface CreateAdminProps {
+  onOpenCardForge?: (admin: any) => void;
+}
+
+const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
   const methods = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      adminCategoryId: '',
+    
       fullname: '',
       email: '',
       phoneNumber: '',
@@ -99,13 +104,45 @@ const CreateAdmin: React.FC = () => {
 
   const columns: Column<AdminRow>[] = [
     { accessor: 'fullname', header: 'Name' },
-    { accessor: 'categoryName', header: 'Category' },
     { accessor: 'phoneNumber', header: 'Phone' },
     { accessor: 'price', header: 'Price (₹)' },
     { accessor: 'renewalAmount', header: 'Renewal (₹)' },
     { accessor: 'startDate', header: 'Start Date' },
     { accessor: 'endDate', header: 'End Date' },
     { accessor: 'address', header: 'Address' },
+    ...(onOpenCardForge
+      ? [
+          {
+            header: 'Digital Card Forge',
+            accessor: 'id' as const,
+            render: (row: AdminRow) => {
+              const adminObj = row.raw || row;
+              return (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const targetId = adminObj.id || adminObj._id || row.id;
+                    try {
+                      const url = new URL(window.location.href);
+                      url.searchParams.set('view', 'card-builder');
+                      url.searchParams.set('adminId', targetId);
+                      window.history.pushState({ view: 'card-builder', adminId: targetId }, '', url.toString());
+                    } catch {}
+                    onOpenCardForge(adminObj);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white dark:bg-indigo-950/50 dark:text-indigo-300 dark:hover:bg-indigo-600 dark:hover:text-white border border-indigo-200 dark:border-indigo-800 transition-all shadow-xs group cursor-pointer"
+                  title={`Open Digital Card Forge for ${row.fullname}`}
+                >
+                  <span className="text-[13px]">📇</span>
+                  <span>Card Forge</span>
+                  <span className="group-hover:translate-x-0.5 transition-transform font-mono">→</span>
+                </button>
+              );
+            },
+          } as Column<AdminRow>,
+        ]
+      : []),
   ];
 
   const rawAdminList: any[] = Array.isArray(adminData)
@@ -152,6 +189,7 @@ const CreateAdmin: React.FC = () => {
       endDate: endRaw ? String(endRaw).split('T')[0] : '',
       email: each.user?.email || each.email || '',
       secondaryPhoneNumber: each.user?.secondaryPhoneNumber || each.secondaryPhoneNumber,
+      raw: each,
     };
   });
 
@@ -200,7 +238,6 @@ const CreateAdmin: React.FC = () => {
             : 0;
 
         methods.reset({
-          adminCategoryId: toEdit.adminCategoryId || toEdit.adminCategory?.id || toEdit.category?.id || '',
           fullname: toEdit.user?.fullname || toEdit.fullname || '',
           email: toEdit.user?.email || toEdit.email || '',
           phoneNumber: toEdit.user?.phoneNumber || toEdit.phoneNumber || '',
@@ -233,7 +270,6 @@ const CreateAdmin: React.FC = () => {
           : 0;
 
       const payload: any = {
-        adminCategoryId: data.adminCategoryId,
         amount: priceNumber,
         price: priceNumber,
         renewalAmount: renewalNumber,
@@ -305,16 +341,7 @@ const CreateAdmin: React.FC = () => {
 
             {/* Space-optimized Form Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-              {/* 1. Category Dropdown (FIRST FIELD) */}
-              <div className="col-span-1 md:col-span-2 lg:col-span-3 bg-blue-50/40 p-4 rounded-xl border border-blue-100">
-                <GenericDropdown
-                  name="adminCategoryId"
-                  label="Category Selection"
-                  options={categoryOptions}
-                  defaultOption="-- Select Target Category --"
-                  required
-                />
-              </div>
+             
 
               {/* 2. Full Name */}
               <div className="col-span-1">
@@ -459,6 +486,17 @@ const CreateAdmin: React.FC = () => {
           itemsPerPage={10}
           searchAble
           action
+          onRowClick={(row) => {
+            const adminObj = row.raw || row;
+            const targetId = adminObj.id || adminObj._id || row.id;
+            try {
+              const url = new URL(window.location.href);
+              url.searchParams.set('view', 'card-builder');
+              url.searchParams.set('adminId', targetId);
+              window.history.pushState({ view: 'card-builder', adminId: targetId }, '', url.toString());
+            } catch {}
+            onOpenCardForge?.(adminObj);
+          }}
           onDelete={(row) => deleteAdmin(row?.id)}
           onEdit={(row) => handleEdit(row)}
         />

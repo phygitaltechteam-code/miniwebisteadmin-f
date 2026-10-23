@@ -29,6 +29,7 @@ interface Step3Props {
   onNext: () => void;
   onPrev: () => void;
   onToast: (msg: string) => void;
+  adminId?: string;
 }
 
 export const Step3ProductsServices: React.FC<Step3Props> = ({
@@ -37,18 +38,19 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
   onNext,
   onPrev,
   onToast,
+  adminId,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [deletedProductIds, setDeletedProductIds] = useState<(string | number)[]>([]);
 
-  // Auto-fetch existing products from GET customers/products (using listProductsSchema)
+  // Auto-fetch existing products from GET customers/products or superAdmin/admin/:adminId/products
   useEffect(() => {
     let isMounted = true;
     const loadProducts = async () => {
       try {
-        const res = await getCustomerProducts({ page: 1, limit: 100 });
+        const res = await getCustomerProducts({ page: 1, limit: 100 }, adminId);
         const rawList = (res as any)?.data?.products || (res as any)?.data || (res as any)?.products || (Array.isArray(res) ? res : []);
         if (isMounted && Array.isArray(rawList) && rawList.length > 0 && (!profile.products || profile.products.length === 0)) {
           const normalized = rawList.map(normalizeBackendProduct);
@@ -60,7 +62,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
     };
     loadProducts();
     return () => { isMounted = false; };
-  }, []);
+  }, [adminId]);
 
   // Form State adhering to createProductSchema & updateProductSchema
   const [name, setName] = useState('');
@@ -235,7 +237,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
     onToast('Product removed from catalog.');
     try {
       if (typeof id === 'string' && !id.startsWith('temp-') && isNaN(Number(id))) {
-        await deleteCustomerProduct(id);
+        await deleteCustomerProduct(id, adminId);
       }
     } catch {
       // Deletions will also be processed during Save & Next
@@ -272,7 +274,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
     onToast('Submitting products to server...');
 
     try {
-      const res = await syncCustomerProducts(profile.products || [], deletedProductIds);
+      const res = await syncCustomerProducts(profile.products || [], deletedProductIds, adminId);
       const serverMsg = res?.message || 'Step 3: Products & Services saved successfully!';
       const displayMsg = `${serverMsg} (customers/products)`;
 
@@ -299,19 +301,19 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
   };
 
   return (
-    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-xs scroll-mt-28" id="sec-3">
+    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-3">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 pb-3 sm:pb-4 border-b border-[#c5c6cd]/40 mb-4 sm:mb-6">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-sm shrink-0">
+      <div className="flex items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b border-[#c5c6cd]/40 mb-3.5 sm:mb-5">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
             3
           </div>
-          <div className="flex items-center gap-2 flex-wrap min-w-0">
-            <h2 className="text-base sm:text-lg font-bold text-[#091426] truncate">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+            <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
               Products & Services
             </h2>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#2563EB] text-white font-bold shrink-0">
-              {profile.products.length} items
+            <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-[#2563EB] text-white font-bold shrink-0">
+              {profile.products.length}
             </span>
           </div>
         </div>
@@ -319,24 +321,24 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
         <GenericButton
           type="button"
           onClick={openAddModal}
-          className="!px-3 sm:!px-4 !py-1.5 sm:!py-2 !text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-md shadow-[#2563EB]/20"
+          className="!px-2.5 sm:!px-4 !py-1 sm:!py-2 !text-xs font-bold flex items-center gap-1 sm:gap-1.5 shrink-0 shadow-md shadow-[#2563EB]/20"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Add Product/Service</span>
           <span className="sm:hidden">Add Product</span>
         </GenericButton>
       </div>
 
       {/* Product List Container */}
-      <div className="space-y-3.5">
+      <div className="space-y-2.5 sm:space-y-3.5">
         {profile.products.length === 0 ? (
-          <div className="p-8 rounded-xl border border-dashed border-slate-200 text-center bg-slate-50/50">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center mx-auto mb-2">
-              <Plus className="w-6 h-6" />
+          <div className="p-6 sm:p-8 rounded-xl border border-dashed border-slate-200 text-center bg-slate-50/50">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center mx-auto mb-2">
+              <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <p className="text-sm font-bold text-slate-800">No products or services added yet</p>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              Click "+ Add Product/Service" above to list your offerings, prices, and enquiry options.
+            <p className="text-xs sm:text-sm font-bold text-slate-800">No products or services added yet</p>
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              Click "+ Add Product" above to list your offerings, prices, and enquiry options.
             </p>
           </div>
         ) : (
@@ -344,10 +346,10 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
           return (
             <div 
               key={product.id}
-              className="border border-stroke rounded-xl p-4 bg-[#f8f9ff]/60 hover:bg-white hover:border-[#2563EB]/40 transition-all shadow-2xs"
+              className="border border-stroke rounded-xl p-2.5 sm:p-4 bg-[#f8f9ff]/60 hover:bg-white hover:border-[#2563EB]/40 transition-all shadow-2xs"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-start gap-3.5 flex-1 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+                <div className="flex items-start gap-2.5 sm:gap-3.5 flex-1 min-w-0">
                   <span className="w-6 h-6 rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs flex items-center justify-center font-bold shrink-0 mt-0.5">
                     {index + 1}
                   </span>

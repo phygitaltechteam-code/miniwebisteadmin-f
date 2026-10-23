@@ -26,13 +26,23 @@ interface Step1Props {
   onChange: <K extends keyof ProfileData>(key: K, value: ProfileData[K]) => void;
   onNext: () => void;
   onToast: (msg: string) => void;
+  adminId?: string;
 }
+
+const cleanServiceString = (s: any): string => {
+  if (!s) return '';
+  return String(s)
+    .replace(/[\[\]]/g, '')
+    .replace(/^['"`\s]+|['"`\s]+$/g, '')
+    .trim();
+};
 
 export const Step1BasicDetails: React.FC<Step1Props> = ({
   profile,
   onChange,
   onNext,
   onToast,
+  adminId,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkingUrl, setCheckingUrl] = useState(false);
@@ -44,12 +54,12 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
   const [catDropdownOpen, setCatDropdownOpen] = useState(false);
   const [catSearch, setCatSearch] = useState('');
 
-  // Fetch available categories from customers/categories (fallback: superAdmin/categories)
+  // Fetch available categories from customers/categories or superAdmin/admin/:adminId/categories
   useEffect(() => {
     let isMounted = true;
     const fetchCats = async () => {
       try {
-        const cats = await getCustomerCategories();
+        const cats = await getCustomerCategories(adminId);
         if (isMounted && Array.isArray(cats) && cats.length > 0) {
           setAvailableCategories(cats);
         }
@@ -59,14 +69,14 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
     };
     fetchCats();
     return () => { isMounted = false; };
-  }, []);
+  }, [adminId]);
 
-  // Auto-fetch existing customer info on mount (GET customers/info)
+  // Auto-fetch existing customer info on mount (GET customers/info or superAdmin/admin/:adminId/info)
   useEffect(() => {
     let isMounted = true;
     const loadCustomerInfo = async () => {
       try {
-        const res = await getCustomerInfo();
+        const res = await getCustomerInfo(adminId);
         const data = (res as any)?.data || (res as any)?.customer || (res as any)?.info || res;
         if (isMounted && data && typeof data === 'object') {
           if (data._id || data.id || data.businessName || data.contactName) {
@@ -97,18 +107,30 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
 
           let loadedServices: string[] = [];
           if (data.servicesOffered) {
-            loadedServices = Array.isArray(data.servicesOffered)
-              ? data.servicesOffered
-              : String(data.servicesOffered)
-                  .split(',')
-                  .map((s: string) => s.trim())
-                  .filter(Boolean);
+            if (Array.isArray(data.servicesOffered)) {
+              loadedServices = data.servicesOffered.map(cleanServiceString).filter(Boolean);
+            } else {
+              let rawStr = String(data.servicesOffered).trim();
+              try {
+                if (rawStr.startsWith('[') && rawStr.endsWith(']')) {
+                  const parsed = JSON.parse(rawStr);
+                  if (Array.isArray(parsed)) {
+                    loadedServices = parsed.map(cleanServiceString).filter(Boolean);
+                  }
+                }
+              } catch {
+                // split by comma fallback
+              }
+              if (loadedServices.length === 0) {
+                loadedServices = rawStr.split(',').map(cleanServiceString).filter(Boolean);
+              }
+            }
             onChange('servicesOffered', loadedServices);
           }
 
           if (Array.isArray(data.businessNatures) && data.businessNatures.length > 0) {
             const natures = data.businessNatures
-              .map((n: any) => (typeof n === 'string' ? n : n.businessNature || n.name))
+              .map((n: any) => cleanServiceString(typeof n === 'string' ? n : n.businessNature || n.name))
               .filter(Boolean);
             onChange('natureOfBusiness', natures);
             onChange('businessNatures', natures);
@@ -211,7 +233,7 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [adminId]);
 
   // Common quick categories
   const suggestedCategories = [
@@ -352,7 +374,7 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
       activeCategories,
       profile.businessName,
       profile.natureOfBusiness || []
-    );
+    ).map(cleanServiceString).filter(Boolean);
 
     if (generated.length === 0) {
       onToast('Please select a business category or enter your business name first.');
@@ -367,20 +389,23 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
   };
 
   const handleAddSuggestedService = (srv: string) => {
-    const current = profile.servicesOffered || [];
-    if (current.includes(srv)) return;
-    const updated = [...current, srv];
+    const cleaned = cleanServiceString(srv);
+    if (!cleaned) return;
+    const current = (profile.servicesOffered || []).map(cleanServiceString);
+    if (current.includes(cleaned)) return;
+    const updated = [...current, cleaned];
     onChange('servicesOffered', updated);
     if (!profile.natureOfBusiness || profile.natureOfBusiness.length === 0) {
       onChange('natureOfBusiness', updated);
     }
-    onToast(`Added service: ${srv}`);
+    onToast(`Added service: ${cleaned}`);
   };
 
   const handleAddAllSuggestedServices = () => {
     if (suggestedServices.length === 0) return;
-    const current = profile.servicesOffered || [];
-    const merged = Array.from(new Set([...current, ...suggestedServices]));
+    const current = (profile.servicesOffered || []).map(cleanServiceString);
+    const cleanedSuggested = suggestedServices.map(cleanServiceString).filter(Boolean);
+    const merged = Array.from(new Set([...current, ...cleanedSuggested]));
     onChange('servicesOffered', merged);
     if (!profile.natureOfBusiness || profile.natureOfBusiness.length === 0) {
       onChange('natureOfBusiness', merged);
@@ -390,9 +415,9 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
 
   // Services Management
   const handleAddService = () => {
-    const name = newService.trim();
+    const name = cleanServiceString(newService);
     if (!name) return;
-    const current = profile.servicesOffered || [];
+    const current = (profile.servicesOffered || []).map(cleanServiceString);
     if (current.includes(name)) {
       onToast(`"${name}" service is already listed.`);
       return;
@@ -407,7 +432,8 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
   };
 
   const handleRemoveService = (service: string) => {
-    onChange('servicesOffered', (profile.servicesOffered || []).filter(s => s !== service));
+    const cleaned = cleanServiceString(service);
+    onChange('servicesOffered', (profile.servicesOffered || []).filter(s => cleanServiceString(s) !== cleaned));
   };
 
   // Pincode auto-lookup
@@ -495,11 +521,11 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
       if (hasExistingRecord) {
         usedMethod = 'PATCH';
         try {
-          response = await updateCustomerInfo(payload);
+          response = await updateCustomerInfo(payload, adminId);
         } catch (patchErr: any) {
           if (patchErr?.response?.status === 404) {
             usedMethod = 'POST';
-            response = await createCustomerInfo(payload);
+            response = await createCustomerInfo(payload, adminId);
             setHasExistingRecord(true);
           } else {
             throw patchErr;
@@ -508,14 +534,14 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
       } else {
         usedMethod = 'POST';
         try {
-          response = await createCustomerInfo(payload);
+          response = await createCustomerInfo(payload, adminId);
           setHasExistingRecord(true);
         } catch (postErr: any) {
           const status = postErr?.response?.status;
           const msg = String(postErr?.response?.data?.message || '').toLowerCase();
           if (status === 409 || status === 405 || (status === 400 && msg.includes('already'))) {
             usedMethod = 'PATCH';
-            response = await updateCustomerInfo(payload);
+            response = await updateCustomerInfo(payload, adminId);
             setHasExistingRecord(true);
           } else {
             throw postErr;
@@ -587,25 +613,25 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
   ];
 
   return (
-    <section className="bg-white border border-[#c5c6cd]/50 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-xs scroll-mt-28" id="sec-1">
+    <section className="bg-white border border-[#c5c6cd]/50 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-1">
       {/* Step Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-stroke mb-4 gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-7 h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between pb-2.5 sm:pb-3 border-b border-stroke mb-3.5 sm:mb-4 gap-2">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
             1
           </div>
-          <h2 className="text-base font-bold text-[#091426] truncate">
+          <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
             Basic Details & Theme Identity
           </h2>
         </div>
 
-        <span className="px-2 py-0.5 rounded-md bg-[#EFF6FF] text-[#2563EB] text-[11px] font-semibold border border-[#BFDBFE] flex items-center gap-1 shrink-0">
+        <span className="px-2 py-0.5 rounded-md bg-[#EFF6FF] text-[#2563EB] text-[10px] sm:text-[11px] font-semibold border border-[#BFDBFE] flex items-center gap-1 shrink-0 ml-auto sm:ml-0">
           <CheckCircle2 className="w-3 h-3 text-[#2563EB]" />
           <span>Active Profile</span>
         </span>
       </div>
 
-      <div className="space-y-5">
+      <div className="space-y-4 sm:space-y-5">
         {/* ─── Card Theme Selector (Dropdown & Preview) ─────────────── */}
         <div>
           <label className="text-xs font-bold text-[#091426] flex items-center gap-1.5 mb-1.5">
@@ -613,12 +639,12 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
             <span>Card Theme (Two-Color Sets)</span>
           </label>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 items-center">
             <div className="relative">
               <select
                 value={profile.theme || 'navy-orange'}
                 onChange={(e) => onChange('theme', e.target.value as ProfileData['theme'])}
-                className="w-full h-11 px-3.5 pr-8 text-xs font-semibold rounded-xl border border-stroke bg-white text-[#091426] focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] cursor-pointer appearance-none shadow-2xs"
+                className="w-full h-10 sm:h-11 px-3 pr-8 text-xs font-semibold rounded-xl border border-stroke bg-white text-[#091426] focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] cursor-pointer appearance-none shadow-2xs truncate"
               >
                 {themes.map((th) => (
                   <option key={th.id} value={th.id}>
@@ -635,11 +661,11 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
             {(() => {
               const currentTh = themes.find((t) => t.id === profile.theme) || themes[0];
               return (
-                <div className="flex items-center gap-3 p-2.5 rounded-xl border border-stroke bg-[#f8f9fc]">
-                  <div className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border shadow-2xs shrink-0 ${currentTh.previewClass}`}>
+                <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl border border-stroke bg-[#f8f9fc] min-w-0">
+                  <div className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold border shadow-2xs shrink-0 ${currentTh.previewClass}`}>
                     Theme Sample
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <span className="text-xs font-bold text-[#091426] block truncate">
                       {currentTh.name}
                     </span>
@@ -790,67 +816,70 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
         </div>
 
         {/* ─── Key Services Offered (Multiple Entry) ───────────────── */}
-        <div className="pt-3 border-t border-stroke">
-          <div className="flex items-center justify-between mb-2">
+        <div className="pt-2.5 sm:pt-3 border-t border-stroke">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-2">
             <div>
               <div className="flex items-center gap-2">
                 <label className="text-xs font-bold text-[#091426] block">
                   Key Services Offered (Add Multiple)
                 </label>
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE]">
-                  Auto Generate
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE]">
+                  {(profile.servicesOffered || []).length} added
                 </span>
               </div>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-gray-400 mt-0.5">
                 List the services provided by your business or auto-generate from category
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleAutoGenerateServices}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#2563EB] text-[11px] font-bold border border-[#BFDBFE] transition-colors shadow-2xs active:scale-95"
-                title="Automatically generate services matching your business category"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
-                <span>Auto Generate</span>
-              </button>
-              <span className="text-[11px] text-gray-400">{(profile.servicesOffered || []).length} added</span>
-            </div>
+
+            <button
+              type="button"
+              onClick={handleAutoGenerateServices}
+              className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#2563EB] text-[11px] font-bold border border-[#BFDBFE] transition-colors shadow-2xs active:scale-95 shrink-0"
+              title="Automatically generate services matching your business category"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
+              <span>Auto Generate</span>
+            </button>
           </div>
 
-          <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl border border-stroke bg-[#f8f9fc] items-center">
-            {(profile.servicesOffered || []).map((srv, idx) => (
-              <span
-                key={idx}
-                className="px-2.5 py-1 rounded-lg bg-white text-[#091426] text-xs font-semibold flex items-center gap-1.5 border border-stroke shadow-2xs"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]" />
-                <span>{srv}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveService(srv)}
-                  className="hover:text-red-600 text-[11px]"
+          <div className="flex flex-wrap gap-1.5 p-2 sm:p-2.5 rounded-xl border border-stroke bg-[#f8f9fc] items-center min-h-[42px]">
+            {(profile.servicesOffered || []).map((srv, idx) => {
+              const cleanSrv = cleanServiceString(srv);
+              if (!cleanSrv) return null;
+              return (
+                <span
+                  key={idx}
+                  className="px-2.5 py-1 rounded-lg bg-white text-[#091426] text-xs font-semibold flex items-center gap-1.5 border border-stroke shadow-2xs"
                 >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]" />
+                  <span>{cleanSrv}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveService(cleanSrv)}
+                    className="hover:text-red-600 text-[11px] p-0.5"
+                    title={`Remove ${cleanSrv}`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              );
+            })}
 
-            <div className="flex items-center gap-1 flex-1 min-w-[160px]">
+            <div className="flex items-center gap-1 flex-1 min-w-[150px]">
               <input
                 type="text"
                 value={newService}
                 onChange={(e) => setNewService(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddService())}
                 placeholder="+ Type service & Enter (e.g. Corporate Consulting)..."
-                className="w-full text-xs bg-transparent border-none text-[#091426] focus:outline-none p-1"
+                className="w-full text-xs bg-transparent border-none text-[#091426] focus:outline-none p-1 placeholder:text-gray-400"
               />
               {newService && (
                 <button
                   type="button"
                   onClick={handleAddService}
-                  className="px-2 py-0.5 rounded bg-[#2563EB] text-white text-[11px] font-bold shrink-0"
+                  className="px-2.5 py-1 rounded-lg bg-[#2563EB] text-white text-[11px] font-bold shrink-0 shadow-2xs"
                 >
                   Add
                 </button>
@@ -860,30 +889,34 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
 
           {/* Smart Suggestions based on Business Category / Services */}
           {suggestedServices.length > 0 && (
-            <div className="mt-2 p-2 rounded-xl bg-[#EFF6FF]/70 border border-[#BFDBFE] flex flex-wrap items-center gap-1.5 text-xs animate-in fade-in duration-200">
-              <span className="text-[10px] font-bold text-[#2563EB] uppercase tracking-wide flex items-center gap-1 mr-0.5">
-                <Sparkles className="w-3 h-3 text-[#2563EB]" />
-                Suggested:
-              </span>
-              {suggestedServices.slice(0, 5).map((srv, idx) => (
+            <div className="mt-2 p-2 sm:p-2.5 rounded-xl bg-[#EFF6FF]/70 border border-[#BFDBFE] text-xs animate-in fade-in duration-200">
+              <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-blue-200/50">
+                <span className="text-[10px] font-bold text-[#2563EB] uppercase tracking-wide flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-[#2563EB]" />
+                  Suggested Services:
+                </span>
                 <button
-                  key={idx}
                   type="button"
-                  onClick={() => handleAddSuggestedService(srv)}
-                  className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-white hover:bg-[#EFF6FF] text-[#091426] hover:text-[#2563EB] border border-stroke hover:border-[#2563EB] transition-all flex items-center gap-1 shadow-2xs"
-                  title={`Add ${srv}`}
+                  onClick={handleAddAllSuggestedServices}
+                  className="text-[10px] font-bold text-[#2563EB] hover:underline px-1 py-0.5"
                 >
-                  <Plus className="w-2.5 h-2.5 text-[#2563EB]" />
-                  <span>{srv}</span>
+                  + Add All
                 </button>
-              ))}
-              <button
-                type="button"
-                onClick={handleAddAllSuggestedServices}
-                className="ml-auto text-[10px] font-bold text-[#2563EB] hover:underline px-1 py-0.5"
-              >
-                + Add All
-              </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {suggestedServices.slice(0, 6).map((srv, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleAddSuggestedService(srv)}
+                    className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-white hover:bg-[#EFF6FF] text-[#091426] hover:text-[#2563EB] border border-stroke hover:border-[#2563EB] transition-all flex items-center gap-1 shadow-2xs"
+                    title={`Add ${srv}`}
+                  >
+                    <Plus className="w-2.5 h-2.5 text-[#2563EB]" />
+                    <span className="truncate max-w-[200px]">{srv}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -1005,20 +1038,20 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
         </div>
 
         {/* ─── Executive Details ──────────────────────────────────── */}
-        <div className="pt-3 border-t border-stroke">
-          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2.5">
+        <div className="pt-2.5 sm:pt-3 border-t border-stroke">
+          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2">
             Executive / Owner Contact Details
           </span>
 
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-            <div className="sm:col-span-2">
+          <div className="grid grid-cols-12 gap-2 sm:gap-3">
+            <div className="col-span-4 sm:col-span-2">
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
                 Prefix
               </label>
               <select
                 value={profile.prefix}
                 onChange={(e) => onChange('prefix', e.target.value)}
-                className="w-full h-10 px-2 rounded-xl border border-stroke bg-white text-xs font-medium focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]/25 focus:outline-none"
+                className="w-full h-10 px-2 rounded-xl border border-stroke bg-white text-xs font-medium focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]/25 focus:outline-none shadow-2xs"
               >
                 <option>Mr.</option>
                 <option>Mrs.</option>
@@ -1028,7 +1061,7 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
               </select>
             </div>
 
-            <div className="sm:col-span-5">
+            <div className="col-span-8 sm:col-span-5">
               <GenericInputField
                 label="Full Name"
                 value={profile.contactName}
@@ -1038,7 +1071,7 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
               />
             </div>
 
-            <div className="sm:col-span-5">
+            <div className="col-span-12 sm:col-span-5">
               <GenericInputField
                 label="Official Designation"
                 value={profile.designation}
@@ -1051,12 +1084,12 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
         </div>
 
         {/* ─── Contact Numbers (Primary & WhatsApp only) ───────────── */}
-        <div className="pt-3 border-t border-stroke">
-          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2.5">
+        <div className="pt-2.5 sm:pt-3 border-t border-stroke">
+          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2">
             Official Direct Phone Numbers
           </span>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
             <GenericInputField
               label="Primary Phone"
               value={profile.primaryPhone}
@@ -1078,22 +1111,22 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
         </div>
 
         {/* ─── Location & Automatic Pincode Lookup ─────────────────── */}
-        <div className="pt-3 border-t border-stroke space-y-3">
+        <div className="pt-2.5 sm:pt-3 border-t border-stroke space-y-2.5 sm:space-y-3">
           <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">
             Location & Physical Coordinates
           </span>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
             <div>
               <GenericInputField
-                label="Pincode (Auto City/District)"
+                label="Pincode (Auto City)"
                 value={profile.pincode || ''}
                 onChange={(e) => handlePincodeChange(e.target.value)}
                 placeholder="e.g. 416416"
                 prefix={<MapPin className="w-3.5 h-3.5 text-[#2563EB]" />}
               />
               {isLookingUpPin && (
-                <span className="text-[10px] text-[#2563EB] animate-pulse">Detecting postal region...</span>
+                <span className="text-[10px] text-[#2563EB] animate-pulse">Detecting...</span>
               )}
             </div>
 
@@ -1128,8 +1161,8 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
             required
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="md:col-span-3">
+          <div className="space-y-2.5 sm:space-y-3">
+            <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
                 Google Maps Location Link
               </label>
@@ -1142,7 +1175,7 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
                 <button
                   type="button"
                   onClick={handleTestPin}
-                  className="px-3.5 h-10 rounded-xl bg-[#EFF6FF] text-[#2563EB] text-xs font-bold border border-[#BFDBFE] hover:bg-[#DBEAFE] transition-colors flex items-center gap-1.5 shrink-0"
+                  className="px-3 sm:px-3.5 h-10 rounded-xl bg-[#EFF6FF] text-[#2563EB] text-xs font-bold border border-[#BFDBFE] hover:bg-[#DBEAFE] transition-colors flex items-center gap-1.5 shrink-0"
                 >
                   <MapPin className="w-3.5 h-3.5" />
                   <span>Test Pin</span>
@@ -1150,27 +1183,25 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
               </div>
             </div>
 
-            <div>
-              <GenericInputField
-                label="Official Email"
-                type="email"
-                value={profile.email}
-                onChange={(e) => onChange('email', e.target.value)}
-                placeholder="info@company.com"
-                required
-              />
-            </div>
+            <GenericInputField
+              label="Official Email"
+              type="email"
+              value={profile.email}
+              onChange={(e) => onChange('email', e.target.value)}
+              placeholder="info@company.com"
+              required
+            />
           </div>
         </div>
       </div>
 
       {/* Step Footer Navigation */}
-      <div className="mt-6 pt-4 border-t border-stroke flex justify-end">
+      <div className="mt-5 sm:mt-6 pt-3.5 sm:pt-4 border-t border-stroke flex justify-end">
         <GenericButton
           type="button"
           onClick={handleSaveAndNext}
           disabled={isSubmitting}
-          className="!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 shadow-md shadow-[#2563EB]/25 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto !px-6 !py-2.5 !text-xs !font-bold flex items-center justify-center gap-2 shadow-md shadow-[#2563EB]/25 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <>

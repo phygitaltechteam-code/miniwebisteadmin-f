@@ -176,13 +176,14 @@ export type CustomerSocialResponse = CustomerLinksResponse;
 
 // ─── GET ─────────────────────────────────────────────────────────────────────
 
-export const getCustomerLinks = async (): Promise<CustomerLinksResponse> => {
+export const getCustomerLinks = async (adminId?: string): Promise<CustomerLinksResponse> => {
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/links` : 'customers/links';
   try {
-    const response = await api.get('customers/links');
+    const response = await api.get(endpoint);
     // Return the full axios response data so the caller can access .data
     return (response as any)?.data != null ? (response as any) : { data: response };
   } catch (err: any) {
-    if (err?.response?.status === 404 || err?.response?.status === 405) {
+    if (!adminId && (err?.response?.status === 404 || err?.response?.status === 405)) {
       try {
         const socialRes = await api.get('customers/social');
         return (socialRes as any)?.data != null ? (socialRes as any) : { data: socialRes };
@@ -203,22 +204,24 @@ export const getCustomerSocial = getCustomerLinks;
 // ─── POST / PATCH ─────────────────────────────────────────────────────────────
 
 export const saveOrUpdateCustomerLinks = async (
-  profile: Partial<ProfileData>
+  profile: Partial<ProfileData>,
+  adminId?: string
 ): Promise<CustomerLinksResponse> => {
   const payload = formatCustomerLinksPayload(profile);
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/links` : 'customers/links';
 
   // Try POST first
   try {
-    const res = await api.post('customers/links', payload);
+    const res = await api.post(endpoint, payload);
     return (res as any)?.data || res;
   } catch (err: any) {
-    // 405 / 409 → try PATCH
+    // 405 / 409 / 404 → try PATCH
     if ([405, 404, 409].includes(err?.response?.status)) {
       try {
-        const patchRes = await api.patch('customers/links', payload);
+        const patchRes = await api.patch(endpoint, payload);
         return (patchRes as any)?.data || patchRes;
       } catch (patchErr: any) {
-        if (patchErr?.response?.status === 404 || patchErr?.response?.status === 405) {
+        if (!adminId && (patchErr?.response?.status === 404 || patchErr?.response?.status === 405)) {
           try {
             const socialPost = await api.post('customers/social', payload);
             return (socialPost as any)?.data || socialPost;

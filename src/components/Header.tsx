@@ -391,28 +391,11 @@ export const Header: React.FC<HeaderProps> = ({
                     <p className="text-[12px] text-slate-300 truncate mt-0.5">
                       {profile.designation}
                     </p>
-                    <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                      Card Administrator
-                    </span>
                   </div>
                 </div>
               </div>
 
               <div className="p-3 text-[13px] space-y-1">
-                <div className="px-3 py-2 text-xs text-[#75777d] border-b border-[#c5c6cd]/30">
-                  <span className="font-semibold text-[#091426] block">Organization:</span>
-                  <span className="truncate block">{profile.businessName}</span>
-                </div>
-
-                <a
-                  href="#sec-1"
-                  onClick={() => { onSelectStep(1); setShowProfileMenu(false); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#0b1c30] hover:bg-[#EFF6FF] hover:text-[#2563EB] transition-colors"
-                >
-                  <SettingsIcon className="w-4 h-4 text-[#75777d]" />
-                  <span>Profile Credentials</span>
-                </a>
-
                 <div className="pt-1 border-t border-[#c5c6cd]/30">
                   <button
                     onClick={() => {

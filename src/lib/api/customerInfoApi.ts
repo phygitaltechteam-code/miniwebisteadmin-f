@@ -144,47 +144,52 @@ export interface CustomerInfoResponse {
 }
 
 /**
- * GET customers/info
- * Retrieves the current customer basic profile information
+ * GET customers/info OR superAdmin/admin/:adminId/info
+ * Retrieves the customer basic profile information
  */
-export const getCustomerInfo = async (): Promise<CustomerInfoResponse> => {
+export const getCustomerInfo = async (adminId?: string): Promise<CustomerInfoResponse> => {
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/info` : 'customers/info';
   try {
-    const response = await api.get('customers/info');
+    const response = await api.get(endpoint);
     return (response as any)?.data || response;
   } catch (error) {
-    console.error('Error fetching customers/info:', error);
+    console.error(`Error fetching ${endpoint}:`, error);
     throw error;
   }
 };
 
 /**
- * POST customers/info
+ * POST customers/info OR superAdmin/admin/:adminId/info
  * Creates new customer basic profile information
  */
 export const createCustomerInfo = async (
-  payload: CustomerInfoPayload
+  payload: CustomerInfoPayload,
+  adminId?: string
 ): Promise<CustomerInfoResponse> => {
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/info` : 'customers/info';
   try {
-    const response = await api.post('customers/info', payload);
+    const response = await api.post(endpoint, payload);
     return (response as any)?.data || response;
   } catch (error) {
-    console.error('Error creating customers/info:', error);
+    console.error(`Error creating info via ${endpoint}:`, error);
     throw error;
   }
 };
 
 /**
- * PATCH customers/info
+ * PATCH customers/info OR superAdmin/admin/:adminId/info
  * Updates existing customer basic profile information
  */
 export const updateCustomerInfo = async (
-  payload: Partial<CustomerInfoPayload>
+  payload: Partial<CustomerInfoPayload>,
+  adminId?: string
 ): Promise<CustomerInfoResponse> => {
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/info` : 'customers/info';
   try {
-    const response = await api.patch('customers/info', payload);
+    const response = await api.patch(endpoint, payload);
     return (response as any)?.data || response;
   } catch (error) {
-    console.error('Error updating customers/info via PATCH:', error);
+    console.error(`Error updating info via PATCH ${endpoint}:`, error);
     throw error;
   }
 };
@@ -194,10 +199,11 @@ export const updateCustomerInfo = async (
  */
 export const saveOrUpdateCustomerInfo = async (
   payload: CustomerInfoPayload,
-  isUpdate: boolean = false
+  isUpdate: boolean = false,
+  adminId?: string
 ): Promise<CustomerInfoResponse> => {
   if (isUpdate) {
-    return updateCustomerInfo(payload);
+    return updateCustomerInfo(payload, adminId);
   }
-  return createCustomerInfo(payload);
+  return createCustomerInfo(payload, adminId);
 };

@@ -24,6 +24,7 @@ interface Step2Props {
   onNext: () => void;
   onPrev: () => void;
   onToast: (msg: string) => void;
+  adminId?: string;
 }
 
 export const Step2AboutSpecialities: React.FC<Step2Props> = ({
@@ -32,6 +33,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
   onNext,
   onPrev,
   onToast,
+  adminId,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newSpeciality, setNewSpeciality] = useState('');
@@ -42,22 +44,25 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
   const [hasExistingAbout, setHasExistingAbout] = useState(false);
   const [backendServices, setBackendServices] = useState<string[]>([]);
 
-  // Auto-fetch existing about info on mount (GET customers/about)
+  // Auto-fetch existing about info on mount (GET customers/about or superAdmin/admin/:adminId/about)
   useEffect(() => {
     let isMounted = true;
     const loadAbout = async () => {
       try {
-        const res = await getCustomerAbout();
+        const res = await getCustomerAbout(adminId);
         const raw = (res as any)?.data || (res as any)?.about || res;
         if (!isMounted || !raw || typeof raw !== 'object') return;
 
         const toCleanString = (item: any, fallbackKey: string): string => {
           if (!item) return '';
-          if (typeof item === 'string') return item.trim();
-          if (typeof item === 'object') {
-            return String(item[fallbackKey] || item.name || item.title || item.value || '').trim();
+          let val = '';
+          if (typeof item === 'string') val = item;
+          else if (typeof item === 'object') {
+            val = String(item[fallbackKey] || item.name || item.title || item.value || '');
+          } else {
+            val = String(item);
           }
-          return String(item).trim();
+          return val.replace(/[\[\]]/g, '').trim();
         };
 
         // Backend response format: { aboutUs: {...} | null, basicDetailsServices: ["..."] }
@@ -84,7 +89,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
         }
 
         if (about && typeof about === 'object') {
-          if (about._id || about.id || about.establishmentYear || about.aboutNarrative || about.aboutUsText || (about.specialities && about.specialities.length > 0)) {
+          if (about._id || about.id || about.establishmentYear || about.aboutNarrative || about.aboutUsText || (about.specialities && about.specialities.length > 0) || (about.officialDocuments && about.officialDocuments.length > 0)) {
             setHasExistingAbout(true);
           }
           if (about.establishmentYear) {
@@ -92,6 +97,9 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
           }
           if (about.gstNumber) {
             onChange('gstNumber', String(about.gstNumber));
+          }
+          if (about.isCategoryDigitalCard !== undefined) {
+            onChange('showCategoryInCard', Boolean(about.isCategoryDigitalCard));
           }
           if (Array.isArray(about.specialities) && about.specialities.length > 0) {
             const cleanSpecialities = about.specialities
@@ -110,16 +118,25 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
           if (narrative) {
             onChange('aboutNarrative', narrative);
           }
-          if (Array.isArray(about.documents) && about.documents.length > 0) {
-            const normalizedDocs = about.documents.map((d: any, idx: number) => ({
-              id: d.id || d._id || `doc_${idx}`,
-              name: d.name || d.fileName || 'Document',
-              fileName: d.fileName || d.name || 'Document',
-              url: d.url || '',
-              size: d.size || '',
-              uploadedAt: d.uploadedAt || '',
-              type: d.type || '',
-            }));
+
+          // ─── HYDRATE OFFICIAL DOCUMENTS FROM BACKEND ──────────────────
+          const rawDocs = about.officialDocuments || about.documents;
+          if (Array.isArray(rawDocs) && rawDocs.length > 0) {
+            const normalizedDocs: CompanyDocument[] = rawDocs.map((d: any, idx: number) => {
+              const fileUrl = d.fileUrl || d.url || '';
+              const docName = d.fileName || d.name || `Document_${idx + 1}`;
+              const isImage = fileUrl.match(/\.(jpeg|jpg|png|webp)/i);
+              const isPdf = fileUrl.toLowerCase().endsWith('.pdf');
+              return {
+                id: d.id || d._id || `doc_${idx}`,
+                name: docName,
+                fileName: docName,
+                url: fileUrl,
+                size: d.size || '',
+                uploadedAt: d.createdAt ? new Date(d.createdAt).toLocaleDateString() : d.uploadedAt || '',
+                type: d.type || (isImage ? 'IMAGE' : isPdf ? 'PDF' : 'DOC'),
+              };
+            });
             onChange('documents', normalizedDocs);
           }
         }
@@ -129,7 +146,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
     };
     loadAbout();
     return () => { isMounted = false; };
-  }, []);
+  }, [adminId]);
 
   // Also auto-sync services from Step 1 or backendServices if natureOfBusiness is currently empty
   useEffect(() => {
@@ -287,7 +304,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
       console.log('[Step2AboutSpecialities] Submitting customers/about as FormData:', jsonPayload);
 
       // Submit via FormData with jsonPayload fallback
-      const res = await saveOrUpdateCustomerAbout(formData, hasExistingAbout, jsonPayload);
+      const res = await saveOrUpdateCustomerAbout(formData, hasExistingAbout, jsonPayload, adminId);
       setHasExistingAbout(true);
 
       const serverMsg = res?.message || 'Step 2: About & Specialities saved successfully!';
@@ -325,21 +342,21 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
   };
 
   return (
-    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-xs scroll-mt-28" id="sec-2">
+    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-2">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#c5c6cd]/40 mb-4 sm:mb-6">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-sm shrink-0">
+      <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-[#c5c6cd]/40 mb-3.5 sm:mb-5">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
             2
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-[#091426] truncate">
+          <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
             About & Specialities
           </h2>
         </div>
       </div>
 
       {/* Statutory & Business Profile Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4 mb-4 sm:mb-5">
         <div>
           <GenericInputField
             label="Establishment Year"
@@ -362,8 +379,8 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
           />
         </div>
 
-        <div className="flex flex-col justify-end">
-          <label className="flex items-center gap-2 p-2.5 rounded-xl border border-stroke bg-[#f8f9ff] cursor-pointer hover:border-[#2563EB] transition-colors">
+        <div className="col-span-2 sm:col-span-1 flex flex-col justify-end">
+          <label className="flex items-center gap-2 p-2 sm:p-2.5 rounded-xl border border-stroke bg-[#f8f9ff] cursor-pointer hover:border-[#2563EB] transition-colors">
             <input
               type="checkbox"
               checked={profile.showCategoryInCard}
@@ -491,20 +508,20 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
       </div>
 
       {/* Core Specialities (Configured tags) */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between sm:justify-start gap-2">
             <label className="text-xs font-semibold text-gray-700 dark:text-gray-200">
               Core Specialities ({profile.specialities.length} Configured)
             </label>
             <button
               type="button"
               onClick={handleAiGenerateKeywords}
-              className="px-2.5 py-1 rounded-lg bg-blue-50 text-[#2563EB] border border-blue-200 text-xs font-bold hover:bg-blue-100 flex items-center gap-1.5 transition-colors shadow-2xs"
+              className="px-2.5 py-1 rounded-lg bg-blue-50 text-[#2563EB] border border-blue-200 text-xs font-bold hover:bg-blue-100 flex items-center gap-1.5 transition-colors shadow-2xs shrink-0"
               title={profile.specialities?.length ? "Regenerate new keyword specialities using AI" : "Automatically craft keywords from registered services"}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>{profile.specialities?.length ? 'Regenerate Specialities' : 'AI Generate Specialities'}</span>
+              <span>{profile.specialities?.length ? 'Regenerate' : 'AI Generate'}</span>
             </button>
           </div>
 
@@ -516,12 +533,12 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
               onChange={(e) => setNewSpeciality(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSpeciality())}
               placeholder="New speciality (max 100 chars)..."
-              className="h-8 px-2.5 text-xs rounded-xl border border-stroke bg-white focus:outline-none focus:border-[#2563EB]"
+              className="h-8 px-2.5 text-xs rounded-xl border border-stroke bg-white focus:outline-none focus:border-[#2563EB] flex-1 sm:w-56"
             />
             <button
               type="button"
               onClick={handleAddSpeciality}
-              className="text-xs font-bold text-[#2563EB] hover:underline flex items-center gap-1 shrink-0"
+              className="h-8 px-3 rounded-xl bg-[#2563EB] text-white text-xs font-bold flex items-center gap-1 shrink-0 shadow-2xs hover:bg-[#1D4ED8]"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add</span>
@@ -851,40 +868,45 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
           {/* Multiple uploaded documents */}
           {profile.documents && profile.documents.length > 0 && (
             profile.documents.map((doc) => {
-              const ext = doc.type || (doc.name.toLowerCase().endsWith('.pdf') ? 'PDF' : 'DOC');
-              const isPdf = ext.toUpperCase() === 'PDF';
+              const fileName = doc.fileName || doc.name || 'Document';
+              const fileUrl = doc.url || '';
+              const isImage = doc.type === 'IMAGE' || fileUrl.match(/\.(jpeg|jpg|png|webp)/i);
+              const isPdf = doc.type === 'PDF' || fileUrl.toLowerCase().endsWith('.pdf') || fileName.toLowerCase().endsWith('.pdf');
+              const badgeLabel = isPdf ? 'PDF' : isImage ? 'IMG' : 'DOC';
+
               return (
                 <div
                   key={doc.id}
                   className="p-3 rounded-xl border border-slate-200/80 bg-white hover:border-[#2563EB]/40 flex items-center justify-between transition-all shadow-2xs group"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-[10px] shrink-0 ${isPdf ? 'bg-red-50 text-red-600 border border-red-200/60' : 'bg-blue-50 text-blue-600 border border-blue-200/60'
-                      }`}>
-                      {ext}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-[10px] shrink-0 ${
+                      isPdf 
+                        ? 'bg-red-50 text-red-600 border border-red-200/60' 
+                        : isImage 
+                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60' 
+                        : 'bg-blue-50 text-blue-600 border border-blue-200/60'
+                    }`}>
+                      {badgeLabel}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-[#091426] truncate group-hover:text-[#2563EB] transition-colors">
-                        {doc.fileName || doc.name}
+                        {fileName}
                       </p>
                       <p className="text-[11px] text-[#75777d]">
-                        {doc.size || 'Document'} • {doc.uploadedAt || 'Uploaded'}
+                        {doc.size || (isImage ? 'Image Document' : 'Official Document')} • {doc.uploadedAt || 'Attached'}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0 ml-2">
-                    {doc.url && (
+                    {fileUrl && (
                       <a
-                        href={doc.url}
-                        download={doc.name}
-                        onClick={() => {
-                          if (!doc.url.startsWith('data:')) {
-                            onToast(`Downloading: ${doc.name}`);
-                          }
-                        }}
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="p-1.5 text-slate-500 hover:text-[#2563EB] rounded-lg hover:bg-blue-50 transition-colors"
-                        title="Download Document"
+                        title="View / Download Document"
                       >
                         <Download className="w-4 h-4" />
                       </a>
@@ -894,7 +916,11 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
                       onClick={() => {
                         const updated = (profile.documents || []).filter(d => d.id !== doc.id);
                         onChange('documents', updated);
-                        onToast(`Removed document: "${doc.name}"`);
+                        if (doc.id && !doc.id.startsWith('doc_')) {
+                          const currentRemoved = (profile as any).removeDocumentIds || [];
+                          onChange('removeDocumentIds' as any, [...currentRemoved, doc.id]);
+                        }
+                        onToast(`Removed document: "${fileName}"`);
                       }}
                       className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
                       title="Remove Document"

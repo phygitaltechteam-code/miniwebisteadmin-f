@@ -126,10 +126,14 @@ export const extractEnquiriesList = (response: any): CustomerEnquiry[] => {
 };
 
 /**
- * GET customers/enquires
+ * GET customers/enquires OR superAdmin/admin/:adminId/enquires
  * Fetches customer leads & enquiries captured from digital business cards
  */
-export const getCustomerEnquiries = async (): Promise<CustomerEnquiry[]> => {
+export const getCustomerEnquiries = async (adminId?: string): Promise<CustomerEnquiry[]> => {
+  if (adminId) {
+    const response = await api.get(`superAdmin/admin/${adminId}/enquires`);
+    return extractEnquiriesList(response?.data || response);
+  }
   try {
     const response = await api.get('customers/enquires');
     return extractEnquiriesList(response?.data || response);
@@ -150,18 +154,22 @@ export const getCustomerEnquiries = async (): Promise<CustomerEnquiry[]> => {
 };
 
 /**
- * PATCH customers/enquires/:id
+ * PATCH customers/enquires/:id OR superAdmin/admin/:adminId/enquires/:id
  * Updates status of an enquiry (e.g. 'New' | 'In Progress' | 'Completed')
  */
 export const updateCustomerEnquiryStatus = async (
   id: string,
-  status: CustomerEnquiry['status']
+  status: CustomerEnquiry['status'],
+  adminId?: string
 ): Promise<any> => {
+  const endpoint = adminId
+    ? `superAdmin/admin/${adminId}/enquires/${id}`
+    : `customers/enquires/${id}`;
   try {
-    const response = await api.patch(`customers/enquires/${id}`, { status });
+    const response = await api.patch(endpoint, { status });
     return (response as any)?.data || response;
   } catch (error: any) {
-    if (error?.response?.status === 404) {
+    if (!adminId && error?.response?.status === 404) {
       try {
         const fallback = await api.patch(`customers/enquiries/${id}`, { status });
         return (fallback as any)?.data || fallback;
@@ -175,18 +183,40 @@ export const updateCustomerEnquiryStatus = async (
 };
 
 /**
- * DELETE customers/enquires/:id
+ * DELETE customers/enquires/:id OR superAdmin/admin/:adminId/enquires/:id
  * Deletes or removes an enquiry
  */
-export const deleteCustomerEnquiry = async (id: string): Promise<any> => {
+export const deleteCustomerEnquiry = async (
+  id: string,
+  adminId?: string
+): Promise<any> => {
+  const endpoint = adminId
+    ? `superAdmin/admin/${adminId}/enquires/${id}`
+    : `customers/enquires/${id}`;
   try {
-    const response = await api.delete(`customers/enquires/${id}`);
+    const response = await api.delete(endpoint);
     return (response as any)?.data || response;
   } catch (error: any) {
-    if (error?.response?.status === 404) {
+    if (!adminId && error?.response?.status === 404) {
       const fallback = await api.delete(`customers/enquiries/${id}`);
       return (fallback as any)?.data || fallback;
     }
     throw error;
+  }
+};
+
+/**
+ * PATCH superAdmin/admin/:adminId/enquires/mark-all-read
+ */
+export const markAllCustomerEnquiriesRead = async (adminId?: string): Promise<any> => {
+  const endpoint = adminId
+    ? `superAdmin/admin/${adminId}/enquires/mark-all-read`
+    : 'customers/enquires/mark-all-read';
+  try {
+    const response = await api.patch(endpoint);
+    return (response as any)?.data || response;
+  } catch (error: any) {
+    console.warn('[customerEnquiriesApi] Could not mark all read:', error);
+    return null;
   }
 };

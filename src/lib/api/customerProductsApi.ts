@@ -140,31 +140,37 @@ export const normalizeBackendProduct = (item: any): ProductItem => {
 };
 
 /**
- * GET customers/products
+ * GET customers/products OR superAdmin/admin/:adminId/products
  * Retrieves products catalog using listProductsSchema query parameters
  */
-export const getCustomerProducts = async (params?: ListProductsQuery): Promise<CustomerProductResponse> => {
+export const getCustomerProducts = async (
+  params?: ListProductsQuery,
+  adminId?: string
+): Promise<CustomerProductResponse> => {
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/products` : 'customers/products';
   try {
-    const response = await api.get('customers/products', { params });
+    const response = await api.get(endpoint, { params });
     return (response as any)?.data || response;
   } catch (error) {
-    console.error('Error fetching customers/products:', error);
+    console.error(`Error fetching ${endpoint}:`, error);
     throw error;
   }
 };
 
 /**
- * POST customers/products
+ * POST customers/products OR superAdmin/admin/:adminId/products
  * Creates a new product adhering to createProductSchema
  */
 export const createCustomerProduct = async (
-  payload: CustomerProductPayload | FormData
+  payload: CustomerProductPayload | FormData,
+  adminId?: string
 ): Promise<CustomerProductResponse> => {
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/products` : 'customers/products';
   try {
-    const response = await api.post('customers/products', payload);
+    const response = await api.post(endpoint, payload);
     return (response as any)?.data || response;
   } catch (error) {
-    console.error('Error creating product via POST customers/products:', error);
+    console.error(`Error creating product via POST ${endpoint}:`, error);
     throw error;
   }
 };
@@ -176,41 +182,45 @@ export const isTempProductId = (id: any): boolean => {
 };
 
 /**
- * PATCH customers/products/:id
+ * PATCH customers/products/:id OR superAdmin/admin/:adminId/products/:id
  * Updates an existing product adhering to updateProductSchema.
  * Never calls PATCH with temporary frontend IDs (e.g. temp-...).
  */
 export const updateCustomerProduct = async (
   id: string | number,
-  payload: Partial<CustomerProductPayload> | FormData
+  payload: Partial<CustomerProductPayload> | FormData,
+  adminId?: string
 ): Promise<CustomerProductResponse> => {
   if (isTempProductId(id)) {
     console.warn(`[customerProductsApi] Prevented PATCH on temporary ID "${id}". Redirecting to POST.`);
-    return createCustomerProduct(payload as any);
+    return createCustomerProduct(payload as any, adminId);
   }
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/products/${id}` : `customers/products/${id}`;
   try {
-    const response = await api.patch(`customers/products/${id}`, payload);
+    const response = await api.patch(endpoint, payload);
     return (response as any)?.data || response;
   } catch (error) {
-    console.error(`Error updating product ${id} via PATCH customers/products/${id}:`, error);
+    console.error(`Error updating product ${id} via PATCH ${endpoint}:`, error);
     throw error;
   }
 };
 
 /**
- * DELETE customers/products/:id
+ * DELETE customers/products/:id OR superAdmin/admin/:adminId/products/:id
  */
 export const deleteCustomerProduct = async (
-  id: string | number
+  id: string | number,
+  adminId?: string
 ): Promise<CustomerProductResponse> => {
   if (isTempProductId(id)) {
     return { success: true, message: 'Local product removed' };
   }
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/products/${id}` : `customers/products/${id}`;
   try {
-    const response = await api.delete(`customers/products/${id}`);
+    const response = await api.delete(endpoint);
     return (response as any)?.data || response;
   } catch (error) {
-    console.error(`Error deleting product via DELETE customers/products/${id}:`, error);
+    console.error(`Error deleting product via DELETE ${endpoint}:`, error);
     throw error;
   }
 };
@@ -223,13 +233,14 @@ export const deleteCustomerProduct = async (
  */
 export const syncCustomerProducts = async (
   products: ProductItem[],
-  deletedProductIds: (string | number)[] = []
+  deletedProductIds: (string | number)[] = [],
+  adminId?: string
 ): Promise<CustomerProductResponse> => {
   // 1. Delete removed items that were previously saved on server
   for (const delId of deletedProductIds) {
     if (delId && !isTempProductId(delId) && isNaN(Number(delId))) {
       try {
-        await deleteCustomerProduct(delId);
+        await deleteCustomerProduct(delId, adminId);
       } catch (err) {
         console.warn(`Could not delete product ${delId}:`, err);
       }
@@ -248,11 +259,11 @@ export const syncCustomerProducts = async (
       if (prod.imageFile) {
         const formData = formatProductFormData(prod, prod.imageFile);
         if (hasRealBackendId && backendId) {
-          const res = await updateCustomerProduct(backendId, formData);
+          const res = await updateCustomerProduct(backendId, formData, adminId);
           results.push(res);
         } else {
-          // New product -> Always use POST customers/products
-          const res = await createCustomerProduct(formData);
+          // New product -> Always use POST customers/products or superAdmin/admin/:adminId/products
+          const res = await createCustomerProduct(formData, adminId);
           results.push(res);
           const newId =
             (res as any)?.data?.product?._id ||
@@ -269,11 +280,11 @@ export const syncCustomerProducts = async (
       } else {
         const payload = formatProductPayload(prod);
         if (hasRealBackendId && backendId) {
-          const res = await updateCustomerProduct(backendId, payload);
+          const res = await updateCustomerProduct(backendId, payload, adminId);
           results.push(res);
         } else {
-          // New product -> Always use POST customers/products with single product JSON
-          const res = await createCustomerProduct(payload);
+          // New product -> Always use POST customers/products or superAdmin/admin/:adminId/products
+          const res = await createCustomerProduct(payload, adminId);
           results.push(res);
           const newId =
             (res as any)?.data?.product?._id ||

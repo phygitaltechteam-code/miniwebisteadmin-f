@@ -38,9 +38,13 @@ export const formatCustomerSettingsPayload = (profile: Partial<ProfileData>): Cu
 };
 
 /**
- * GET customers/settings (with fallback to customers/info)
+ * GET customers/settings OR superAdmin/admin/:adminId/settings
  */
-export const getCustomerSettings = async (): Promise<CustomerSettingsResponse> => {
+export const getCustomerSettings = async (adminId?: string): Promise<CustomerSettingsResponse> => {
+  if (adminId) {
+    const response = await api.get(`superAdmin/admin/${adminId}/settings`);
+    return (response as any)?.data || response;
+  }
   try {
     const response = await api.get('customers/settings');
     return (response as any)?.data || response;
@@ -54,25 +58,36 @@ export const getCustomerSettings = async (): Promise<CustomerSettingsResponse> =
 };
 
 /**
- * Save or update card settings & headings (POST/PATCH customers/settings with fallback to customers/info)
+ * Save or update card settings & headings
+ * POST/PATCH customers/settings OR superAdmin/admin/:adminId/settings
  */
 export const saveOrUpdateCustomerSettings = async (
-  profile: Partial<ProfileData>
+  profile: Partial<ProfileData>,
+  adminId?: string
 ): Promise<CustomerSettingsResponse> => {
   const payload = formatCustomerSettingsPayload(profile);
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/settings` : 'customers/settings';
 
-  // 1. Try POST customers/settings
+  // 1. Try POST
   try {
-    const res = await api.post('customers/settings', payload);
+    const res = await api.post(endpoint, payload);
     return (res as any)?.data || res;
   } catch (err: any) {
-    // 2. Try PATCH customers/settings
-    if (err?.response?.status === 405 || err?.response?.status === 404) {
+    // 2. Try PATCH / PUT
+    if (err?.response?.status === 405 || err?.response?.status === 404 || err?.response?.status === 409) {
       try {
-        const patchRes = await api.patch('customers/settings', payload);
+        const patchRes = await api.patch(endpoint, payload);
         return (patchRes as any)?.data || patchRes;
       } catch (patchErr: any) {
-        // 3. Fallback to customers/info
+        if (adminId) {
+          try {
+            const putRes = await api.put(endpoint, payload);
+            return (putRes as any)?.data || putRes;
+          } catch {
+            throw patchErr;
+          }
+        }
+        // 3. Fallback to customers/info for regular customer only
         if (patchErr?.response?.status === 404 || patchErr?.response?.status === 405) {
           const infoRes = await api.patch('customers/info', payload);
           return (infoRes as any)?.data || infoRes;
@@ -82,4 +97,15 @@ export const saveOrUpdateCustomerSettings = async (
     }
     throw err;
   }
+};
+
+/**
+ * Reset card settings (POST superAdmin/admin/:adminId/settings/reset)
+ */
+export const resetCustomerSettings = async (adminId?: string): Promise<any> => {
+  if (adminId) {
+    const res = await api.post(`superAdmin/admin/${adminId}/settings/reset`);
+    return (res as any)?.data || res;
+  }
+  return { success: true };
 };

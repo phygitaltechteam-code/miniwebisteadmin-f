@@ -20,6 +20,7 @@ interface Step7Props {
   onNext: () => void;
   onPrev: () => void;
   onToast: (msg: string) => void;
+  adminId?: string;
 }
 
 export const Step7YoutubeVideos: React.FC<Step7Props> = ({
@@ -28,18 +29,19 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
   onNext,
   onPrev,
   onToast,
+  adminId,
 }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [videoTitle, setVideoTitle] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Auto-fetch existing video embeds on mount (GET customers/videos)
+  // Auto-fetch existing video embeds on mount (GET customers/videos or superAdmin/admin/:adminId/videos)
   useEffect(() => {
     let isMounted = true;
     const loadVideos = async () => {
       try {
-        const res = await getCustomerVideos();
+        const res = await getCustomerVideos(adminId);
         const normalized = parseCustomerVideosResponse(res);
         if (isMounted && normalized.length > 0 && (!profile.youtubeVideos || profile.youtubeVideos.length === 0)) {
           onChange('youtubeVideos', normalized);
@@ -50,7 +52,7 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
     };
     loadVideos();
     return () => { isMounted = false; };
-  }, []);
+  }, [adminId]);
 
   // Helper to extract YouTube embed URL
   const getEmbedUrl = (url: string) => {
@@ -96,7 +98,7 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
   };
 
   const handleDeleteVideo = (id: string) => {
-    deleteCustomerVideo(id);
+    deleteCustomerVideo(id, adminId);
     onChange('youtubeVideos', profile.youtubeVideos.filter(v => v.id !== id));
     onToast('Video embed removed from gallery.');
   };
@@ -122,7 +124,7 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
     onToast('Submitting video links to server...');
 
     try {
-      const res = await saveOrUpdateCustomerVideos(profile.youtubeVideos || []);
+      const res = await saveOrUpdateCustomerVideos(profile.youtubeVideos || [], adminId);
       const serverMsg = res?.message || 'Step 7: YouTube Video Gallery saved successfully!';
       const displayMsg = `${serverMsg} (customers/videos)`;
 
@@ -158,19 +160,19 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
   };
 
   return (
-    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-xs scroll-mt-28" id="sec-7">
+    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-7">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 pb-3 sm:pb-4 border-b border-[#c5c6cd]/40 mb-4 sm:mb-6">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-sm shrink-0">
+      <div className="flex items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b border-[#c5c6cd]/40 mb-3.5 sm:mb-5">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
             7
           </div>
-          <div className="flex items-center gap-2 flex-wrap min-w-0">
-            <h2 className="text-base sm:text-lg font-bold text-[#091426] truncate">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+            <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
               YouTube Video Gallery
             </h2>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#2563EB] text-white font-bold shrink-0">
-              {profile.youtubeVideos.length} videos
+            <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-[#2563EB] text-white font-bold shrink-0">
+              {profile.youtubeVideos.length}
             </span>
           </div>
         </div>
@@ -178,9 +180,9 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
         <GenericButton
           type="button"
           onClick={() => setShowAddForm(true)}
-          className="!px-3 sm:!px-4 !py-1.5 sm:!py-2 !text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-md shadow-[#2563EB]/20"
+          className="!px-2.5 sm:!px-4 !py-1 sm:!py-2 !text-xs font-bold flex items-center gap-1 sm:gap-1.5 shrink-0 shadow-md shadow-[#2563EB]/20"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Add YouTube Video</span>
           <span className="sm:hidden">Add Video</span>
         </GenericButton>
@@ -188,7 +190,7 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
 
       {/* Add Video Inline Form */}
       {showAddForm && (
-        <div className="mb-6 p-5 rounded-2xl bg-[#EFF6FF] border border-[#DBEAFE] space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="mb-4 sm:mb-6 p-3.5 sm:p-5 rounded-2xl bg-[#EFF6FF] border border-[#DBEAFE] space-y-3.5 sm:space-y-4 animate-in fade-in zoom-in-95 duration-150">
           <h4 className="text-xs font-bold text-[#091426] uppercase tracking-wider">
             Add YouTube Video Embed
           </h4>

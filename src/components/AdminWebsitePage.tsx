@@ -153,6 +153,13 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
   const themeConfig = getPortalTheme(activeThemeId);
 
   // Dynamic Profile Fields with Fallbacks
+  const hasCustomIdentity = Boolean(
+    (builderProfile?.businessName && builderProfile.businessName.trim()) ||
+    (builderProfile?.contactName && builderProfile.contactName.trim()) ||
+    initialAdminFallback?.businessName ||
+    initialAdminFallback?.name
+  );
+
   const businessName =
     builderProfile?.businessName ||
     profileObj?.businessName ||
@@ -164,14 +171,26 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
     (builderProfile && [builderProfile.prefix, builderProfile.contactName].filter(Boolean).join(' ')) ||
     [profileObj.prefix, profileObj.contactName].filter(Boolean).join(' ') ||
     initialAdminFallback?.contactName ||
-    'Rahul Patil';
+    (hasCustomIdentity ? businessName : 'Rahul Patil');
+
+  const categoryName =
+    (Array.isArray(builderProfile?.categories) && builderProfile.categories[0]) ||
+    builderProfile?.categoryName ||
+    builderProfile?.category ||
+    (profileObj.categories && profileObj.categories[0]?.name) ||
+    initialAdminFallback?.domain ||
+    (hasCustomIdentity ? 'Professional Services' : 'Electrical Services');
 
   const designation =
     builderProfile?.designation ||
     profileObj.designation ||
     initialAdminFallback?.designation ||
     initialAdminFallback?.title ||
-    'Owner & Senior Electrician';
+    (hasCustomIdentity
+      ? (categoryName && !categoryName.toLowerCase().includes('electric')
+          ? `${categoryName} Specialist`
+          : 'Founder & Owner')
+      : 'Owner & Senior Electrician');
 
   const primaryPhone =
     builderProfile?.primaryPhone ||
@@ -192,30 +211,34 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
   const cleanWhatsappDigits = whatsappRaw.replace(/[^0-9]/g, '');
   const whatsappUrl = `https://wa.me/${cleanWhatsappDigits || cleanDigitsPhone}`;
 
+  const cleanBusinessSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '');
+
   const email =
     builderProfile?.email ||
     profileObj.email ||
     linksObj?.emailLinks ||
     initialAdminFallback?.email ||
-    'rahul.patil@example.com';
+    (hasCustomIdentity ? `${cleanBusinessSlug || 'admin'}@example.com` : 'rahul.patil@example.com');
 
   const address =
     builderProfile?.address ||
     profileObj.address ||
     initialAdminFallback?.address ||
-    'Shop No. 5, Main Market Road, Kavathe Mahankal, Sangli, Maharashtra';
+    (hasCustomIdentity
+      ? (builderProfile?.city ? `${builderProfile.city}, India` : 'Registered Business Address, India')
+      : 'Shop No. 5, Main Market Road, Kavathe Mahankal, Sangli, Maharashtra');
 
   const city =
     builderProfile?.city ||
     profileObj.city ||
     initialAdminFallback?.city ||
-    'Kavathe Mahankal';
+    (hasCustomIdentity ? 'Main City' : 'Kavathe Mahankal');
 
   const district =
     builderProfile?.district ||
     profileObj.district ||
     initialAdminFallback?.district ||
-    'Sangli';
+    (hasCustomIdentity ? 'Central District' : 'Sangli');
 
   const state =
     builderProfile?.state ||
@@ -228,14 +251,6 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
     profileObj.mapLink ||
     linksObj?.location ||
     `https://maps.google.com/?q=${encodeURIComponent(address)}`;
-
-  const categoryName =
-    (Array.isArray(builderProfile?.categories) && builderProfile.categories[0]) ||
-    builderProfile?.categoryName ||
-    builderProfile?.category ||
-    (profileObj.categories && profileObj.categories[0]?.name) ||
-    initialAdminFallback?.domain ||
-    'Electrical Services';
 
   const logoUrl =
     builderProfile?.logoUrl ||
@@ -292,6 +307,15 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
     { title: 'CCTV Installation', icon: FaVideo },
   ];
 
+  const universalSpecialitiesList = [
+    { title: 'Quality Assurance', icon: FaShieldHalved },
+    { title: 'Custom Solutions', icon: FaSliders },
+    { title: 'Direct Consultation', icon: FaLightbulb },
+    { title: 'Timely Execution', icon: FaClock },
+    { title: 'Verified Standards', icon: FaShieldHalved },
+    { title: 'Dedicated Support', icon: FaPhone },
+  ];
+
   const rawSpecialities: string[] =
     builderProfile?.specialities && builderProfile.specialities.length > 0
       ? builderProfile.specialities.map((s: any) => (typeof s === 'string' ? s : s.name || s.title || s.specialities || ''))
@@ -305,6 +329,8 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
           title,
           icon: getSpecialityIcon(title, idx),
         }))
+      : hasCustomIdentity && !categoryName.toLowerCase().includes('electric')
+      ? universalSpecialitiesList
       : defaultSpecialitiesList;
 
   const specialitiesList: string[] = specialitiesItems.map((item) => item.title);
@@ -319,6 +345,19 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
         }))
       : aboutObj.officialDocuments && aboutObj.officialDocuments.length > 0
       ? aboutObj.officialDocuments
+      : hasCustomIdentity
+      ? [
+          {
+            id: 'def-doc-1',
+            fileName: `${categoryName || 'Trade'} Registration & License`,
+            fileUrl: 'https://upload.phygitaltech.in/uploads/1792575917224-12318949.jpeg',
+          },
+          {
+            id: 'def-doc-2',
+            fileName: `${businessName} Official Catalog & Brochure`,
+            fileUrl: 'https://upload.phygitaltech.in/uploads/1792660291401-934139205.jpeg',
+          },
+        ]
       : [
           {
             id: '3471ed82-17fa-4c4d-93bc-290de4d2e216',
@@ -355,6 +394,25 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
         }))
       : data?.products && data.products.length > 0
       ? data.products
+      : hasCustomIdentity
+      ? [
+          {
+            id: 'def-prod-1',
+            name: `${categoryName || 'Standard'} Service Package`,
+            price: 499,
+            currency: 'INR',
+            description: `Comprehensive and professional ${categoryName.toLowerCase()} solutions tailored by ${businessName}. Verified standards, prompt execution, and complete customer satisfaction.`,
+            image: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=600&h=400&fit=crop',
+          },
+          {
+            id: 'def-prod-2',
+            name: `Custom ${categoryName || 'Consultation'} & Support`,
+            price: 299,
+            currency: 'INR',
+            description: `Dedicated assistance and quality deliverables provided by the specialized team at ${businessName}.`,
+            image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&h=400&fit=crop',
+          },
+        ]
       : [
           {
             id: '5c4b7eaf-f7fb-430e-898d-cbe83731a1af',
@@ -385,8 +443,30 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
           title: g.title || 'Project Work Sample',
           description: g.description || 'Verified execution by partner',
         }))
+      : builderProfile?.galleryImages && builderProfile.galleryImages.length > 0
+      ? builderProfile.galleryImages.map((g: any) => ({
+          id: g.id || g._id,
+          image: g.url || g.image,
+          title: g.title || 'Project Work Sample',
+          description: g.description || 'Verified execution by partner',
+        }))
       : data?.gallery && data.gallery.length > 0
       ? data.gallery
+      : hasCustomIdentity
+      ? [
+          {
+            id: 'def-gal-1',
+            image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=700&h=500&fit=crop',
+            title: `${categoryName || 'Project'} Work Sample`,
+            description: `Professional setup and delivery by ${businessName}`,
+          },
+          {
+            id: 'def-gal-2',
+            image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=700&h=500&fit=crop',
+            title: 'Quality Standards & Delivery',
+            description: `Verified execution meeting highest client expectations at ${businessName}`,
+          },
+        ]
       : [
           {
             id: '58d9fbaf-f7c7-454b-b363-0efb1a1376ba',
@@ -424,6 +504,23 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
         })
       : data?.videos && data.videos.length > 0
       ? data.videos
+      : hasCustomIdentity
+      ? [
+          {
+            id: 'def-vid-1',
+            title: `${categoryName || 'Service'} Overview & Introduction`,
+            embedUrl: 'https://www.youtube.com/embed/YD2x7FFsFcc',
+            thumbnailUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=500&fit=crop',
+            duration: '04:15',
+          },
+          {
+            id: 'def-vid-2',
+            title: `${businessName} Quality Standards Presentation`,
+            embedUrl: 'https://www.youtube.com/embed/0GjRb4-iaog',
+            thumbnailUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=500&fit=crop',
+            duration: '05:30',
+          },
+        ]
       : [
           {
             id: 'v-1',
@@ -442,7 +539,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
         ];
 
   // Payment credentials
-  const upiId = builderProfile?.upiId || paymentObj.upiId || 'rahulpatil@oksbi';
+  const upiId =
+    builderProfile?.upiId ||
+    paymentObj.upiId ||
+    (hasCustomIdentity ? `${cleanBusinessSlug || 'merchant'}@upi` : 'rahulpatil@oksbi');
   const paymentPhoneNo =
     builderProfile?.upiNumber ||
     builderProfile?.primaryPhone ||

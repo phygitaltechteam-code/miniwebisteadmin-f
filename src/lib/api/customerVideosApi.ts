@@ -91,9 +91,13 @@ export const parseCustomerVideosResponse = (res: any): YoutubeVideo[] => {
 };
 
 /**
- * GET customers/videos
+ * GET customers/videos OR superAdmin/admin/:adminId/videos
  */
-export const getCustomerVideos = async (): Promise<CustomerVideosResponse> => {
+export const getCustomerVideos = async (adminId?: string): Promise<CustomerVideosResponse> => {
+  if (adminId) {
+    const response = await api.get(`superAdmin/admin/${adminId}/videos`);
+    return (response as any)?.data != null ? response.data : response;
+  }
   try {
     const response = await api.get('customers/videos');
     return (response as any)?.data != null ? response.data : response;
@@ -112,29 +116,37 @@ export const getCustomerVideos = async (): Promise<CustomerVideosResponse> => {
 };
 
 /**
- * POST customers/videos
+ * POST customers/videos OR superAdmin/admin/:adminId/videos
  * Sends { title, videoUrl }
  */
-export const createCustomerVideo = async (item: any): Promise<CustomerVideosResponse> => {
+export const createCustomerVideo = async (
+  item: any,
+  adminId?: string
+): Promise<CustomerVideosResponse> => {
   const payload = formatSingleVideoPayload(item);
-  const res = await api.post('customers/videos', payload);
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/videos` : 'customers/videos';
+  const res = await api.post(endpoint, payload);
   return (res as any)?.data || res;
 };
 
 /**
- * PATCH customers/videos/:id
+ * PATCH customers/videos/:id OR superAdmin/admin/:adminId/videos/:id
  * Sends { title, videoUrl }
  */
 export const updateCustomerVideo = async (
   id: string,
-  item: any
+  item: any,
+  adminId?: string
 ): Promise<CustomerVideosResponse> => {
   const payload = formatSingleVideoPayload(item);
+  const endpoint = adminId
+    ? `superAdmin/admin/${adminId}/videos/${id}`
+    : `customers/videos/${id}`;
   try {
-    const res = await api.patch(`customers/videos/${id}`, payload);
+    const res = await api.patch(endpoint, payload);
     return (res as any)?.data || res;
   } catch (err: any) {
-    if (err?.response?.status === 404 || err?.response?.status === 405) {
+    if (!adminId && (err?.response?.status === 404 || err?.response?.status === 405)) {
       const patchGeneral = await api.patch('customers/videos', payload);
       return (patchGeneral as any)?.data || patchGeneral;
     }
@@ -143,14 +155,20 @@ export const updateCustomerVideo = async (
 };
 
 /**
- * DELETE customers/videos/:id
+ * DELETE customers/videos/:id OR superAdmin/admin/:adminId/videos/:id
  */
-export const deleteCustomerVideo = async (id: string): Promise<any> => {
+export const deleteCustomerVideo = async (
+  id: string,
+  adminId?: string
+): Promise<any> => {
   if (!id || String(id).startsWith('vid-') || String(id).startsWith('temp-')) {
     return { success: true };
   }
+  const endpoint = adminId
+    ? `superAdmin/admin/${adminId}/videos/${id}`
+    : `customers/videos/${id}`;
   try {
-    const res = await api.delete(`customers/videos/${id}`);
+    const res = await api.delete(endpoint);
     return (res as any)?.data || res;
   } catch (err) {
     console.warn(`Could not delete video ${id}:`, err);
@@ -166,7 +184,8 @@ export const deleteCustomerVideo = async (id: string): Promise<any> => {
  * }
  */
 export const saveOrUpdateCustomerVideos = async (
-  profileOrList: any
+  profileOrList: any,
+  adminId?: string
 ): Promise<CustomerVideosResponse> => {
   const list = Array.isArray(profileOrList)
     ? profileOrList
@@ -183,19 +202,16 @@ export const saveOrUpdateCustomerVideos = async (
 
       if (hasRealId) {
         try {
-          const patchRes = await api.patch(`customers/videos/${item.id}`, payload);
-          return (patchRes as any)?.data || patchRes;
+          return await updateCustomerVideo(item.id, payload, adminId);
         } catch (patchErr: any) {
           if (patchErr?.response?.status === 404 || patchErr?.response?.status === 405) {
-            const postRes = await api.post('customers/videos', payload);
-            return (postRes as any)?.data || postRes;
+            return await createCustomerVideo(payload, adminId);
           }
           throw patchErr;
         }
       }
 
-      const res = await api.post('customers/videos', payload);
-      return (res as any)?.data || res;
+      return await createCustomerVideo(payload, adminId);
     })
   );
 

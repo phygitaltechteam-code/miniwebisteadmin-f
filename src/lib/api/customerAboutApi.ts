@@ -196,17 +196,16 @@ export const formatAboutFormData = (profile: Partial<ProfileData>): FormData => 
 };
 
 /**
- * GET customers/about
+ * GET customers/about OR superAdmin/admin/:adminId/about
  * Fetches company about, specialities, narrative, and documents.
- * Gracefully falls back to customers/info if customers/about is not a separate endpoint.
  */
-export const getCustomerAbout = async (): Promise<CustomerAboutResponse> => {
+export const getCustomerAbout = async (adminId?: string): Promise<CustomerAboutResponse> => {
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/about` : 'customers/about';
   try {
-    const response = await api.get('customers/about');
+    const response = await api.get(endpoint);
     return (response as any)?.data || response;
   } catch (error: any) {
-    // If backend uses customers/info for about fields, fallback
-    if (error?.response?.status === 404) {
+    if (!adminId && error?.response?.status === 404) {
       const fallbackRes = await api.get('customers/info');
       return (fallbackRes as any)?.data || fallbackRes;
     }
@@ -215,14 +214,18 @@ export const getCustomerAbout = async (): Promise<CustomerAboutResponse> => {
 };
 
 /**
- * POST customers/about
+ * POST customers/about OR superAdmin/admin/:adminId/about
  */
-export const createCustomerAbout = async (payload: CustomerAboutPayload | FormData): Promise<CustomerAboutResponse> => {
+export const createCustomerAbout = async (
+  payload: CustomerAboutPayload | FormData,
+  adminId?: string
+): Promise<CustomerAboutResponse> => {
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/about` : 'customers/about';
   try {
-    const response = await api.post('customers/about', payload);
+    const response = await api.post(endpoint, payload);
     return (response as any)?.data || response;
   } catch (error: any) {
-    if (error?.response?.status === 404 || error?.response?.status === 405) {
+    if (!adminId && (error?.response?.status === 404 || error?.response?.status === 405)) {
       const fallbackRes = await api.post('customers/info', payload);
       return (fallbackRes as any)?.data || fallbackRes;
     }
@@ -231,14 +234,18 @@ export const createCustomerAbout = async (payload: CustomerAboutPayload | FormDa
 };
 
 /**
- * PATCH customers/about
+ * PATCH customers/about OR superAdmin/admin/:adminId/about
  */
-export const updateCustomerAbout = async (payload: Partial<CustomerAboutPayload> | FormData): Promise<CustomerAboutResponse> => {
+export const updateCustomerAbout = async (
+  payload: Partial<CustomerAboutPayload> | FormData,
+  adminId?: string
+): Promise<CustomerAboutResponse> => {
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/about` : 'customers/about';
   try {
-    const response = await api.patch('customers/about', payload);
+    const response = await api.patch(endpoint, payload);
     return (response as any)?.data || response;
   } catch (error: any) {
-    if (error?.response?.status === 404 || error?.response?.status === 405) {
+    if (!adminId && (error?.response?.status === 404 || error?.response?.status === 405)) {
       const fallbackRes = await api.patch('customers/info', payload);
       return (fallbackRes as any)?.data || fallbackRes;
     }
@@ -252,35 +259,36 @@ export const updateCustomerAbout = async (payload: Partial<CustomerAboutPayload>
 export const saveOrUpdateCustomerAbout = async (
   payload: CustomerAboutPayload | FormData,
   isUpdate: boolean = false,
-  fallbackJsonPayload?: CustomerAboutPayload
+  fallbackJsonPayload?: CustomerAboutPayload,
+  adminId?: string
 ): Promise<CustomerAboutResponse> => {
   if (isUpdate) {
     try {
-      return await updateCustomerAbout(payload);
+      return await updateCustomerAbout(payload, adminId);
     } catch (patchErr: any) {
       const status = patchErr?.response?.status;
       if (status === 404 || status === 405) {
-        return await createCustomerAbout(payload);
+        return await createCustomerAbout(payload, adminId);
       }
       if (payload instanceof FormData && fallbackJsonPayload && (status === 415 || status === 400)) {
         console.warn('[customerAboutApi] FormData PATCH failed, falling back to JSON payload with fileName');
-        return await updateCustomerAbout(fallbackJsonPayload);
+        return await updateCustomerAbout(fallbackJsonPayload, adminId);
       }
       throw patchErr;
     }
   }
 
   try {
-    return await createCustomerAbout(payload);
+    return await createCustomerAbout(payload, adminId);
   } catch (postErr: any) {
     const status = postErr?.response?.status;
     const msg = String(postErr?.response?.data?.message || '').toLowerCase();
     if (status === 409 || status === 405 || (status === 400 && msg.includes('already'))) {
-      return await updateCustomerAbout(payload);
+      return await updateCustomerAbout(payload, adminId);
     }
     if (payload instanceof FormData && fallbackJsonPayload && (status === 415 || status === 400)) {
       console.warn('[customerAboutApi] FormData POST failed, falling back to JSON payload with fileName');
-      return await createCustomerAbout(fallbackJsonPayload);
+      return await createCustomerAbout(fallbackJsonPayload, adminId);
     }
     throw postErr;
   }

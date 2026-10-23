@@ -109,14 +109,15 @@ export const parseCustomerPaymentResponse = (res: any): Partial<ProfileData> => 
 };
 
 /**
- * GET customers/payment (with fallback to customers/payments and customers/info)
+ * GET customers/payment OR superAdmin/admin/:adminId/payment
  */
-export const getCustomerPayment = async (): Promise<CustomerPaymentResponse> => {
+export const getCustomerPayment = async (adminId?: string): Promise<CustomerPaymentResponse> => {
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/payment` : 'customers/payment';
   try {
-    const response = await api.get('customers/payment');
+    const response = await api.get(endpoint);
     return (response as any)?.data || response;
   } catch (error: any) {
-    if (error?.response?.status === 404 || error?.response?.status === 405) {
+    if (!adminId && (error?.response?.status === 404 || error?.response?.status === 405)) {
       try {
         const pluralRes = await api.get('customers/payments');
         return (pluralRes as any)?.data || pluralRes;
@@ -133,26 +134,27 @@ export const getCustomerPayment = async (): Promise<CustomerPaymentResponse> => 
 };
 
 /**
- * Save or update payment methods & dynamic QR (POST/PATCH customers/payment)
+ * Save or update payment methods & dynamic QR (POST/PATCH customers/payment OR superAdmin/admin/:adminId/payment)
  */
 export const saveOrUpdateCustomerPayment = async (
-  profile: Partial<ProfileData>
+  profile: Partial<ProfileData>,
+  adminId?: string
 ): Promise<CustomerPaymentResponse> => {
   const payload = formatCustomerPaymentPayload(profile);
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/payment` : 'customers/payment';
 
-  // 1. Try POST customers/payment
+  // 1. Try POST
   try {
-    const res = await api.post('customers/payment', payload);
+    const res = await api.post(endpoint, payload);
     return (res as any)?.data || res;
   } catch (err: any) {
-    // 2. Try PATCH customers/payment
-    if (err?.response?.status === 405 || err?.response?.status === 404) {
+    // 2. Try PATCH
+    if (err?.response?.status === 405 || err?.response?.status === 404 || err?.response?.status === 409) {
       try {
-        const patchRes = await api.patch('customers/payment', payload);
+        const patchRes = await api.patch(endpoint, payload);
         return (patchRes as any)?.data || patchRes;
       } catch (patchErr: any) {
-        // 3. Try customers/payments
-        if (patchErr?.response?.status === 404 || patchErr?.response?.status === 405) {
+        if (!adminId && (patchErr?.response?.status === 404 || patchErr?.response?.status === 405)) {
           try {
             const paymentsRes = await api.post('customers/payments', payload);
             return (paymentsRes as any)?.data || paymentsRes;
@@ -161,7 +163,6 @@ export const saveOrUpdateCustomerPayment = async (
               const paymentsPatch = await api.patch('customers/payments', payload);
               return (paymentsPatch as any)?.data || paymentsPatch;
             } catch (paymentsPatchErr: any) {
-              // 4. Fallback to customers/info
               const infoRes = await api.patch('customers/info', payload);
               return (infoRes as any)?.data || infoRes;
             }

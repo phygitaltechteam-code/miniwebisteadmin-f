@@ -10,7 +10,8 @@ import GenericButton from '@/components/Forms/Buttons/GenericButton';
 import { step7SettingsHeadingsSchema } from '@/schemas/cardProfileSchema';
 import { 
   getCustomerSettings, 
-  saveOrUpdateCustomerSettings 
+  saveOrUpdateCustomerSettings,
+  resetCustomerSettings 
 } from '@/lib/api/customerSettingsApi';
 
 interface Step7Props {
@@ -19,6 +20,7 @@ interface Step7Props {
   onPrev: () => void;
   onSaveAll: () => void;
   onToast: (msg: string) => void;
+  adminId?: string;
 }
 
 export const Step7SettingsHeadings: React.FC<Step7Props> = ({
@@ -27,15 +29,16 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
   onPrev,
   onSaveAll,
   onToast,
+  adminId,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Auto-fetch existing card settings & headings on mount (GET customers/settings)
+  // Auto-fetch existing card settings & headings on mount (GET customers/settings or superAdmin/admin/:adminId/settings)
   useEffect(() => {
     let isMounted = true;
     const loadSettings = async () => {
       try {
-        const res = await getCustomerSettings();
+        const res = await getCustomerSettings(adminId);
         const raw = (res as any)?.data || (res as any)?.settings || res;
         if (!isMounted || !raw || typeof raw !== 'object') return;
 
@@ -56,7 +59,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
     };
     loadSettings();
     return () => { isMounted = false; };
-  }, []);
+  }, [adminId]);
 
   const handleToggleVisibility = (key: keyof ProfileData['visibility']) => {
     const updated = {
@@ -103,6 +106,9 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
       videos: 'VIDEOS',
       feedback: 'FEEDBACK',
     });
+    if (adminId) {
+      resetCustomerSettings(adminId).catch(() => {});
+    }
     onToast('Reset headings and bottom labels to default values.');
   };
 
@@ -132,7 +138,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
     onToast('Finalizing & submitting card settings to server...');
 
     try {
-      const res = await saveOrUpdateCustomerSettings(profile);
+      const res = await saveOrUpdateCustomerSettings(profile, adminId);
       const serverMsg = res?.message || 'Step 8: Card settings and headings saved successfully!';
       const displayMsg = `${serverMsg} (customers/settings)`;
 
@@ -197,14 +203,14 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
   ];
 
   return (
-    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-xs scroll-mt-28" id="sec-7">
+    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-7">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 pb-3 sm:pb-4 border-b border-[#c5c6cd]/40 mb-4 sm:mb-6">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-sm shrink-0">
+      <div className="flex items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b border-[#c5c6cd]/40 mb-3.5 sm:mb-5">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
             8
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-[#091426] truncate">
+          <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
             Card Settings & Section Headings
           </h2>
         </div>

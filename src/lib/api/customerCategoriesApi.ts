@@ -12,7 +12,7 @@ export interface CustomerCategory {
  * Returns the list of categories available for customers to select.
  * Falls back to superAdmin/categories if the customer endpoint is not available.
  */
-export const getCustomerCategories = async (): Promise<CustomerCategory[]> => {
+export const getCustomerCategories = async (adminId?: string): Promise<CustomerCategory[]> => {
   const parseList = (resAny: any): CustomerCategory[] | null => {
     const data =
       resAny?.data?.categories ||
@@ -44,22 +44,41 @@ export const getCustomerCategories = async (): Promise<CustomerCategory[]> => {
     }));
   };
 
-  // Try customers/categories first
+  // If in SuperAdmin mode with adminId, fetch that admin's categories
+  if (adminId) {
+    try {
+      const res = await api.get(`superAdmin/admin/${adminId}/categories`);
+      const parsed = parseList(res as any);
+      if (parsed && parsed.length > 0) return parsed;
+    } catch (err: any) {
+      // Fallback to superAdmin/categories (NEVER customers/ on superadmin side)
+      try {
+        const res = await api.get('superAdmin/categories');
+        const parsed = parseList(res as any);
+        if (parsed && parsed.length > 0) return parsed;
+      } catch {}
+    }
+    return [];
+  }
+
+  // Fallback for SuperAdmin sessions without specific adminId
+  try {
+    const rawToken = localStorage.getItem('token');
+    const isSuperAdmin = rawToken && String(rawToken).toUpperCase().includes('SUPERADMIN');
+    if (isSuperAdmin) {
+      const res = await api.get('superAdmin/categories');
+      const parsed = parseList(res as any);
+      return parsed || [];
+    }
+  } catch {}
+
+  // Regular customer only: Try customers/categories
   try {
     const res = await api.get('customers/categories');
     const parsed = parseList(res as any);
     if (parsed && parsed.length > 0) return parsed;
   } catch (err: any) {
-    // fall through to superAdmin fallback
-  }
-
-  // Fallback: superAdmin/categories (same shape)
-  try {
-    const res = await api.get('superAdmin/categories');
-    const parsed = parseList(res as any);
-    if (parsed && parsed.length > 0) return parsed;
-  } catch (err: any) {
-    console.error('[getCustomerCategories] Both category endpoints failed:', err);
+    // Normal for regular customer if endpoint unavailable
   }
 
   return [];

@@ -28,19 +28,62 @@ import { Step5PaymentQR } from './components/steps/Step5PaymentQR';
 import { Step6GalleryMedia } from './components/steps/Step6GalleryMedia';
 import { Step7YoutubeVideos } from './components/steps/Step7YoutubeVideos';
 import { Step7SettingsHeadings } from './components/steps/Step7SettingsHeadings';
+import { SuperAdminCardForge } from './pages/superadmin/SuperAdminCardForge';
 
 // ─── Super Admin Layout (sidebar only, no header) ─────────────────────────────
 function SuperAdminPortal({ onSignOut }: { onSignOut: () => void }) {
-  const [activeView, setActiveView] = useState<SuperAdminView>('categories');
+  const [activeView, setActiveView] = useState<SuperAdminView>(() => {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      return (p.get('view') as SuperAdminView) || 'categories';
+    } catch {
+      return 'categories';
+    }
+  });
+  const [selectedAdminForCard, setSelectedAdminForCard] = useState<any | null>(() => {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const aId = p.get('adminId');
+      return aId ? { id: aId } : null;
+    } catch {
+      return null;
+    }
+  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const handleOpenCardForge = (admin: any) => {
+    setSelectedAdminForCard(admin);
+    setActiveView('card-builder');
+    const targetId = admin?.id || admin?._id || '';
+    if (targetId) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', 'card-builder');
+        url.searchParams.set('adminId', targetId);
+        window.history.pushState({ view: 'card-builder', adminId: targetId }, '', url.toString());
+      } catch {}
+    }
+  };
+
+  const handleSelectView = (view: SuperAdminView) => {
+    setActiveView(view);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', view);
+      if (view !== 'card-builder') {
+        url.searchParams.delete('adminId');
+      }
+      window.history.pushState({}, '', url.toString());
+    } catch {}
+  };
+
   return (
-    <div className="min-h-screen flex bg-[#f8f9fc] font-satoshi relative">
-      {/* Desktop Sidebar */}
-      <div className="hidden md:block">
+    <div className="h-screen overflow-hidden flex bg-[#f8f9fc] font-satoshi">
+      {/* Desktop Sidebar (Fixed on the left, does NOT scroll) */}
+      <div className="hidden md:block h-screen sticky top-0 shrink-0 z-30">
         <SuperAdminSidebar
           currentView={activeView}
-          onSelectView={setActiveView}
+          onSelectView={handleSelectView}
         />
       </div>
 
@@ -54,16 +97,17 @@ function SuperAdminPortal({ onSignOut }: { onSignOut: () => void }) {
           <div className="relative z-10 animate-in slide-in-from-left duration-200">
             <SuperAdminSidebar
               currentView={activeView}
-              onSelectView={setActiveView}
+              onSelectView={handleSelectView}
               onClose={() => setIsMobileMenuOpen(false)}
             />
           </div>
         </div>
       )}
 
-      <main className="flex-1 overflow-y-auto flex flex-col min-w-0">
+      {/* Main Content Area (Only page content scrolls smoothly) */}
+      <main className="flex-1 h-screen overflow-y-auto flex flex-col min-w-0">
         {/* Top Breadcrumb & Actions Bar */}
-        <div className="bg-white border-b border-stroke px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20 shadow-xs">
+        <div className="bg-white border-b border-stroke px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20 shadow-xs shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 text-sm min-w-0">
             {/* Hamburger Button for Mobile */}
             <button
@@ -82,31 +126,71 @@ function SuperAdminPortal({ onSignOut }: { onSignOut: () => void }) {
             </span>
             <span className="text-gray-400 font-medium">/</span>
             <span className="font-bold text-gray-800 text-xs sm:text-sm truncate">
-              {activeView === 'categories' ? 'Category Master' : 'Admin Create Master'}
+              {activeView === 'categories'
+                ? 'Category Master'
+                : activeView === 'admins'
+                ? 'Admin Create Master'
+                : selectedAdminForCard
+                ? `Card Forge: ${selectedAdminForCard.fullname || selectedAdminForCard.user?.fullname || 'Admin'}`
+                : 'Digital Card Forge'}
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-all shadow-2xs shrink-0"
-          >
-            <span>🚪</span>
-            <span className="hidden sm:inline">Sign Out</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {activeView === 'card-builder' && (
+              <button
+                type="button"
+                onClick={() => handleSelectView('admins')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-2xs"
+              >
+                <span>←</span>
+                <span>Back to Admins</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-all shadow-2xs shrink-0"
+            >
+              <span>🚪</span>
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
+          </div>
         </div>
 
-        <div className="max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-5 flex-1">
-          {activeView === 'categories' && <CategoryMaster />}
-          {activeView === 'admins' && <CreateAdmin />}
-        </div>
+        {activeView === 'categories' && (
+          <div className="max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-5 flex-1">
+            <CategoryMaster />
+          </div>
+        )}
+        {activeView === 'admins' && (
+          <div className="max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-5 flex-1">
+            <CreateAdmin onOpenCardForge={handleOpenCardForge} />
+          </div>
+        )}
+        {activeView === 'card-builder' && (
+          <div className="w-full flex-1">
+            <SuperAdminCardForge
+              selectedAdmin={selectedAdminForCard}
+              onBackToAdmins={() => setActiveView('admins')}
+              onSignOut={onSignOut}
+            />
+          </div>
+        )}
       </main>
     </div>
   );
 }
 
 // ─── Admin Card Builder ───────────────────────────────────────────────────────
-function AdminCardBuilder({ onSignOut }: { onSignOut: () => void }) {
+function AdminCardBuilder({
+  onSignOut,
+  isInsideSuperAdmin = false,
+}: {
+  onSignOut: () => void;
+  isInsideSuperAdmin?: boolean;
+}) {
   const [profile, setProfile] = useState<ProfileData>(initialProfileData);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -142,25 +226,29 @@ function AdminCardBuilder({ onSignOut }: { onSignOut: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col font-sans overflow-x-hidden w-full max-w-full">
-      <Header
-        profile={profile}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onSelectStep={handleSelectStep}
-        onSignOut={onSignOut}
-      />
+    <div className={`text-[#0b1c30] flex flex-col font-sans overflow-x-hidden w-full max-w-full ${
+      isInsideSuperAdmin ? 'bg-transparent' : 'min-h-screen bg-[#f8f9ff]'
+    }`}>
+      {!isInsideSuperAdmin && (
+        <Header
+          profile={profile}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onSelectStep={handleSelectStep}
+          onSignOut={onSignOut}
+        />
+      )}
 
-      <main className="flex-1 w-full max-w-[1520px] mx-auto px-2.5 sm:px-4 lg:px-6 py-2.5 sm:py-4 flex flex-col gap-3 sm:gap-4 pb-6 sm:pb-12 overflow-x-hidden">
+      <main className="flex-1 w-full max-w-[1520px] mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-3.5 flex flex-col gap-2.5 sm:gap-4 pb-24 sm:pb-14 overflow-x-hidden">
         <TabStepper
           currentStep={currentStep}
           onSelectStep={handleSelectStep}
           productCount={profile.products.length}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 xl:gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 xl:gap-6 items-start">
           {/* Left Form Process Step Area */}
-          <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-4 sm:gap-5 min-w-0">
+          <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3.5 sm:gap-5 min-w-0">
             {currentStep === 1 && <Step1BasicDetails profile={profile} onChange={handleFieldChange} onNext={next} onToast={showToast} />}
             {currentStep === 2 && <Step2AboutSpecialities profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}
             {currentStep === 3 && <Step3ProductsServices profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}

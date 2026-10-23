@@ -62,11 +62,44 @@ export const getStoredRefreshToken = (): string | null => {
   }
 };
 
+/**
+ * Check if the currently stored authentication token belongs to a SuperAdmin user.
+ */
+export const isSuperAdminUser = (): boolean => {
+  try {
+    const raw = localStorage.getItem('token') || localStorage.getItem(QUERY_KEYS.TOKEN);
+    if (!raw) return false;
+    let parsed: any = null;
+    if (typeof raw === 'string' && (raw.startsWith('{') || raw.startsWith('['))) {
+      parsed = JSON.parse(raw);
+    }
+    const tokenStr = parsed?.accessToken || (typeof raw === 'string' && !raw.startsWith('{') ? raw : null);
+    if (!tokenStr) {
+      const userRole = parsed?.user?.role || parsed?.role || '';
+      return String(userRole).toUpperCase() === 'SUPERADMIN';
+    }
+    const decoded: any = jwtDecode(tokenStr);
+    const role = decoded?.role || parsed?.user?.role || parsed?.role || '';
+    return String(role).toUpperCase() === 'SUPERADMIN';
+  } catch {
+    return false;
+  }
+};
+
 export const api: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_SERVER_URL,
 });
 
 api.interceptors.request.use(async (req) => {
+  // Strict guard: on SuperAdmin sessions, NEVER dispatch any request to customers/*
+  if (isSuperAdminUser()) {
+    const targetUrl = req.url || '';
+    if (targetUrl.startsWith('customers/') || targetUrl.includes('/customers/')) {
+      console.warn(`[axios] Blocked customers/ route on SuperAdmin session: ${targetUrl}`);
+      return Promise.reject(new Error(`[SuperAdmin Protection] Customers endpoint blocked on SuperAdmin side: ${targetUrl}`));
+    }
+  }
+
   const accessToken = getStoredAccessToken();
   const refreshToken = getStoredRefreshToken();
 
@@ -142,6 +175,22 @@ api.interceptors.request.use(async (req) => {
 
   return req;
 });
+
+export const setActiveAdminId = (adminId: string | null) => {
+  if (adminId) {
+    sessionStorage.setItem('active_admin_id', adminId);
+  } else {
+    sessionStorage.removeItem('active_admin_id');
+  }
+};
+
+export const getActiveAdminId = (): string | null => {
+  try {
+    return sessionStorage.getItem('active_admin_id') || null;
+  } catch {
+    return null;
+  }
+};
 
 api.interceptors.response.use(
   async (res: AxiosResponse) => {

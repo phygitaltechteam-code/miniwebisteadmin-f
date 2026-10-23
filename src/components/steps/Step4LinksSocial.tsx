@@ -109,13 +109,13 @@ interface LinkRowProps {
 const LinkRow: React.FC<LinkRowProps> = ({ icon, label, value, onEdit }) => {
   const isLinked = !!value;
   return (
-    <div className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-white border border-stroke">
-      <div className="flex items-center gap-2 min-w-0">
+    <div className="flex items-center justify-between text-xs p-2 sm:p-2.5 rounded-xl bg-white border border-stroke hover:border-[#2563EB]/40 transition-colors">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
         <span className="shrink-0">{icon}</span>
-        <div className="min-w-0">
-          <span className="font-semibold text-[#091426] block">{label}</span>
+        <div className="min-w-0 flex-1">
+          <span className="font-semibold text-[#091426] block truncate">{label}</span>
           {isLinked && (
-            <span className="text-[10px] text-gray-400 font-mono truncate block max-w-[160px]">
+            <span className="text-[10px] text-gray-400 font-mono truncate block max-w-[140px] sm:max-w-xs">
               {value!.replace(/^https?:\/\//, '').replace(/^mailto:/, '').replace(/^tel:/, '')}
             </span>
           )}
@@ -124,13 +124,13 @@ const LinkRow: React.FC<LinkRowProps> = ({ icon, label, value, onEdit }) => {
       <button
         type="button"
         onClick={onEdit}
-        className={`text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors shrink-0 ml-2 ${
+        className={`text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-1 rounded-lg transition-colors shrink-0 ml-1.5 ${
           isLinked
             ? 'bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE]'
             : 'text-gray-600 bg-gray-100 hover:bg-[#EFF6FF] hover:text-[#2563EB]'
         }`}
       >
-        {isLinked ? 'LINKED ✓' : '+ ADD LINK'}
+        {isLinked ? 'LINKED ✓' : '+ ADD'}
       </button>
     </div>
   );
@@ -182,21 +182,22 @@ interface Step4Props {
   onNext: () => void;
   onPrev: () => void;
   onToast: (msg: string) => void;
+  adminId?: string;
 }
 
 export const Step4LinksSocial: React.FC<Step4Props> = ({
-  profile, onChange, onNext, onPrev, onToast,
+  profile, onChange, onNext, onPrev, onToast, adminId,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activePopup, setActivePopup] = useState<PopupKey | null>(null);
   const [showMore, setShowMore] = useState(false);
 
-  // Hydrate from API on mount
+  // Hydrate from API on mount (GET customers/links or superAdmin/admin/:adminId/links)
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
       try {
-        const res = await getCustomerLinks();
+        const res = await getCustomerLinks(adminId);
         // The response wrapper: { statusCode, status, message, data: { ... } }
         const raw = res?.data || res;
         if (!isMounted || !raw || typeof raw !== 'object') return;
@@ -211,7 +212,7 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
     };
     load();
     return () => { isMounted = false; };
-  }, []);
+  }, [adminId]);
 
   // ── Popup helpers ────────────────────────────────────────────────────────
 
@@ -232,7 +233,7 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
     setIsSubmitting(true);
     const toastId = toast.loading('Saving links...');
     try {
-      const res = await saveOrUpdateCustomerLinks(profile);
+      const res = await saveOrUpdateCustomerLinks(profile, adminId);
       const msg = res?.message || 'Links saved successfully!';
       toast.success(msg, { id: toastId, duration: 4000 });
       onToast(`✅ ${msg}`);
@@ -266,12 +267,12 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
         />
       )}
 
-      <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-xs scroll-mt-28" id="sec-4">
+      <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-4">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#c5c6cd]/40 mb-4 sm:mb-5">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-sm shrink-0">4</div>
-            <h2 className="text-base sm:text-lg font-bold text-[#091426] truncate">Links & Social Store</h2>
+        <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-[#c5c6cd]/40 mb-3.5 sm:mb-5">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">4</div>
+            <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">Links & Social Store</h2>
           </div>
         </div>
 

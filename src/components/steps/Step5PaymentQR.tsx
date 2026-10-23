@@ -21,6 +21,7 @@ interface Step5Props {
   onNext: () => void;
   onPrev: () => void;
   onToast: (msg: string) => void;
+  adminId?: string;
 }
 
 export const Step5PaymentQR: React.FC<Step5Props> = ({
@@ -29,16 +30,17 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
   onNext,
   onPrev,
   onToast,
+  adminId,
 }) => {
   const [showAccountNo, setShowAccountNo] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Auto-fetch existing payment info on mount (GET customers/payment)
+  // Auto-fetch existing payment info on mount (GET customers/payment or superAdmin/admin/:adminId/payment)
   useEffect(() => {
     let isMounted = true;
     const loadPayment = async () => {
       try {
-        const res = await getCustomerPayment();
+        const res = await getCustomerPayment(adminId);
         const parsed = parseCustomerPaymentResponse(res);
         if (!isMounted) return;
 
@@ -73,7 +75,7 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
     };
     loadPayment();
     return () => { isMounted = false; };
-  }, []);
+  }, [adminId]);
 
   // Dynamic UPI string
   const upiId = profile.upiId || '9225812831@ybl';
@@ -140,7 +142,7 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
     onToast('Submitting payment & UPI details to server...');
 
     try {
-      const res = await saveOrUpdateCustomerPayment(profile);
+      const res = await saveOrUpdateCustomerPayment(profile, adminId);
       const serverMsg = res?.message || 'Step 5: Payment details saved successfully!';
       const displayMsg = `${serverMsg} (customers/payment)`;
 
@@ -178,23 +180,23 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
   };
 
   return (
-    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-xs scroll-mt-28" id="sec-5">
+    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-5">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#c5c6cd]/40 mb-4 sm:mb-5">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-sm shrink-0">
+      <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-[#c5c6cd]/40 mb-3.5 sm:mb-5">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
             5
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-[#091426] truncate">
+          <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
             Payment Methods & Dynamic UPI QR
           </h2>
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-5">
         {/* ─── Dynamic UPI Address & Live Generated QR ─────────────── */}
-        <div className="p-4 sm:p-5 rounded-2xl border border-blue-200 bg-[#f8faff]">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="p-3 sm:p-5 rounded-2xl border border-blue-200 bg-[#f8faff]">
+          <div className="flex items-center gap-2 mb-2.5 sm:mb-3">
             <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB] animate-ping" />
             <h3 className="text-xs font-bold text-[#091426] uppercase tracking-wider">
               Automatic Dynamic UPI QR Generator

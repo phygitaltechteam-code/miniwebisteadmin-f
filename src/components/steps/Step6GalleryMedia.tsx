@@ -20,6 +20,7 @@ interface Step6Props {
   onNext: () => void;
   onPrev: () => void;
   onToast: (msg: string) => void;
+  adminId?: string;
 }
 
 export const Step6GalleryMedia: React.FC<Step6Props> = ({
@@ -28,6 +29,7 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
   onNext,
   onPrev,
   onToast,
+  adminId,
 }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [photoTitle, setPhotoTitle] = useState('');
@@ -37,12 +39,12 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
   const [isCompressing, setIsCompressing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Auto-fetch existing photo gallery on mount (GET customers/gallery)
+  // Auto-fetch existing photo gallery on mount (GET customers/gallery or superAdmin/admin/:adminId/gallery)
   useEffect(() => {
     let isMounted = true;
     const loadGallery = async () => {
       try {
-        const res = await getCustomerGallery();
+        const res = await getCustomerGallery(adminId);
         const normalized = parseCustomerGalleryResponse(res);
         if (isMounted && normalized.length > 0 && (!profile.galleryImages || profile.galleryImages.length === 0)) {
           onChange('galleryImages', normalized);
@@ -53,7 +55,7 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
     };
     loadGallery();
     return () => { isMounted = false; };
-  }, []);
+  }, [adminId]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -137,7 +139,7 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
 
     try {
       // Sends array of { title, description, image }
-      const res = await saveOrUpdateCustomerGallery(profile.galleryImages || []);
+      const res = await saveOrUpdateCustomerGallery(profile.galleryImages || [], adminId);
       const serverMsg = res?.message || 'Step 6: Photo Gallery saved successfully!';
       const displayMsg = `${serverMsg} (customers/gallery)`;
 
@@ -173,19 +175,19 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
   };
 
   return (
-    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-xs scroll-mt-28" id="sec-6">
+    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 pb-3 sm:pb-4 border-b border-[#c5c6cd]/40 mb-4 sm:mb-6">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-sm shrink-0">
+      <div className="flex items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b border-[#c5c6cd]/40 mb-3.5 sm:mb-5">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
             6
           </div>
-          <div className="flex items-center gap-2 flex-wrap min-w-0">
-            <h2 className="text-base sm:text-lg font-bold text-[#091426] truncate">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+            <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
               Photo Gallery
             </h2>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#2563EB] text-white font-bold shrink-0">
-              {profile.galleryImages.length} photos
+            <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-[#2563EB] text-white font-bold shrink-0">
+              {profile.galleryImages.length}
             </span>
           </div>
         </div>
@@ -193,16 +195,16 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
         <GenericButton
           type="button"
           onClick={() => setShowAddForm(true)}
-          className="!px-3 sm:!px-4 !py-1.5 sm:!py-2 !text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-md shadow-[#2563EB]/20"
+          className="!px-2.5 sm:!px-4 !py-1 sm:!py-2 !text-xs font-bold flex items-center gap-1 sm:gap-1.5 shrink-0 shadow-md shadow-[#2563EB]/20"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span>Add Photo</span>
         </GenericButton>
       </div>
 
-      {/* Add Photo Inline Form (Same as YouTube Video Add) */}
+      {/* Add Photo Inline Form */}
       {showAddForm && (
-        <div className="mb-6 p-5 rounded-2xl bg-[#EFF6FF] border border-[#DBEAFE] space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="mb-4 sm:mb-6 p-3.5 sm:p-5 rounded-2xl bg-[#EFF6FF] border border-[#DBEAFE] space-y-3.5 sm:space-y-4 animate-in fade-in zoom-in-95 duration-150">
           <h4 className="text-xs font-bold text-[#091426] uppercase tracking-wider">
             Add Photo to Gallery
           </h4>

@@ -36,6 +36,7 @@ type GenericTableProps<T> = {
   onDelete?: (item: T) => void;
   paginationOff?: boolean;
   onView?: (item: T) => void;
+  onRowClick?: (item: T) => void;
   showBackButton?: boolean;
   onBack?: () => void;
   headerAction?: React.ReactNode;
@@ -52,6 +53,7 @@ export const GenericTable = <T,>({
   onDelete: handleDelete,
   paginationOff = false,
   onView,
+  onRowClick,
   showBackButton = false,
   onBack,
   headerAction,
@@ -159,14 +161,14 @@ export const GenericTable = <T,>({
           />
         </div>
       )}
-      <div className="max-w-full overflow-x-auto">
+      <div className="max-w-full overflow-x-auto rounded-lg border border-slate-200 dark:border-strokedark">
         <table className="w-full table-auto">
           <thead>
-            <tr className="bg-gray-2 text-left dark:bg-meta-4">
+            <tr className="bg-[#1E40AF] text-left text-white shadow-xs dark:bg-blue-950">
               {columns.map((column, index) => (
                 <th
                   key={index}
-                  className={`min-w-[120px] px-3 py-2.5 font-medium text-black dark:text-white ${column.className || ''}`}
+                  className={`min-w-[120px] px-3.5 py-3 font-semibold text-white tracking-wide text-xs sm:text-sm ${column.className || ''}`}
                   onClick={
                     column.sortable
                       ? () => handleSort(column.accessor as keyof T)
@@ -174,96 +176,126 @@ export const GenericTable = <T,>({
                   }
                   style={{cursor: column.sortable ? 'pointer' : 'default'}}
                 >
-                  <div className="text-sm">
-                    {column.header}{' '}
-                    {sortConfig?.key === column.accessor
-                      ? sortConfig.direction === 'asc'
-                        ? '↑'
-                        : '↓'
-                      : null}
+                  <div className="flex items-center gap-1 font-bold text-white">
+                    <span>{column.header}</span>
+                    {sortConfig?.key === column.accessor && (
+                      <span className="text-xs text-blue-200 font-bold">
+                        {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
                   </div>
                 </th>
               ))}
               {action && (
-                <th className="min-w-[100px] px-3 py-2.5">
-                  <div className="text-sm">Action</div>
+                <th className="min-w-[100px] px-3.5 py-3 font-bold text-white text-xs sm:text-sm">
+                  <div>Action</div>
                 </th>
               )}
             </tr>
           </thead>
           <tbody>
-            {paginatedData.map((item, rowIndex) => (
-              <tr key={rowIndex} className="text-sm">
-                {columns.map((column, colIndex) => {
-                  const value =
-                    typeof column.accessor === 'function'
-                      ? column.accessor(item)
-                      : item[column.accessor];
+            {paginatedData.map((item, rowIndex) => {
+              const isEven = rowIndex % 2 === 0;
+              const rowBg = isEven
+                ? 'bg-white dark:bg-boxdark'
+                : 'bg-[#F0F6FF] dark:bg-boxdark-2/60';
 
-                  return (
-                    <td
-                      key={colIndex}
-                      className="border-b border-[#eee] px-3 py-2 dark:border-strokedark"
-                      onClick={() => column.onCellClick?.(item)} // 👈 Trigger click
-                      style={{
-                        cursor: column.onCellClick ? 'pointer' : 'default',
-                      }} // 👈 Show pointer
-                    >
-                      <div className="py-1.5">
-                        {column.render
-                          ? column.render(item)
-                          : typeof value === 'string'
+              return (
+                <tr
+                  key={rowIndex}
+                  className={`text-sm ${rowBg} ${
+                    onRowClick
+                      ? 'cursor-pointer hover:bg-blue-100/70 dark:hover:bg-meta-4 transition-colors'
+                      : 'hover:bg-blue-100/40 dark:hover:bg-meta-4 transition-colors'
+                  }`}
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest('button, a, input, select, svg, .no-row-click')) return;
+                    onRowClick?.(item);
+                  }}
+                >
+                  {columns.map((column, colIndex) => {
+                    const value =
+                      typeof column.accessor === 'function'
+                        ? column.accessor(item)
+                        : item[column.accessor];
+
+                    return (
+                      <td
+                        key={colIndex}
+                        className="border-b border-slate-100 px-3.5 py-2.5 text-slate-800 dark:border-strokedark dark:text-slate-200"
+                        onClick={() => {
+                          if (column.onCellClick) {
+                            column.onCellClick(item);
+                          }
+                        }}
+                        style={{
+                          cursor: column.onCellClick
+                            ? 'pointer'
+                            : onRowClick
+                            ? 'pointer'
+                            : 'default',
+                        }}
+                      >
+                        <div className="py-1.5">
+                          {column.render
+                            ? column.render(item)
+                            : React.isValidElement(value)
                             ? value
-                            : JSON.stringify(value)}
-                        {column.buttons && (
-                          <div className="mt-1.5 space-x-2">
-                            {column.buttons.map((button, btnIndex) => (
-                              <button
-                                key={btnIndex}
-                                onClick={() => button.onClick(item)}
-                                className={`rounded px-2 py-1 text-xs ${button.className || ''}`}
-                              >
-                                {button.icon || button.label}
-                              </button>
-                            ))}
-                          </div>
+                            : typeof value === 'string' || typeof value === 'number'
+                            ? value
+                            : value === null || value === undefined
+                            ? ''
+                            : String(value)}
+                          {column.buttons && (
+                            <div className="mt-1.5 space-x-2">
+                              {column.buttons.map((button, btnIndex) => (
+                                <button
+                                  key={btnIndex}
+                                  onClick={() => button.onClick(item)}
+                                  className={`rounded px-2 py-1 text-xs ${button.className || ''}`}
+                                >
+                                  {button.icon || button.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  {action && (
+                    <td className="border-b border-slate-100 px-3.5 py-2.5 dark:border-strokedark">
+                      <div className="flex items-center space-x-2 py-1.5 sm:block sm:space-x-0 sm:space-y-2">
+                        {onView && (
+                          <button
+                            className="hover:bg-blue-100 rounded p-1.5 text-slate-600 hover:text-blue-700 dark:hover:bg-meta-4 transition-colors"
+                            onClick={() => onView(item)}
+                          >
+                            <FiEye className="h-4 w-4" />
+                          </button>
+                        )}
+                        {handleEdit && (
+                          <button
+                            className="hover:bg-blue-100 rounded p-1.5 text-slate-600 hover:text-blue-700 dark:hover:bg-meta-4 transition-colors"
+                            onClick={() => handleEdit(item)}
+                          >
+                            <FiEdit className="h-4 w-4" />
+                          </button>
+                        )}
+                        {handleDelete && (
+                          <button
+                            className="hover:bg-rose-100 rounded p-1.5 text-slate-600 hover:text-rose-600 dark:hover:bg-meta-4 transition-colors"
+                            onClick={() => handleDelete(item)}
+                          >
+                            <MdDelete className="h-4 w-4" />
+                          </button>
                         )}
                       </div>
                     </td>
-                  );
-                })}
-                {action && (
-                  <td className="border-b border-[#eee] px-3 py-2 dark:border-strokedark">
-                    <div className="flex items-center space-x-2 py-1.5 sm:block sm:space-x-0 sm:space-y-2">
-                      {onView && (
-                        <button
-                          className="hover:bg-gray-100 rounded p-1.5 dark:hover:bg-meta-4"
-                          onClick={() => onView(item)}
-                        >
-                          <FiEye className="h-4 w-4" />
-                        </button>
-                      )}
-                      {handleEdit && (
-                        <button
-                          className="hover:bg-gray-100 rounded p-1.5 dark:hover:bg-meta-4"
-                          onClick={() => handleEdit(item)}
-                        >
-                          <FiEdit className="h-4 w-4" />
-                        </button>
-                      )}
-                      {handleDelete && (
-                        <button
-                          className="hover:bg-gray-100 rounded p-1.5 dark:hover:bg-meta-4"
-                          onClick={() => handleDelete(item)}
-                        >
-                          <MdDelete className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                )}
-              </tr>
-            ))}
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -98,9 +98,13 @@ export const parseCustomerGalleryResponse = (res: any): GalleryImage[] => {
 };
 
 /**
- * GET customers/gallery (with fallback to customers/info)
+ * GET customers/gallery OR superAdmin/admin/:adminId/gallery
  */
-export const getCustomerGallery = async (): Promise<CustomerGalleryResponse> => {
+export const getCustomerGallery = async (adminId?: string): Promise<CustomerGalleryResponse> => {
+  if (adminId) {
+    const response = await api.get(`superAdmin/admin/${adminId}/gallery`);
+    return (response as any)?.data || response;
+  }
   try {
     const response = await api.get('customers/gallery');
     return (response as any)?.data || response;
@@ -175,7 +179,7 @@ export const formatSingleGalleryFormData = (item: any): FormData => {
 };
 
 /**
- * Format gallery data as multipart/form-data for customers/gallery
+ * Format gallery data as multipart/form-data for customers/gallery or superAdmin/admin/:adminId/gallery
  * Sends separate title, description, image fields (not wrapped in 'gallery')
  */
 export const formatGalleryFormData = (
@@ -216,10 +220,11 @@ export const formatGalleryFormData = (
 };
 
 /**
- * Save or update gallery (POST customers/gallery as FormData with separate title, description, image fields)
+ * Save or update gallery (POST customers/gallery or superAdmin/admin/:adminId/gallery as FormData)
  */
 export const saveOrUpdateCustomerGallery = async (
-  profileOrList: any
+  profileOrList: any,
+  adminId?: string
 ): Promise<CustomerGalleryResponse> => {
   const list = Array.isArray(profileOrList)
     ? profileOrList
@@ -229,27 +234,46 @@ export const saveOrUpdateCustomerGallery = async (
     return { success: true, message: 'No gallery photos to upload' };
   }
 
+  const baseEndpoint = adminId ? `superAdmin/admin/${adminId}/gallery` : 'customers/gallery';
+
   const uploadSingle = async (item: any): Promise<any> => {
     const formData = formatSingleGalleryFormData(item);
+    const hasRealId = item.id && !String(item.id).startsWith('img-') && !String(item.id).startsWith('temp-');
+
+    if (adminId && hasRealId) {
+      try {
+        const patchRes = await api.patch(`${baseEndpoint}/${item.id}`, formData);
+        return (patchRes as any)?.data || patchRes;
+      } catch (patchErr: any) {
+        if (patchErr?.response?.status === 404 || patchErr?.response?.status === 405) {
+          const postRes = await api.post(baseEndpoint, formData);
+          return (postRes as any)?.data || postRes;
+        }
+        throw patchErr;
+      }
+    }
+
     try {
-      const res = await api.post('customers/gallery', formData);
+      const res = await api.post(baseEndpoint, formData);
       return (res as any)?.data || res;
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 405 || status === 404) {
         try {
-          const patchRes = await api.patch('customers/gallery', formData);
+          const patchRes = await api.patch(baseEndpoint, formData);
           return (patchRes as any)?.data || patchRes;
         } catch {
-          const pluralRes = await api.post('customers/galleries', formData);
-          return (pluralRes as any)?.data || pluralRes;
+          if (!adminId) {
+            const pluralRes = await api.post('customers/galleries', formData);
+            return (pluralRes as any)?.data || pluralRes;
+          }
         }
       }
       throw err;
     }
   };
 
-  // If single item, send as a single FormData with separate title, image, description fields
+  // If single item, send as a single FormData
   if (list.length === 1) {
     return await uploadSingle(list[0]);
   }
@@ -257,7 +281,7 @@ export const saveOrUpdateCustomerGallery = async (
   // If multiple items, try batch FormData first
   try {
     const batchFormData = formatGalleryFormData(list);
-    const res = await api.post('customers/gallery', batchFormData);
+    const res = await api.post(baseEndpoint, batchFormData);
     return (res as any)?.data || res;
   } catch (err: any) {
     // If batch fails, upload each photo individually
@@ -270,12 +294,50 @@ export const saveOrUpdateCustomerGallery = async (
   }
 };
 
-export const createCustomerGallery = async (payload: any): Promise<CustomerGalleryResponse> => {
-  return saveOrUpdateCustomerGallery(payload);
+export const deleteCustomerGallery = async (
+  id: string | number,
+  adminId?: string
+): Promise<any> => {
+  const endpoint = adminId
+    ? `superAdmin/admin/${adminId}/gallery/${id}`
+    : `customers/gallery/${id}`;
+  try {
+    const res = await api.delete(endpoint);
+    return (res as any)?.data || res;
+  } catch (err) {
+    console.warn(`Could not delete gallery item ${id}:`, err);
+    return null;
+  }
 };
 
-export const updateCustomerGallery = async (payload: any): Promise<CustomerGalleryResponse> => {
-  return saveOrUpdateCustomerGallery(payload);
+export const bulkDeleteCustomerGallery = async (
+  ids: (string | number)[],
+  adminId?: string
+): Promise<any> => {
+  const endpoint = adminId
+    ? `superAdmin/admin/${adminId}/gallery`
+    : 'customers/gallery';
+  try {
+    const res = await api.delete(endpoint, { data: { ids } });
+    return (res as any)?.data || res;
+  } catch (err) {
+    console.warn('Could not bulk delete gallery items:', err);
+    return null;
+  }
+};
+
+export const createCustomerGallery = async (
+  payload: any,
+  adminId?: string
+): Promise<CustomerGalleryResponse> => {
+  return saveOrUpdateCustomerGallery(payload, adminId);
+};
+
+export const updateCustomerGallery = async (
+  payload: any,
+  adminId?: string
+): Promise<CustomerGalleryResponse> => {
+  return saveOrUpdateCustomerGallery(payload, adminId);
 };
 
 // Re-export video API utilities from customerVideosApi

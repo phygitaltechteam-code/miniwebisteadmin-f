@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tag, UserPlus, ChevronRight, Shield, X } from 'lucide-react';
 
-export type SuperAdminView = 'categories' | 'admins';
+export type SuperAdminView = 'categories' | 'admins' | 'card-builder';
 
 interface SuperAdminSidebarProps {
   currentView: SuperAdminView;
