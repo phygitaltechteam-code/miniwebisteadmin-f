@@ -9,7 +9,7 @@ export {IoCashOutline as CashIcon} from 'react-icons/io5';
 export {BsBookmarkPlus as EPinIcon} from 'react-icons/bs';
 export {RiBarChartFill as ReportIcon} from 'react-icons/ri';
 export {FaRegUser as ProfileIcon} from 'react-icons/fa';
-export {TbTool as ToolIcon} from 'react-icons/tb';
+export {Wrench as ToolIcon} from 'lucide-react';
 export {IoSettingsOutline as SettingIcon} from 'react-icons/io5';
 export {FaRegCalendarAlt as CalendarIcon} from 'react-icons/fa';
 export {GrFormPrevious as PrevIcon} from 'react-icons/gr';

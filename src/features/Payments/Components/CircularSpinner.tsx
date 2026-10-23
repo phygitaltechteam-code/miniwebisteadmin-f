@@ -36,7 +36,7 @@ export const CircularSpinner: React.FC<CircularSpinnerProps> = ({
         viewBox={`0 0 ${size} ${size}`}
         className="animate-spin-slow -rotate-90 transform"
       >
-        {/* Background Track (Lighter Orange) */}
+        {/* Background Track (Lighter Blue) */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -47,7 +47,7 @@ export const CircularSpinner: React.FC<CircularSpinnerProps> = ({
           className="text-primary/10"
         />
 
-        {/* Progress Arc (Darker Orange) */}
+        {/* Progress Arc (Darker Blue) */}
         {/* We use stroke-dasharray to create the open circle look */}
         <circle
           cx={size / 2}

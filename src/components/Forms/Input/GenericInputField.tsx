@@ -1,19 +1,24 @@
 import React from 'react';
-import {useFormContext, RegisterOptions} from 'react-hook-form';
+import { useFormContext, RegisterOptions } from 'react-hook-form';
 
 interface InputProps {
-  name: string;
+  name?: string;
   label?: string;
   type?: string;
   placeholder?: string;
   validation?: RegisterOptions;
   disabled?: boolean;
-  defaultValue?: string;
+  defaultValue?: string | number;
   required?: boolean;
+  value?: string | number;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  className?: string;
+  inputClassName?: string;
+  prefix?: React.ReactNode;
 }
 
 const GenericInputField: React.FC<InputProps> = ({
-  name,
+  name = '',
   label,
   type = 'text',
   placeholder,
@@ -21,43 +26,66 @@ const GenericInputField: React.FC<InputProps> = ({
   disabled = false,
   defaultValue,
   required = false,
+  value,
+  onChange,
+  className = '',
+  inputClassName = '',
+  prefix,
 }) => {
-  const {
-    register,
-    formState: {errors},
-    setValue,
-  } = useFormContext();
+  let formContext: any = null;
+  try {
+    formContext = useFormContext();
+  } catch {
+    formContext = null;
+  }
+
+  const isRHF = formContext && name && value === undefined;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const {value} = e.target;
-    if (type === 'number') {
-      setValue(name, Number(value));
+    if (onChange) {
+      onChange(e);
+    } else if (isRHF && type === 'number') {
+      formContext.setValue(name, Number(e.target.value));
     }
   };
 
+  const errorMessage =
+    isRHF && formContext?.formState?.errors?.[name]?.message
+      ? String(formContext.formState.errors[name].message)
+      : undefined;
+
   return (
-    <div className="w-full">
+    <div className={`w-full ${className}`}>
       {label && (
-        <label className="mb-2.5 block text-black dark:text-white">
+        <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-200">
           {label}
-          <span className="text-lg font-bold text-red-600">
-            &nbsp;{required && '*'}
-          </span>
+          {required && <span className="text-sm font-bold text-red-500">&nbsp;*</span>}
         </label>
       )}
 
-      <input
-        type={type}
-        placeholder={placeholder}
-        className="w-full rounded border-[1.7px] border-stroke bg-transparent p-2 px-3 text-black outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
-        disabled={disabled}
-        defaultValue={defaultValue}
-        {...register(name, validation)}
-        onChange={handleInputChange} // Handle the number conversion for number types
-      />
-      {errors[name] && (
-        <p className="mt-1 text-sm text-red-500">
-          {errors[name]?.message as string}
+      <div className="relative flex items-center">
+        {prefix && (
+          <div className="absolute left-3 flex items-center pointer-events-none text-gray-400">
+            {prefix}
+          </div>
+        )}
+        <input
+          type={type}
+          placeholder={placeholder}
+          className={`w-full rounded-xl border border-stroke bg-white py-2.5 text-xs text-black outline-none transition focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]/25 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-[#2563EB] ${
+            prefix ? 'pl-9 pr-3.5' : 'px-3.5'
+          } ${inputClassName}`}
+          disabled={disabled}
+          defaultValue={defaultValue}
+          {...(isRHF ? formContext.register(name, validation) : {})}
+          value={value}
+          onChange={handleInputChange}
+        />
+      </div>
+
+      {errorMessage && (
+        <p className="mt-1 text-xs text-red-500 font-medium">
+          {errorMessage}
         </p>
       )}
     </div>

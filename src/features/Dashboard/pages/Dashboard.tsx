@@ -41,7 +41,7 @@ const Dashboard: React.FC = () => {
           </p>
           <button
             onClick={() => refetch()}
-            className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-white hover:bg-orange-600"
+            className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-white hover:bg-blue-700"
           >
             <MdRefresh />
             Retry
@@ -60,7 +60,7 @@ const Dashboard: React.FC = () => {
           </p>
           <button
             onClick={() => refetch()}
-            className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-white hover:bg-orange-600"
+            className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-white hover:bg-blue-700"
           >
             <MdRefresh />
             Refresh

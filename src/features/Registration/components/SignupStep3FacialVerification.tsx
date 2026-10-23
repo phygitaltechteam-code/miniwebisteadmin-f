@@ -59,8 +59,8 @@ const SignupStep3FacialVerification: FC<SignupStep3FacialVerificationProps> = ({
   };
 
   return (
-    <div className="dark:bg-gray-950 flex min-h-screen w-full justify-center bg-white font-['Inter'] antialiased selection:bg-[#F57F3D]/30 md:p-6">
-      <div className="relative mx-auto w-full max-w-[min(390px,95vw,500px)] overflow-hidden rounded-2xl bg-white dark:bg-[#221610] md:min-h-[700px] md:max-w-[800px]">
+    <div className="dark:bg-gray-950 flex min-h-screen w-full justify-center bg-white font-['Inter'] antialiased selection:bg-[#2563EB]/30 md:p-6">
+      <div className="relative mx-auto w-full max-w-[min(390px,95vw,500px)] overflow-hidden rounded-2xl bg-white dark:bg-slate-900 md:min-h-[700px] md:max-w-[800px]">
         {/* Hidden file input for photo upload */}
         <input
           type="file"
@@ -72,12 +72,12 @@ const SignupStep3FacialVerification: FC<SignupStep3FacialVerificationProps> = ({
 
         {/* Background elements - simplified for white theme */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="from-[#F57F3D]/3 absolute -right-40 -top-40 size-[400px] rounded-full bg-gradient-to-br to-transparent blur-3xl" />
-          <div className="from-[#F57F3D]/3 absolute -bottom-40 -left-40 size-[400px] rounded-full bg-gradient-to-tr to-transparent blur-3xl" />
+          <div className="from-[#2563EB]/3 absolute -right-40 -top-40 size-[400px] rounded-full bg-gradient-to-br to-transparent blur-3xl" />
+          <div className="from-[#2563EB]/3 absolute -bottom-40 -left-40 size-[400px] rounded-full bg-gradient-to-tr to-transparent blur-3xl" />
         </div>
 
         {/* Sticky header */}
-        <div className="sticky top-0 z-20 flex items-center justify-between bg-white/95 p-4 pb-2 backdrop-blur-sm dark:bg-[#221610]/95 md:p-6 md:pb-3">
+        <div className="sticky top-0 z-20 flex items-center justify-between bg-white/95 p-4 pb-2 backdrop-blur-sm dark:bg-slate-900/95 md:p-6 md:pb-3">
           <button
             onClick={onBack}
             className="flex size-12 shrink-0 items-center justify-center rounded-full text-[#0d131c] transition-colors hover:bg-slate-100 dark:text-white dark:hover:bg-slate-800 md:size-14"
@@ -94,9 +94,9 @@ const SignupStep3FacialVerification: FC<SignupStep3FacialVerificationProps> = ({
         {/* Progress bar */}
         <div className="relative z-10 flex w-full flex-col items-center justify-center gap-2 px-6 py-4 md:px-8 md:py-6">
           <div className="flex w-full flex-row items-center justify-center gap-2 md:gap-3">
-            <div className="h-1.5 flex-1 rounded-full bg-[#F57F3D]" />
-            <div className="h-1.5 flex-1 rounded-full bg-[#F57F3D]" />
-            <div className="h-1.5 flex-1 rounded-full bg-[#F57F3D]" />
+            <div className="h-1.5 flex-1 rounded-full bg-[#2563EB]" />
+            <div className="h-1.5 flex-1 rounded-full bg-[#2563EB]" />
+            <div className="h-1.5 flex-1 rounded-full bg-[#2563EB]" />
           </div>
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400 md:text-sm">
             Step 3 of 3 • Facial Verification
@@ -120,12 +120,12 @@ const SignupStep3FacialVerification: FC<SignupStep3FacialVerificationProps> = ({
             <div className="relative mx-auto h-[340px] w-[280px] md:h-[400px] md:w-[320px]">
               {/* Upload overlay frame */}
               <div
-                className={`absolute inset-0 rounded-[40%] border-2 border-[#F57F3D] ${
+                className={`absolute inset-0 rounded-[40%] border-2 border-[#2563EB] ${
                   isUploading ? 'animate-pulse' : ''
                 } pointer-events-none z-20 opacity-70`}
               />
 
-              <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[40%] border-4 border-[#F57F3D] bg-white shadow-xl dark:bg-slate-900">
+              <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[40%] border-4 border-[#2563EB] bg-white shadow-xl dark:bg-slate-900">
                 {previewUrl ? (
                   <div className="flex h-full w-full flex-col items-center justify-center">
                     <img
@@ -144,7 +144,7 @@ const SignupStep3FacialVerification: FC<SignupStep3FacialVerificationProps> = ({
                     onClick={handleUploadClick}
                     className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-4 p-6 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
                   >
-                    <span className="material-symbols-outlined text-7xl text-[#F57F3D] md:text-8xl">
+                    <span className="material-symbols-outlined text-7xl text-[#2563EB] md:text-8xl">
                       upload
                     </span>
                     <p className="text-center text-sm font-medium text-slate-600 dark:text-slate-300 md:text-base">
@@ -160,7 +160,7 @@ const SignupStep3FacialVerification: FC<SignupStep3FacialVerificationProps> = ({
 
             {/* Status message */}
             {isUploading ? (
-              <p className="mt-6 animate-pulse text-base font-semibold text-[#F57F3D] md:text-lg">
+              <p className="mt-6 animate-pulse text-base font-semibold text-[#2563EB] md:text-lg">
                 Uploading and verifying...
               </p>
             ) : uploadedImage ? (
@@ -180,7 +180,7 @@ const SignupStep3FacialVerification: FC<SignupStep3FacialVerificationProps> = ({
               <div className="flex gap-3 md:gap-4">
                 <button
                   onClick={handleRemovePhoto}
-                  className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#F57F3D] text-base font-semibold text-[#F57F3D] transition-colors hover:bg-[#F57F3D]/10 md:h-16 md:text-lg"
+                  className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#2563EB] text-base font-semibold text-[#2563EB] transition-colors hover:bg-[#2563EB]/10 md:h-16 md:text-lg"
                 >
                   <span className="material-symbols-outlined text-[20px] md:text-[22px]">
                     delete
@@ -189,7 +189,7 @@ const SignupStep3FacialVerification: FC<SignupStep3FacialVerificationProps> = ({
                 </button>
                 <button
                   onClick={handleComplete}
-                  className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl bg-[#F57F3D] text-base font-semibold text-white shadow-[#F57F3D]/20 transition-colors hover:bg-[#e06c2e] md:h-16 md:text-lg"
+                  className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl bg-[#2563EB] text-base font-semibold text-white shadow-[#2563EB]/20 transition-colors hover:bg-[#1D4ED8] md:h-16 md:text-lg"
                 >
                   Continue
                   <span className="material-symbols-outlined text-[20px] md:text-[22px]">
@@ -201,10 +201,10 @@ const SignupStep3FacialVerification: FC<SignupStep3FacialVerificationProps> = ({
               <button
                 onClick={handleUploadClick}
                 disabled={isUploading}
-                className={`flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#F57F3D] text-base font-semibold text-white shadow-[#F57F3D]/20 transition-colors ${
+                className={`flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#2563EB] text-base font-semibold text-white shadow-[#2563EB]/20 transition-colors ${
                   isUploading
                     ? 'cursor-not-allowed opacity-50'
-                    : 'hover:bg-[#e06c2e]'
+                    : 'hover:bg-[#1D4ED8]'
                 } md:h-16 md:text-lg`}
               >
                 <span className="material-symbols-outlined text-[20px] md:text-[22px]">
@@ -240,7 +240,7 @@ const SignupStep3FacialVerification: FC<SignupStep3FacialVerificationProps> = ({
           {/* Tips - tablet responsive */}
           <div className="mt-8 grid grid-cols-2 gap-3 md:mt-10 md:grid-cols-3 md:gap-4">
             <div className="flex flex-col items-center rounded-2xl border border-slate-100 bg-white p-4 text-center shadow-sm dark:border-slate-800 dark:bg-slate-800/50 md:p-5">
-              <span className="material-symbols-outlined mb-2 text-2xl text-[#F57F3D] md:text-3xl">
+              <span className="material-symbols-outlined mb-2 text-2xl text-[#2563EB] md:text-3xl">
                 light_mode
               </span>
               <p className="text-sm font-medium text-slate-800 dark:text-slate-200 md:text-base">
@@ -251,7 +251,7 @@ const SignupStep3FacialVerification: FC<SignupStep3FacialVerificationProps> = ({
               </p>
             </div>
             <div className="flex flex-col items-center rounded-2xl border border-slate-100 bg-white p-4 text-center shadow-sm dark:border-slate-800 dark:bg-slate-800/50 md:p-5">
-              <span className="material-symbols-outlined mb-2 text-2xl text-[#F57F3D] md:text-3xl">
+              <span className="material-symbols-outlined mb-2 text-2xl text-[#2563EB] md:text-3xl">
                 face
               </span>
               <p className="text-sm font-medium text-slate-800 dark:text-slate-200 md:text-base">
@@ -262,7 +262,7 @@ const SignupStep3FacialVerification: FC<SignupStep3FacialVerificationProps> = ({
               </p>
             </div>
             <div className="col-span-2 flex flex-col items-center rounded-2xl border border-slate-100 bg-white p-4 text-center shadow-sm dark:border-slate-800 dark:bg-slate-800/50 md:col-span-1 md:p-5">
-              <span className="material-symbols-outlined mb-2 text-2xl text-[#F57F3D] md:text-3xl">
+              <span className="material-symbols-outlined mb-2 text-2xl text-[#2563EB] md:text-3xl">
                 photo_size_select_actual
               </span>
               <p className="text-sm font-medium text-slate-800 dark:text-slate-200 md:text-base">

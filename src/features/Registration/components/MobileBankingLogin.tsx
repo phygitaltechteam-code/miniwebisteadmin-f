@@ -4,7 +4,7 @@ import type {FC} from 'react';
 
 const MobileBankingLogin: FC = () => {
   return (
-    <div className="bg-gray-50 dark:bg-gray-950 flex min-h-screen w-full items-center justify-center p-4 font-['Inter'] antialiased selection:bg-[#F57F3D]/30">
+    <div className="bg-gray-50 dark:bg-gray-950 flex min-h-screen w-full items-center justify-center p-4 font-['Inter'] antialiased selection:bg-[#2563EB]/30">
       {/* Mobile frame simulation */}
       <div className="border-gray-200/60 dark:border-gray-800/60 relative mx-auto min-h-[844px] w-full max-w-[390px] overflow-hidden bg-white shadow-2xl dark:bg-[#221610]">
         {/* Background patterns */}
@@ -18,8 +18,8 @@ const MobileBankingLogin: FC = () => {
         <div className="relative z-10 flex flex-1 flex-col justify-between px-6 pb-6 pt-8">
           {/* Header */}
           <div className="flex flex-col gap-2">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#F57F3D]/10 backdrop-blur-sm">
-              <span className="material-symbols-outlined text-2xl text-[#F57F3D]">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#2563EB]/10 backdrop-blur-sm">
+              <span className="material-symbols-outlined text-2xl text-[#2563EB]">
                 account_balance_wallet
               </span>
             </div>
@@ -43,7 +43,7 @@ const MobileBankingLogin: FC = () => {
                   <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3">
                     <span className="text-lg leading-none">🇮🇳</span>
                   </div>
-                  <select className="bg-gray-50/80 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 h-14 w-full cursor-pointer appearance-none rounded-xl border pl-10 pr-8 text-base backdrop-blur-sm focus:border-[#F57F3D] focus:ring-[#F57F3D] dark:text-white">
+                  <select className="bg-gray-50/80 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 h-14 w-full cursor-pointer appearance-none rounded-xl border pl-10 pr-8 text-base backdrop-blur-sm focus:border-[#2563EB] focus:ring-[#2563EB] dark:text-white">
                     <option value="+91">+91</option>
                     <option value="+1">+1</option>
                     <option value="+44">+44</option>
@@ -56,7 +56,7 @@ const MobileBankingLogin: FC = () => {
                 </div>
 
                 <input
-                  className="bg-gray-50/80 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 placeholder-gray-400 h-14 flex-1 rounded-xl border px-4 text-base backdrop-blur-sm transition-shadow focus:border-[#F57F3D] focus:ring-[#F57F3D] dark:text-white"
+                  className="bg-gray-50/80 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 placeholder-gray-400 h-14 flex-1 rounded-xl border px-4 text-base backdrop-blur-sm transition-shadow focus:border-[#2563EB] focus:ring-[#2563EB] dark:text-white"
                   placeholder="98765 43210"
                   type="tel"
                 />
@@ -70,7 +70,7 @@ const MobileBankingLogin: FC = () => {
               </label>
               <div className="relative">
                 <input
-                  className="bg-gray-50/80 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 placeholder-gray-400 h-14 w-full rounded-xl border pl-4 pr-12 text-base backdrop-blur-sm transition-shadow focus:border-[#F57F3D] focus:ring-[#F57F3D] dark:text-white"
+                  className="bg-gray-50/80 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 placeholder-gray-400 h-14 w-full rounded-xl border pl-4 pr-12 text-base backdrop-blur-sm transition-shadow focus:border-[#2563EB] focus:ring-[#2563EB] dark:text-white"
                   placeholder="••••••••••••"
                   type="password"
                 />
@@ -90,7 +90,7 @@ const MobileBankingLogin: FC = () => {
               {/* <div className="flex justify-end pt-1">
                 <a
                   href="#"
-                  className="text-sm font-medium text-[#F57F3D] hover:underline"
+                  className="text-sm font-medium text-[#2563EB] hover:underline"
                 >
                   Forgot Password?
                 </a>
@@ -98,7 +98,7 @@ const MobileBankingLogin: FC = () => {
             </div>
 
             {/* Login Button */}
-            <button className="mt-2 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#F57F3D] text-base font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-600 active:scale-[0.99]">
+            <button className="mt-2 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#2563EB] text-base font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-600 active:scale-[0.99]">
               <span>Login</span>
               <span className="material-symbols-outlined text-sm">
                 arrow_forward
@@ -116,7 +116,7 @@ const MobileBankingLogin: FC = () => {
 
             {/* Touch ID Button */}
             <button className="border-gray-200 dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 group flex h-14 w-full items-center justify-center gap-2 rounded-xl border bg-white/50 backdrop-blur-sm transition-colors">
-              <span className="material-symbols-outlined text-[28px] text-[#F57F3D] transition-transform group-hover:scale-110">
+              <span className="material-symbols-outlined text-[28px] text-[#2563EB] transition-transform group-hover:scale-110">
                 fingerprint
               </span>
               <span className="text-gray-700 dark:text-gray-300 font-medium">
@@ -131,7 +131,7 @@ const MobileBankingLogin: FC = () => {
               Don't have an account?{' '}
               <a
                 href="#"
-                className="ml-1 font-semibold text-[#F57F3D] transition-colors hover:text-blue-600"
+                className="ml-1 font-semibold text-[#2563EB] transition-colors hover:text-blue-600"
               >
                 Create an account
               </a>

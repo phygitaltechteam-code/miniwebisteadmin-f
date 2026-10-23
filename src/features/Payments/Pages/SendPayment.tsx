@@ -236,7 +236,7 @@ const PaymentSend: React.FC<Props> = ({
                 onClick={() => setSelectedWalletType('E_PRIVATEACCOUNT')}
                 className={`flex-1 rounded-lg border py-2.5 text-xs font-bold leading-tight transition-all md:py-3 md:text-sm ${
                   selectedWalletType === 'E_PRIVATEACCOUNT'
-                    ? 'border-slate-100 bg-white text-[#F57F3d] shadow-sm dark:border-slate-700 dark:bg-[#1a2533]'
+                    ? 'border-slate-100 bg-white text-[#2563EB] shadow-sm dark:border-slate-700 dark:bg-[#1a2533]'
                     : 'border-transparent text-slate-500 hover:text-[#0d131c] dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
@@ -246,7 +246,7 @@ const PaymentSend: React.FC<Props> = ({
                 onClick={() => setSelectedWalletType('E_TEMPORYACCOUNT')}
                 className={`flex-1 rounded-lg border py-2.5 text-xs font-bold leading-tight transition-all md:py-3 md:text-sm ${
                   selectedWalletType === 'E_TEMPORYACCOUNT'
-                    ? 'border-slate-100 bg-white text-[#F57F3d] shadow-sm dark:border-slate-700 dark:bg-[#1a2533]'
+                    ? 'border-slate-100 bg-white text-[#2563EB] shadow-sm dark:border-slate-700 dark:bg-[#1a2533]'
                     : 'border-transparent text-slate-500 hover:text-[#0d131c] dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
@@ -292,7 +292,7 @@ const PaymentSend: React.FC<Props> = ({
                       {formattedValue()}
                     </div>
                     <div
-                      className={`absolute bottom-[-4px] left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#F57F3d] to-transparent transition-all duration-300 ${
+                      className={`absolute bottom-[-4px] left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#2563EB] to-transparent transition-all duration-300 ${
                         isInputActive
                           ? 'scale-x-100 opacity-100'
                           : 'scale-x-0 opacity-0'
@@ -333,7 +333,7 @@ const PaymentSend: React.FC<Props> = ({
                 {selectedFile ? (
                   <div className="flex w-full items-center justify-between gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-700 dark:bg-[#1a2533] dark:text-slate-300 md:py-2.5">
                     <div className="flex items-center gap-2 overflow-hidden">
-                      <Camera className="h-4 w-4 shrink-0 text-[#F57F3d]" />
+                      <Camera className="h-4 w-4 shrink-0 text-[#2563EB]" />
                       <span className="truncate">{selectedFile.name}</span>
                     </div>
                     <button
@@ -348,7 +348,7 @@ const PaymentSend: React.FC<Props> = ({
                     onClick={handleAttachReceipt}
                     className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-[#1a2533] dark:text-slate-300 dark:hover:bg-slate-700 md:py-2.5"
                   >
-                    <Camera className="h-4 w-4 text-[#F57F3d]" />
+                    <Camera className="h-4 w-4 text-[#2563EB]" />
                     Attach Receipt (Optional)
                   </button>
                 )}

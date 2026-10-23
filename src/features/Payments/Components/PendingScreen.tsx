@@ -45,9 +45,9 @@ const StatusScreen: React.FC = () => {
           <div className="absolute inset-0 scale-110 rounded-full bg-primary/40 blur-[40px]"></div>
 
           {/* Main Circle */}
-          <div className="relative flex h-40 w-40 items-center justify-center rounded-full border-[6px] border-white/30 bg-gradient-to-br from-[#FF9D66] to-[#D65F1E] shadow-[0_20px_40px_-10px_rgba(245,127,61,0.5),inset_0_2px_15px_rgba(255,255,255,0.4)] ring-1 ring-black/5">
+          <div className="relative flex h-40 w-40 items-center justify-center rounded-full border-[6px] border-white/30 bg-gradient-to-br from-[#60A5FA] to-[#1D4ED8] shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4),inset_0_2px_15px_rgba(255,255,255,0.4)] ring-1 ring-black/5">
             {/* Inner Bevel */}
-            <div className="absolute inset-2 flex items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-primary to-orange-700 shadow-inner">
+            <div className="absolute inset-2 flex items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-primary to-blue-800 shadow-inner">
               {/* Glassy Top Reflection */}
               <div className="pointer-events-none absolute left-0 right-0 top-0 h-1/2 rounded-t-full bg-gradient-to-b from-white/20 to-transparent"></div>
               <MdSchedule className="text-[4.5rem] text-white drop-shadow-md" />
@@ -96,7 +96,7 @@ const StatusScreen: React.FC = () => {
         {/* Action Button */}
         <div className="mt-8 w-full">
           <button
-            className="group flex h-14 w-full items-center justify-center gap-2 rounded-xl border-t border-white/20 bg-gradient-to-r from-primary to-[#E06925] text-lg font-bold text-white shadow-[0_10px_20px_-5px_rgba(245,127,61,0.4)] transition-all hover:from-[#E06925] hover:to-primary active:scale-[0.98]"
+            className="group flex h-14 w-full items-center justify-center gap-2 rounded-xl border-t border-white/20 bg-gradient-to-r from-primary to-[#1D4ED8] text-lg font-bold text-white shadow-[0_10px_20px_-5px_rgba(37,99,235,0.3)] transition-all hover:from-[#1D4ED8] hover:to-primary active:scale-[0.98]"
             onClick={() => navigate({to: '/wallet/paymentdashbord'})}
           >
             <span>Back to Dashboard</span>

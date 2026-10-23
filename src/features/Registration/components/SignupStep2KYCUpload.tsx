@@ -207,9 +207,9 @@ const SignupStep2KYCUpload: FC<SignupStep2KYCUploadProps> = ({
   return (
     <div className="dark:bg-gray-950 flex min-h-screen w-full justify-center bg-white font-['Inter'] antialiased">
       {/* Main container */}
-      <div className="relative mx-auto w-full max-w-[min(390px,95vw,500px)] overflow-hidden rounded-2xl bg-white dark:bg-[#221610] md:min-h-[600px] md:max-w-[700px]">
+      <div className="relative mx-auto w-full max-w-[min(390px,95vw,500px)] overflow-hidden rounded-2xl bg-white dark:bg-slate-900 md:min-h-[600px] md:max-w-[700px]">
         {/* Header */}
-        <div className="sticky top-0 z-20 flex items-center justify-between bg-white p-4 dark:bg-[#221610] md:p-6">
+        <div className="sticky top-0 z-20 flex items-center justify-between bg-white p-4 dark:bg-slate-900 md:p-6">
           <button
             onClick={onBack}
             className="flex size-12 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 md:size-14"
@@ -227,7 +227,7 @@ const SignupStep2KYCUpload: FC<SignupStep2KYCUploadProps> = ({
         <div className="px-6 py-4 text-center md:px-8 md:py-6">
           <div className="flex gap-2 md:gap-3">
             <div className="h-1.5 flex-1 rounded-full bg-slate-300" />
-            <div className="h-1.5 flex-1 rounded-full bg-[#F57F3D]" />
+            <div className="h-1.5 flex-1 rounded-full bg-[#2563EB]" />
             <div className="h-1.5 flex-1 rounded-full bg-slate-300" />
           </div>
           <p className="mt-2 text-xs text-slate-500 md:text-sm">
@@ -257,7 +257,7 @@ const SignupStep2KYCUpload: FC<SignupStep2KYCUploadProps> = ({
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30'
                     : validation.isValid
                       ? 'border-green-500 focus:border-green-500 focus:ring-green-500/30'
-                      : 'focus:border-[#F57F3D] focus:ring-[#F57F3D]/30'
+                      : 'focus:border-[#2563EB] focus:ring-[#2563EB]/30'
                 }`}
                 placeholder="Enter passport number (e.g. G12345678)"
                 value={formattedDisplay}
@@ -320,7 +320,7 @@ const SignupStep2KYCUpload: FC<SignupStep2KYCUploadProps> = ({
                 className={`border-gray-300 bg-gray-50 hover:bg-gray-100 mt-4 flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed p-6 text-center md:p-8 ${
                   isTouched && !file
                     ? 'hover:border-red-500'
-                    : 'hover:border-[#F57F3D]'
+                    : 'hover:border-[#2563EB]'
                 }`}
               >
                 <input
@@ -356,7 +356,7 @@ const SignupStep2KYCUpload: FC<SignupStep2KYCUploadProps> = ({
               disabled={!isFormValid()}
               className={`h-14 w-full rounded-xl text-lg font-semibold transition-all md:mx-auto md:block md:h-16 md:max-w-[400px] md:text-xl ${
                 isFormValid()
-                  ? 'bg-[#F57F3D] text-white shadow-lg shadow-[#F57F3D]/20 hover:bg-[#e06c2e]'
+                  ? 'bg-[#2563EB] text-white shadow-lg shadow-[#2563EB]/20 hover:bg-[#1D4ED8]'
                   : 'cursor-not-allowed bg-slate-200 text-slate-400'
               }`}
             >

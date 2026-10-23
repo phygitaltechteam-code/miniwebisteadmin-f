@@ -303,7 +303,7 @@ export const TransactionDetailPage: React.FC = () => {
           </p>
           <button
             onClick={handleBackToHome}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-white hover:bg-orange-600"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-white hover:bg-blue-700"
           >
             <MdArrowBack />
             Back to Dashboard
@@ -327,7 +327,7 @@ export const TransactionDetailPage: React.FC = () => {
           </p>
           <button
             onClick={handleBackToHome}
-            className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-white hover:bg-orange-600"
+            className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-white hover:bg-blue-700"
           >
             <MdArrowBack />
             Back to Dashboard
@@ -423,7 +423,7 @@ export const TransactionDetailPage: React.FC = () => {
         {/* Background Effects */}
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <div className="absolute -right-[10%] -top-[10%] h-[40%] w-[80%] rounded-full bg-blue-100/40 blur-[80px] dark:bg-blue-900/10"></div>
-          <div className="absolute -left-[10%] top-[20%] h-[30%] w-[60%] rounded-full bg-orange-100/50 blur-[70px] dark:bg-orange-900/10"></div>
+          <div className="absolute -left-[10%] top-[20%] h-[30%] w-[60%] rounded-full bg-blue-100/50 blur-[70px] dark:bg-blue-900/10"></div>
         </div>
 
         {/* Header */}
@@ -559,7 +559,7 @@ export const TransactionDetailPage: React.FC = () => {
           <div className="mt-6 w-full max-w-md space-y-3 sm:mt-8">
             <button
               onClick={handleShareReceipt}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-orange-600 active:scale-[0.98] sm:h-14 sm:text-lg"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-blue-700 active:scale-[0.98] sm:h-14 sm:text-lg"
             >
               <span>Share Receipt</span>
               <MdShare className="text-lg sm:text-[20px]" />
@@ -649,7 +649,7 @@ export const TransactionDetailPage: React.FC = () => {
           <div className="mt-6 w-full max-w-md space-y-3 sm:mt-8">
             <button
               onClick={handleBackToHome}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-semibold text-white transition-colors hover:bg-orange-600 sm:h-14"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-semibold text-white transition-colors hover:bg-blue-700 sm:h-14"
             >
               <MdRefresh />
               <span className="text-sm sm:text-base">
@@ -697,7 +697,7 @@ export const TransactionDetailPage: React.FC = () => {
         </div>
         <button
           onClick={handleBackToHome}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-white hover:bg-orange-600"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-white hover:bg-blue-700"
         >
           <MdArrowBack />
           Back to Dashboard

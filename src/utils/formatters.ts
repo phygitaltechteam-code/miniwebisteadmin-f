@@ -393,12 +393,12 @@ export const transformApiTransaction = (apiTransaction: any): Transaction => {
   const iconBgClass =
     transactionType === 'income'
       ? 'bg-green-100 dark:bg-green-900/30'
-      : 'bg-orange-100 dark:bg-orange-900/30';
+      : 'bg-blue-100 dark:bg-blue-900/30';
 
   const colorClass =
     transactionType === 'income'
       ? 'text-green-600 dark:text-green-400'
-      : 'text-orange-600 dark:text-orange-400';
+      : 'text-blue-600 dark:text-blue-400';
 
   const badgeClass =
     status === 'Approved'

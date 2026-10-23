@@ -26,7 +26,7 @@ export const theme = {
   extend: {
     colors: {
       current: 'currentColor',
-      primary:'#ff7207',
+      primary: '#2563EB',
       transparent: 'transparent',
       white: '#FFFFFF',
       black: '#1C2434',

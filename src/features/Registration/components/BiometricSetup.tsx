@@ -4,9 +4,9 @@ import type {FC} from 'react';
 
 const BiometricSetup: FC = () => {
   return (
-    <div className="bg-gray-50 dark:bg-gray-950 flex min-h-screen w-full items-center justify-center p-4 font-['Inter'] antialiased selection:bg-[#F57F3D]/30">
+    <div className="bg-gray-50 dark:bg-gray-950 flex min-h-screen w-full items-center justify-center p-4 font-['Inter'] antialiased selection:bg-[#2563EB]/30">
       {/* Mobile frame wrapper */}
-      <div className="border-gray-200/60 dark:border-gray-800/60 relative mx-auto min-h-[844px] w-full max-w-[390px] overflow-hidden bg-[#f8f6f5] shadow-2xl dark:bg-[#221610]">
+      <div className="border-gray-200/60 dark:border-gray-800/60 relative mx-auto min-h-[844px] w-full max-w-[390px] overflow-hidden bg-[#f8fafc] shadow-2xl dark:bg-[#0f172a]">
         {/* Background grid + fade */}
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <svg
@@ -30,7 +30,7 @@ const BiometricSetup: FC = () => {
             </defs>
             <rect width="100%" height="100%" fill="url(#grid-pattern)" />
           </svg>
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#f8f6f5]/40 to-[#f8f6f5] dark:via-[#221610]/40 dark:to-[#221610]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#f8fafc]/40 to-[#f8fafc] dark:via-[#0f172a]/40 dark:to-[#0f172a]" />
         </div>
 
         {/* Header with back & step indicator */}
@@ -51,22 +51,22 @@ const BiometricSetup: FC = () => {
             {/* Concentric circles */}
             <div className="pointer-events-none absolute inset-0 flex select-none items-center justify-center">
               <div className="h-[320px] w-[320px] rounded-full border border-slate-200/60 dark:border-white/5" />
-              <div className="absolute h-[240px] w-[240px] rounded-full border border-dashed border-[#F57F3D]/20 dark:border-[#F57F3D]/10" />
-              <div className="absolute flex h-[180px] w-[180px] items-center justify-center rounded-full border border-[#F57F3D]/30">
-                <div className="absolute top-0 h-3 w-1 -translate-y-1/2 bg-[#F57F3D]/40" />
-                <div className="absolute bottom-0 h-3 w-1 translate-y-1/2 bg-[#F57F3D]/40" />
-                <div className="absolute left-0 h-1 w-3 -translate-x-1/2 bg-[#F57F3D]/40" />
-                <div className="absolute right-0 h-1 w-3 translate-x-1/2 bg-[#F57F3D]/40" />
+              <div className="absolute h-[240px] w-[240px] rounded-full border border-dashed border-[#2563EB]/20 dark:border-[#2563EB]/10" />
+              <div className="absolute flex h-[180px] w-[180px] items-center justify-center rounded-full border border-[#2563EB]/30">
+                <div className="absolute top-0 h-3 w-1 -translate-y-1/2 bg-[#2563EB]/40" />
+                <div className="absolute bottom-0 h-3 w-1 translate-y-1/2 bg-[#2563EB]/40" />
+                <div className="absolute left-0 h-1 w-3 -translate-x-1/2 bg-[#2563EB]/40" />
+                <div className="absolute right-0 h-1 w-3 translate-x-1/2 bg-[#2563EB]/40" />
               </div>
             </div>
 
             {/* Central fingerprint icon */}
             <div
-              className="relative z-10 flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-white to-slate-50 shadow-2xl shadow-[#F57F3D]/10 ring-4 ring-white dark:from-slate-800 dark:to-slate-900 dark:ring-slate-800/50"
+              className="relative z-10 flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-white to-slate-50 shadow-2xl shadow-[#2563EB]/10 ring-4 ring-white dark:from-slate-800 dark:to-slate-900 dark:ring-slate-800/50"
               title="Biometric fingerprint security icon"
             >
               <span
-                className="material-symbols-outlined bg-gradient-to-br from-[#F57F3D] to-orange-600 bg-clip-text text-[64px] text-transparent"
+                className="material-symbols-outlined bg-gradient-to-br from-[#2563EB] to-blue-600 bg-clip-text text-[64px] text-transparent"
                 style={{fontSize: '64px'}}
               >
                 fingerprint
@@ -74,7 +74,7 @@ const BiometricSetup: FC = () => {
             </div>
 
             {/* Success checkmark badge */}
-            <div className="absolute bottom-10 z-20 flex translate-y-2 items-center justify-center rounded-full border-[3px] border-white bg-emerald-500 p-1.5 shadow-sm dark:border-[#221610]">
+            <div className="absolute bottom-10 z-20 flex translate-y-2 items-center justify-center rounded-full border-[3px] border-white bg-emerald-500 p-1.5 shadow-sm dark:border-[#0f172a]">
               <span
                 className="material-symbols-outlined text-[16px] text-white"
                 style={{fontSize: '16px', fontWeight: 700}}
@@ -108,7 +108,7 @@ const BiometricSetup: FC = () => {
 
           {/* Enable button */}
           <div className="mb-3 flex w-full">
-            <button className="flex h-14 w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-[#F57F3D] to-orange-600 px-5 text-base font-bold leading-normal tracking-[0.015em] text-white shadow-lg shadow-[#F57F3D]/30 transition-all hover:from-orange-500 hover:to-orange-700 active:scale-[0.98]">
+            <button className="flex h-14 w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-[#2563EB] to-blue-600 px-5 text-base font-bold leading-normal tracking-[0.015em] text-white shadow-lg shadow-[#2563EB]/30 transition-all hover:from-blue-500 hover:to-blue-700 active:scale-[0.98]">
               <span className="truncate">Enable Now</span>
             </button>
           </div>

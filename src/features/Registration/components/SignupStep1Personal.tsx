@@ -376,11 +376,11 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
   };
 
   return (
-    <div className="dark:bg-gray-950 flex min-h-screen w-full items-center justify-center bg-white font-['Inter'] antialiased selection:bg-[#F57F3D]/30 md:p-6">
+    <div className="dark:bg-gray-950 flex min-h-screen w-full items-center justify-center bg-white font-['Inter'] antialiased selection:bg-[#2563EB]/30 md:p-6">
       {/* Main container with responsive width */}
-      <div className="relative mx-auto w-full max-w-[min(390px,95vw,500px)] overflow-hidden rounded-2xl bg-white dark:bg-[#221610] md:min-h-[600px] md:max-w-[700px]">
+      <div className="relative mx-auto w-full max-w-[min(390px,95vw,500px)] overflow-hidden rounded-2xl bg-white dark:bg-slate-900 md:min-h-[600px] md:max-w-[700px]">
         {/* Header section */}
-        <div className="sticky top-0 z-20 flex items-center justify-between bg-white/95 p-4 pb-2 backdrop-blur-sm dark:bg-[#221610]/95 md:p-6 md:pb-3">
+        <div className="sticky top-0 z-20 flex items-center justify-between bg-white/95 p-4 pb-2 backdrop-blur-sm dark:bg-slate-900/95 md:p-6 md:pb-3">
           <button
             onClick={() => {
               navigate({to: '/'});
@@ -402,13 +402,13 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
             <p className="dark:text-gray-300 text-sm font-medium leading-normal text-[#0d131c]">
               Step 1 of 3
             </p>
-            <p className="text-sm font-medium text-[#F57F3D]">
+            <p className="text-sm font-medium text-[#2563EB]">
               Personal Details
             </p>
           </div>
           <div className="h-1.5 w-full rounded-full bg-[#ced9e9] dark:bg-slate-700">
             <div
-              className="h-1.5 rounded-full bg-[#F57F3D] transition-all"
+              className="h-1.5 rounded-full bg-[#2563EB] transition-all"
               style={{width: '33%'}}
             />
           </div>
@@ -439,7 +439,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                       className={`h-10 w-full rounded-md border px-3 text-sm text-[#0d131c] shadow-sm outline-none transition-all placeholder:text-[#94a3b8] focus:ring-1 md:text-base ${
                         errors.accountHolderName
                           ? 'border-red-400 focus:border-red-400 focus:ring-red-400/30 dark:border-red-500'
-                          : 'border-[#ced9e9] focus:border-[#F57F3D] focus:ring-[#F57F3D]/30 dark:border-slate-600'
+                          : 'border-[#ced9e9] focus:border-[#2563EB] focus:ring-[#2563EB]/30 dark:border-slate-600'
                       } bg-white dark:bg-slate-800/80 dark:text-white`}
                       placeholder="Full legal name as on ID"
                       type="text"
@@ -470,7 +470,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                       className={`h-10 w-full rounded-md border px-3 pl-9 text-sm text-[#0d131c] shadow-sm outline-none transition-all placeholder:text-[#94a3b8] focus:ring-1 md:text-base ${
                         errors.dateOfBirth
                           ? 'border-red-400 focus:border-red-400 focus:ring-red-400/30 dark:border-red-500'
-                          : 'border-[#ced9e9] focus:border-[#F57F3D] focus:ring-[#F57F3D]/30 dark:border-slate-600'
+                          : 'border-[#ced9e9] focus:border-[#2563EB] focus:ring-[#2563EB]/30 dark:border-slate-600'
                       } bg-white dark:bg-slate-800/80 dark:text-white`}
                       placeholder="DD / MM / YYYY"
                       type="date"
@@ -508,7 +508,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                     className={`h-10 w-full rounded-md border px-3 text-sm text-[#0d131c] shadow-sm outline-none transition-all placeholder:text-[#94a3b8] focus:ring-1 md:text-base ${
                       errors.contactEmail
                         ? 'border-red-400 focus:border-red-400 focus:ring-red-400/30 dark:border-red-500'
-                        : 'border-[#ced9e9] focus:border-[#F57F3D] focus:ring-[#F57F3D]/30 dark:border-slate-600'
+                        : 'border-[#ced9e9] focus:border-[#2563EB] focus:ring-[#2563EB]/30 dark:border-slate-600'
                     } bg-white dark:bg-slate-800/80 dark:text-white`}
                     placeholder="name@example.com"
                     type="email"
@@ -530,7 +530,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                       className={`h-10 w-full rounded-md border px-3 text-sm text-[#0d131c] shadow-sm outline-none transition-all placeholder:text-[#94a3b8] focus:ring-1 md:text-base ${
                         errors.password
                           ? 'border-red-400 focus:border-red-400 focus:ring-red-400/30 dark:border-red-500'
-                          : 'border-[#ced9e9] focus:border-[#F57F3D] focus:ring-[#F57F3D]/30 dark:border-slate-600'
+                          : 'border-[#ced9e9] focus:border-[#2563EB] focus:ring-[#2563EB]/30 dark:border-slate-600'
                       } bg-white dark:bg-slate-800/80 dark:text-white`}
                       placeholder="Minimum 8 characters"
                       type={isPasswordVisible ? 'text' : 'password'}
@@ -566,7 +566,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                       className={`h-10 w-full rounded-md border px-3 text-sm text-[#0d131c] shadow-sm outline-none transition-all placeholder:text-[#94a3b8] focus:ring-1 md:text-base ${
                         errors.securityPin
                           ? 'border-red-400 focus:border-red-400 focus:ring-red-400/30 dark:border-red-500'
-                          : 'border-[#ced9e9] focus:border-[#F57F3D] focus:ring-[#F57F3D]/30 dark:border-slate-600'
+                          : 'border-[#ced9e9] focus:border-[#2563EB] focus:ring-[#2563EB]/30 dark:border-slate-600'
                       } bg-white dark:bg-slate-800/80 dark:text-white`}
                       placeholder="6 digits"
                       type="text"
@@ -602,7 +602,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                       className={`h-10 flex-1 rounded-md border px-3 text-sm text-[#0d131c] shadow-sm outline-none transition-all placeholder:text-[#94a3b8] focus:ring-1 md:text-base ${
                         errors.contactPhone
                           ? 'border-red-400 focus:border-red-400 focus:ring-red-400/30 dark:border-red-500'
-                          : 'border-[#ced9e9] focus:border-[#F57F3D] focus:ring-[#F57F3D]/30 dark:border-slate-600'
+                          : 'border-[#ced9e9] focus:border-[#2563EB] focus:ring-[#2563EB]/30 dark:border-slate-600'
                       } bg-white dark:bg-slate-800/80 dark:text-white`}
                       placeholder="10 digit Phone Number"
                       type="tel"
@@ -635,7 +635,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                     className={`min-h-[80px] w-full rounded-md border px-3 py-2 text-sm text-[#0d131c] shadow-sm outline-none transition-all placeholder:text-[#94a3b8] focus:ring-1 md:text-base ${
                       errors.streetAddress
                         ? 'border-red-400 focus:border-red-400 focus:ring-red-400/30 dark:border-red-500'
-                        : 'border-[#ced9e9] focus:border-[#F57F3D] focus:ring-[#F57F3D]/30 dark:border-slate-600'
+                        : 'border-[#ced9e9] focus:border-[#2563EB] focus:ring-[#2563EB]/30 dark:border-slate-600'
                     } bg-white dark:bg-slate-800/80 dark:text-white`}
                     placeholder="123 Main St, Apt 4B"
                     value={formData.streetAddress}
@@ -656,7 +656,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                       className={`h-10 w-full rounded-md border px-3 text-sm text-[#0d131c] shadow-sm outline-none transition-all placeholder:text-[#94a3b8] focus:ring-1 md:text-base ${
                         errors.postalCode
                           ? 'border-red-400 focus:border-red-400 focus:ring-red-400/30 dark:border-red-500'
-                          : 'border-[#ced9e9] focus:border-[#F57F3D] focus:ring-[#F57F3D]/30 dark:border-slate-600'
+                          : 'border-[#ced9e9] focus:border-[#2563EB] focus:ring-[#2563EB]/30 dark:border-slate-600'
                       } bg-white dark:bg-slate-800/80 dark:text-white`}
                       placeholder="12345 or 12345-6789"
                       type="text"
@@ -668,7 +668,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                     />
                     {isLoading && (
                       <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <span className="material-symbols-outlined animate-spin text-[16px] text-[#F57F3D]">
+                        <span className="material-symbols-outlined animate-spin text-[16px] text-[#2563EB]">
                           progress_activity
                         </span>
                       </span>
@@ -677,7 +677,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                   <ErrorMessage message={errors.postalCode} />
                   {formData.country === 'US' &&
                     formData.postalCode.length >= 5 && (
-                      <p className="mt-0.5 text-xs text-[#F57F3D] dark:text-[#F57F3D]">
+                      <p className="mt-0.5 text-xs text-[#2563EB] dark:text-[#2563EB]">
                         <span className="material-symbols-outlined mr-1 align-middle text-[12px]">
                           auto_awesome
                         </span>
@@ -686,7 +686,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                     )}
                   {formData.country === 'IN' &&
                     formData.postalCode.length === 6 && (
-                      <p className="mt-0.5 text-xs text-[#F57F3D] dark:text-[#F57F3D]">
+                      <p className="mt-0.5 text-xs text-[#2563EB] dark:text-[#2563EB]">
                         <span className="material-symbols-outlined mr-1 align-middle text-[12px]">
                           auto_awesome
                         </span>
@@ -704,7 +704,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                       className={`h-10 w-full rounded-md border px-3 text-sm text-[#0d131c] shadow-sm outline-none transition-all placeholder:text-[#94a3b8] focus:ring-1 md:text-base ${
                         errors.city
                           ? 'border-red-400 focus:border-red-400 focus:ring-red-400/30 dark:border-red-500'
-                          : 'border-[#ced9e9] focus:border-[#F57F3D] focus:ring-[#F57F3D]/30 dark:border-slate-600'
+                          : 'border-[#ced9e9] focus:border-[#2563EB] focus:ring-[#2563EB]/30 dark:border-slate-600'
                       } bg-white dark:bg-slate-800/80 dark:text-white`}
                       placeholder="City"
                       type="text"
@@ -725,7 +725,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                       className={`h-10 w-full rounded-md border px-3 text-sm text-[#0d131c] shadow-sm outline-none transition-all placeholder:text-[#94a3b8] focus:ring-1 md:text-base ${
                         errors.stateProvince
                           ? 'border-red-400 focus:border-red-400 focus:ring-red-400/30 dark:border-red-500'
-                          : 'border-[#ced9e9] focus:border-[#F57F3D] focus:ring-[#F57F3D]/30 dark:border-slate-600'
+                          : 'border-[#ced9e9] focus:border-[#2563EB] focus:ring-[#2563EB]/30 dark:border-slate-600'
                       } bg-white dark:bg-slate-800/80 dark:text-white`}
                       placeholder="State"
                       type="text"
@@ -747,7 +747,7 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
                     className={`h-10 w-full rounded-md border px-3 text-sm text-[#0d131c] shadow-sm outline-none transition-all focus:ring-1 md:text-base ${
                       errors.country
                         ? 'border-red-400 focus:border-red-400 focus:ring-red-400/30 dark:border-red-500'
-                        : 'border-[#ced9e9] focus:border-[#F57F3D] focus:ring-[#F57F3D]/30 dark:border-slate-600'
+                        : 'border-[#ced9e9] focus:border-[#2563EB] focus:ring-[#2563EB]/30 dark:border-slate-600'
                     } bg-white dark:bg-slate-800/80 dark:text-white`}
                     value={formData.country}
                     onChange={(e) =>
@@ -770,14 +770,14 @@ const SignupStep1Personal: FC<SignupStep1PersonalProps> = ({
         </form>
 
         {/* Fixed bottom CTA */}
-        <div className="fixed bottom-0 left-0 right-0 z-20 mx-auto w-full max-w-[min(390px,95vw,500px)] border-t border-slate-100 bg-white p-2 backdrop-blur-md dark:border-slate-800 dark:bg-[#221610]/80 md:relative md:mt-4 md:max-w-[700px] md:border-t-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+        <div className="fixed bottom-0 left-0 right-0 z-20 mx-auto w-full max-w-[min(390px,95vw,500px)] border-t border-slate-100 bg-white p-2 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80 md:relative md:mt-4 md:max-w-[700px] md:border-t-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
           <div className="flex flex-col items-center gap-3 md:px-8 md:pb-6">
             <button
               type="submit"
               className={`flex h-12 w-full items-center justify-center gap-2 rounded-md text-base font-semibold text-white shadow-md transition-all md:h-14 md:max-w-[400px] md:text-lg ${
                 isFormValid && !isLoading
-                  ? 'bg-[#F57F3D] shadow-[#F57F3D]/20 hover:bg-[#e06c2e] active:scale-[0.98]'
-                  : 'cursor-not-allowed bg-orange-400 opacity-50'
+                  ? 'bg-[#2563EB] shadow-[#2563EB]/20 hover:bg-[#1D4ED8] active:scale-[0.98]'
+                  : 'cursor-not-allowed bg-blue-400 opacity-50'
               }`}
               onClick={handleSubmit}
               disabled={!isFormValid || isLoading}

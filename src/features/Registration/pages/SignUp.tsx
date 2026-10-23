@@ -191,7 +191,7 @@ const SignUp = () => {
             <p className="text-lg font-medium">Creating your account...</p>
             <div className="bg-gray-200 mt-4 h-2 w-64 overflow-hidden rounded">
               <div
-                className="h-full animate-pulse bg-orange-500"
+                className="h-full animate-pulse bg-blue-600"
                 style={{width: '60%'}}
               />
             </div>

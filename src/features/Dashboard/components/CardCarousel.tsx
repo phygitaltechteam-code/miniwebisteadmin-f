@@ -17,7 +17,7 @@ export const CardCarousel: React.FC<CardCarouselProps> = ({cards}) => {
             key={card.id}
             className={`group relative flex h-40 w-[85%] max-w-[320px] shrink-0 cursor-pointer snap-center flex-col justify-center overflow-hidden rounded-xl p-6 text-white shadow-lg transition-transform active:scale-95 ${
               card.theme === 'orange'
-                ? 'bg-primary shadow-orange-500/30'
+                ? 'bg-primary shadow-blue-500/30'
                 : 'border border-slate-700 bg-slate-900 shadow-slate-900/20 dark:bg-slate-800'
             }`}
           >

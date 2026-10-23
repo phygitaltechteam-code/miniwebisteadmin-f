@@ -8,3 +8,13 @@ export enum QUERY_KEYS {
   SEARCH_CATERORS = 'search-caterors',
   GET_CATEROR_BY_ID = 'cateror',
 }
+
+export enum SUPERADMIN_ADMIN_KEYS {
+  GET_ALL = 'superadmin-get-admins',
+  GET_BY_ID = 'superadmin-get-admin-by-id',
+}
+
+export enum SUPERADMIN_CATEGORY_KEYS {
+  GET_ALL = 'superadmin-get-categories',
+  GET_BY_ID = 'superadmin-get-category-by-id',
+}

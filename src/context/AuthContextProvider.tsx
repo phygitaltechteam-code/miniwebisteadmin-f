@@ -12,27 +12,37 @@ const AuthContextProvider = ({children}: {children: ReactNode}) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   useEffect(() => {
-    const localToken = JSON.parse(
-      localStorage.getItem(QUERY_KEYS.TOKEN) || 'null',
-    );
+    try {
+      const raw = localStorage.getItem('token') || localStorage.getItem(QUERY_KEYS.TOKEN);
+      if (!raw) return;
+      const localToken = typeof raw === 'string' && (raw.startsWith('{') || raw.startsWith('['))
+        ? JSON.parse(raw)
+        : raw;
 
-    if (localToken) {
-      const decodedToken: User = jwtDecode(localToken.accessToken);
+      const accessToken = localToken?.accessToken || (typeof localToken === 'string' ? localToken : null);
 
-      if (decodedToken.exp && decodedToken.exp * 1000 < Date.now()) {
-        localStorage.removeItem(QUERY_KEYS.TOKEN);
-        setToken(null);
-        setUser(null);
-        setRole(null);
-        setIsSuperAdmin(false);
-        setIsAuthenticated(false);
-      } else {
-        setToken(localToken);
-        setUser(decodedToken);
-        setRole(decodedToken.role);
-        setIsSuperAdmin(decodedToken.role === 'SuperAdmin');
-        setIsAuthenticated(true);
+      if (accessToken) {
+        const decodedToken: any = jwtDecode(accessToken);
+
+        if (decodedToken.exp && decodedToken.exp * 1000 < Date.now()) {
+          localStorage.removeItem('token');
+          localStorage.removeItem(QUERY_KEYS.TOKEN);
+          setToken(null);
+          setUser(null);
+          setRole(null);
+          setIsSuperAdmin(false);
+          setIsAuthenticated(false);
+        } else {
+          setToken(localToken);
+          setUser(decodedToken);
+          const userRole = decodedToken.role || localToken?.user?.role || '';
+          setRole(userRole);
+          setIsSuperAdmin(userRole?.toUpperCase() === 'SUPERADMIN');
+          setIsAuthenticated(true);
+        }
       }
+    } catch (e) {
+      console.warn('AuthContextProvider decode token error:', e);
     }
   }, []);
 

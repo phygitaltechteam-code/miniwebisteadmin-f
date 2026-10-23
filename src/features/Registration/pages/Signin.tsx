@@ -1,284 +1,198 @@
 /*eslint-disable*/
-import {useAuthContext} from '@/context/AuthContext';
-import {api} from '@/utils/axios';
-import {useMutation} from '@tanstack/react-query';
-import {useNavigate} from '@tanstack/react-router';
-import {AxiosError} from 'axios';
-import React, {useState, useEffect} from 'react';
+import { useAuthContext } from '@/context/AuthContext';
+import { api } from '@/utils/axios';
+import { useMutation } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
+import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import swissLogo from '@/assets/images/logo/swiss-logo.png';
 
-const Signin: React.FC = () => {
-  const {setIsAuthenticated} = useAuthContext();
+interface SigninProps {
+  onSuccess?: (role?: string) => void;
+}
+
+const Signin: React.FC<SigninProps> = ({ onSuccess: onLoginSuccess }) => {
+  const { setIsAuthenticated } = useAuthContext();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [formSubmitted, setFormSubmitted] = useState(false);
-  const [logoError, setLogoError] = useState(false); // For image fallback
-  const navigate = useNavigate();
 
-  interface SignInPayload {
-    username: string;
-    password: string;
-  }
+  interface SignInPayload { username: string; password: string; }
 
-  // Validate password on change or after form submission
   useEffect(() => {
-    if (formSubmitted || password) {
-      validatePassword(password);
-    }
+    if (formSubmitted || password) validatePassword(password);
   }, [password, formSubmitted]);
 
-  const {mutate, isPending} = useMutation({
+  const { mutate, isPending } = useMutation({
     mutationFn: async (data: SignInPayload) => {
       const response = await api.post('/users/login', data);
-      return response.data;
+      return response;
     },
-    onSuccess: (data) => {
-      console.log('Login successful:', data);
-      const newData = JSON.stringify(data, null, 2);
-      if (newData) {
-        localStorage.setItem('token', newData);
-        setIsAuthenticated(true);
-        window.location.href = '/dashboard';
+    onSuccess: (data: any) => {
+      const tokenData = data?.data || data;
+      localStorage.setItem('token', JSON.stringify(tokenData));
+      localStorage.setItem('token_key', JSON.stringify(tokenData));
+      if (tokenData?.accessToken) {
+        localStorage.setItem('accessToken', tokenData.accessToken);
       }
+      setIsAuthenticated(true);
+      const role = tokenData?.user?.role || tokenData?.role || '';
+      toast.success('Logged in successfully');
+      if (onLoginSuccess) onLoginSuccess(role);
     },
     onError: (error: AxiosError<any>) => {
       const message = error.response?.data?.message || 'Login failed';
-      if (message === 'Pending') {
-        navigate({to: '/verification'});
-      }
-      if (message === 'Rejected') {
-        navigate({to: '/rejected'});
-      }
-      if (message === 'User does not exist') {
-        toast.error('User does not exist. Please sign up first.');
-      }
-      if (message === 'Validation failed') {
-        toast.error('Invalid Credentials. Please check your credentials.');
-      }
+      toast.error(message === 'Validation failed' ? 'Invalid credentials. Please check your details.' : message);
     },
   });
 
   const validatePhoneNumber = (phone: string): boolean => {
-    const cleanedPhone = phone.replace(/\D/g, '');
-    const isValid = /^\d{10}$/.test(cleanedPhone);
-    if (phone && !isValid) {
-      setPhoneError('Please enter exactly 10 digits');
-      return false;
-    } else {
-      setPhoneError('');
-      return true;
+    const cleaned = phone.replace(/\D/g, '');
+    if (phone && !/^\d{10}$/.test(cleaned)) {
+      setPhoneError('Please enter exactly 10 digits'); return false;
     }
+    setPhoneError(''); return true;
   };
 
   const validatePassword = (pass: string): boolean => {
-    if (!pass.trim()) {
-      setPasswordError('Password is required');
-      return false;
-    } else if (pass.length < 8) {
-      setPasswordError('Password must be at least 8 characters');
-      return false;
-    } else {
-      setPasswordError('');
-      return true;
-    }
+    if (!pass.trim()) { setPasswordError('Password is required'); return false; }
+    if (pass.length < 8) { setPasswordError('At least 8 characters required'); return false; }
+    setPasswordError(''); return true;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const cleanedValue = value.replace(/[^\d\s]/g, '');
-    const digitsOnly = cleanedValue.replace(/\s/g, '');
-    if (digitsOnly.length <= 10) {
-      setUsername(cleanedValue);
-      if (cleanedValue) {
-        validatePhoneNumber(cleanedValue);
-      } else {
-        setPhoneError('');
-      }
+    const val = e.target.value.replace(/[^\d\s]/g, '');
+    if (val.replace(/\s/g, '').length <= 10) {
+      setUsername(val);
+      if (val) validatePhoneNumber(val); else setPhoneError('');
     }
-  };
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPassword(e.target.value);
   };
 
   const handleSignIn = () => {
     setFormSubmitted(true);
-    const cleanedPhone = username.replace(/\D/g, '');
-    const isPhoneValid = validatePhoneNumber(cleanedPhone);
-    if (!cleanedPhone) {
-      setPhoneError('Mobile number is required');
-    }
-    const isPasswordValid = validatePassword(password);
-    if (!isPhoneValid || !cleanedPhone || !isPasswordValid) {
-      return;
-    }
-    mutate({username: cleanedPhone, password});
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSignIn();
-    }
+    const cleaned = username.replace(/\D/g, '');
+    if (!cleaned) { setPhoneError('Mobile number is required'); return; }
+    if (!validatePhoneNumber(cleaned) || !validatePassword(password)) return;
+    mutate({ username: cleaned, password });
   };
 
   const canSubmit = () => {
-    const cleanedPhone = username.replace(/\D/g, '');
-    return (
-      !isPending &&
-      cleanedPhone.length === 10 &&
-      password.length >= 8 &&
-      !phoneError &&
-      !passwordError
-    );
+    const cleaned = username.replace(/\D/g, '');
+    return !isPending && cleaned.length === 10 && password.length >= 8 && !phoneError && !passwordError;
   };
 
   return (
-    <div className="dark:bg-gray-950 flex min-h-screen w-full justify-center bg-white font-['Inter'] antialiased selection:bg-[#F57F3D]/30">
-      <div className="border-gray-200/60 dark:border-gray-800/60 relative mx-auto min-h-[min(844px,90vh)] w-full max-w-[min(390px,95vw,480px)] overflow-hidden bg-white dark:bg-[#221610] md:min-h-[600px] md:max-w-[420px] md:rounded-2xl">
-        {/* Background patterns */}
-        <div className="bg-premium-pattern pointer-events-none absolute inset-0 z-0 opacity-100 dark:opacity-5" />
-        <div className="from-gray-100/40 pointer-events-none absolute inset-0 z-0 bg-gradient-to-br via-transparent to-transparent dark:from-white/5" />
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#f0f7ff] via-white to-[#e8f1fc] p-4">
+      <div className="w-full max-w-md">
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden">
+          {/* Top accent */}
+          <div className="h-1.5 bg-gradient-to-r from-[#2563EB] via-[#60A5FA] to-[#2563EB]" />
 
-        <div className="relative z-10 h-6 w-full md:h-8" />
-
-        <div className="relative z-10 flex flex-1 flex-col justify-between px-6 pb-6 pt-8 md:px-8 md:pb-8 md:pt-10">
-          <div className="mb-8 flex flex-col items-center">
-            {/* Logo row with fallback */}
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F57F3D]/10 md:h-14 md:w-14">
-                <img
-                  src={swissLogo}
-                  alt="SwissQuote"
-                  className="h-7 w-7 object-contain md:h-9 md:w-9"
-                  onError={() => setLogoError(true)}
-                />
+          <div className="px-8 py-9 sm:px-10">
+            {/* Icon + Heading */}
+            <div className="mb-8 text-center">
+              <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-[#2563EB]/10 ring-2 ring-[#2563EB]/20 flex items-center justify-center">
+                <svg className="h-7 w-7 text-[#2563EB]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
               </div>
-              <span
-                className="text-2xl font-black tracking-wide text-[#0d131c] dark:text-white md:text-3xl"
-                style={
-                  {
-                    // Optional gradient text – uncomment if desired
-                    // background: 'linear-gradient(135deg, #F57F3D, #FFB347)',
-                    // WebkitBackgroundClip: 'text',
-                    // WebkitTextFillColor: 'transparent',
-                  }
-                }
-              >
-                SwissQuote
-              </span>
+              <h1 className="text-2xl font-bold text-gray-900">Sign In</h1>
+              <p className="mt-1 text-sm text-gray-500">Enter your credentials to continue</p>
             </div>
 
-            <h1 className="mb-2 text-3xl font-bold leading-tight tracking-tight text-[#0d131c] dark:text-white md:text-4xl">
-              Welcome back
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400 max-w-sm text-center text-base md:text-lg">
-              Enter your details to access your account.
-            </p>
-          </div>
-
-          {/* Form */}
-          <div className="mt-2 flex flex-col gap-2">
-            {/* Mobile Number */}
-            <div className="flex flex-col gap-2 md:gap-3">
-              <label className="dark:text-gray-200 text-sm font-medium leading-normal text-[#0d131c] md:text-base">
-                Mobile Number
-              </label>
-              <div className="flex gap-3">
+            {/* Form Fields */}
+            <div className="flex flex-col gap-5">
+              {/* Mobile */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-gray-700">Mobile Number</label>
                 <input
-                  className={`bg-gray-50/80 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 placeholder-gray-400 h-12 flex-1 rounded-md border px-4 text-base backdrop-blur-sm transition-shadow focus:border-[#F57F3D] focus:ring-[#F57F3D] dark:text-white md:h-12 md:text-lg ${
-                    phoneError ? 'border-red-500 dark:border-red-500' : ''
-                  }`}
-                  placeholder="98765 43210"
                   type="tel"
+                  inputMode="numeric"
+                  placeholder="98765 43210"
                   value={username}
                   onChange={handlePhoneChange}
-                  onKeyPress={handleKeyPress}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
                   maxLength={12}
-                  inputMode="numeric"
-                />
-              </div>
-              {phoneError && (
-                <p className="mt-1 flex items-center gap-1 text-sm text-red-500 dark:text-red-400">
-                  <span className="material-symbols-outlined text-sm">
-                    error
-                  </span>
-                  {phoneError}
-                </p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div className="flex flex-col gap-2 md:gap-3">
-              <label className="dark:text-gray-200 text-sm font-medium leading-normal text-[#0d131c] md:text-base">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  className={`bg-gray-50/80 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 placeholder-gray-400 h-12 w-full rounded-md border pl-4 pr-12 text-base backdrop-blur-sm transition-shadow focus:border-[#F57F3D] focus:ring-[#F57F3D] dark:text-white md:h-12 md:text-lg ${
-                    passwordError ? 'border-red-500 dark:border-red-500' : ''
+                  className={`h-11 w-full rounded-xl border px-4 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:ring-2 focus:ring-[#2563EB]/25 ${
+                    phoneError ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-gray-50 focus:border-[#2563EB]'
                   }`}
-                  placeholder="••••••••••••"
-                  type={passwordVisible ? 'text' : 'password'}
-                  value={password}
-                  onChange={handlePasswordChange}
-                  onKeyPress={handleKeyPress}
                 />
-                <button
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 absolute inset-y-0 right-0 flex items-center px-4 transition-colors md:px-5"
-                  type="button"
-                  onClick={() => setPasswordVisible(!passwordVisible)}
-                  aria-label="Toggle password visibility"
-                >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{fontSize: '20px'}}
-                  >
-                    {passwordVisible ? 'visibility' : 'visibility_off'}
-                  </span>
-                </button>
+                {phoneError && (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+                    </svg>
+                    {phoneError}
+                  </p>
+                )}
               </div>
-              {passwordError && (
-                <p className="mt-1 flex items-center gap-1 text-sm text-red-500 dark:text-red-400">
-                  <span className="material-symbols-outlined text-sm">
-                    error
-                  </span>
-                  {passwordError}
-                </p>
-              )}
-              <p className="text-gray-500 dark:text-gray-400 mt-1 text-xs">
-                Password must be at least 8 characters
-              </p>
-            </div>
 
-            {/* Login Button */}
-            <button
-              onClick={handleSignIn}
-              disabled={!canSubmit()}
-              className={`mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-xl text-base font-semibold text-white md:text-lg ${
-                !canSubmit()
-                  ? 'cursor-not-allowed bg-orange-300'
-                  : 'bg-[#F57F3D] hover:bg-[#E06E2C]'
-              }`}
-            >
-              {isPending ? 'Logging in…' : 'Login'}
-            </button>
-          </div>
+              {/* Password */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-gray-700">Password</label>
+                <div className="relative">
+                  <input
+                    type={passwordVisible ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
+                    className={`h-11 w-full rounded-xl border px-4 pr-11 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:ring-2 focus:ring-[#2563EB]/25 ${
+                      passwordError ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-gray-50 focus:border-[#2563EB]'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPasswordVisible(!passwordVisible)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3.5 text-gray-400 hover:text-[#2563EB] transition-colors"
+                  >
+                    {passwordVisible ? (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                {passwordError && (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+                    </svg>
+                    {passwordError}
+                  </p>
+                )}
+              </div>
 
-          {/* Footer */}
-          <div className="mt-auto flex flex-col items-center gap-6 pt-4 md:gap-7">
-            <p className="text-gray-500 dark:text-gray-400 text-center text-sm md:text-base">
-              Don't have an account?{' '}
-              <a
-                href="signup"
-                className="ml-1 font-semibold text-[#F57F3D] transition-colors hover:text-blue-600"
+              {/* Login Button */}
+              <button
+                type="button"
+                onClick={handleSignIn}
+                disabled={isPending}
+                className={`mt-1 h-12 w-full rounded-xl text-base font-bold text-white transition-all shadow-md ${
+                  isPending
+                    ? 'cursor-not-allowed bg-[#2563EB]/60'
+                    : 'bg-[#2563EB] hover:bg-[#1D4ED8] active:scale-[0.98] shadow-[#2563EB]/25'
+                }`}
               >
-                Create an account
-              </a>
-            </p>
+                {isPending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                    Signing in…
+                  </span>
+                ) : 'Sign In'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

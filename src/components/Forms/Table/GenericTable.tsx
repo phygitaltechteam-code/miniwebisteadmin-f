@@ -38,6 +38,7 @@ type GenericTableProps<T> = {
   onView?: (item: T) => void;
   showBackButton?: boolean;
   onBack?: () => void;
+  headerAction?: React.ReactNode;
 };
 
 export const GenericTable = <T,>({
@@ -53,6 +54,7 @@ export const GenericTable = <T,>({
   onView,
   showBackButton = false,
   onBack,
+  headerAction,
 }: GenericTableProps<T>) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,18 +101,23 @@ export const GenericTable = <T,>({
     setSortConfig({key, direction});
   };
 
-  const filteredData = sortedData.filter((item) =>
-    columns.some((column) => {
-      const value =
-        typeof column.accessor === 'function'
-          ? column.accessor(item)
-          : item[column.accessor];
-      return value
-        ?.toString()
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-    }),
-  );
+  const filteredData = React.useMemo(() => {
+    if (!searchQuery.trim()) return sortedData;
+    const q = searchQuery.toLowerCase();
+    return sortedData.filter((item) =>
+      columns.some((column) => {
+        const value =
+          typeof column.accessor === 'function'
+            ? column.accessor(item)
+            : item[column.accessor];
+        return (
+          value !== null &&
+          value !== undefined &&
+          String(value).toLowerCase().includes(q)
+        );
+      }),
+    );
+  }, [sortedData, searchQuery, columns]);
 
   const totalItems = filteredData.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -121,19 +128,23 @@ export const GenericTable = <T,>({
     : filteredData.slice(startIdx, startIdx + itemsPerPage);
 
   return (
-    <div className="rounded-sm border border-stroke bg-white px-4 pb-2 pt-4 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-6">
+    <div className="rounded-xl border border-stroke bg-white px-4 pb-3 pt-4 shadow-xs dark:border-strokedark dark:bg-boxdark sm:px-6">
       {title && (
-        <div className="mb-3 flex items-center gap-2">
-          {showBackButton && onBack && (
-            <button
-              onClick={onBack}
-              className="hover:bg-gray-100 rounded p-1.5 dark:hover:bg-meta-4"
-            >
-              <FaArrowLeft className="h-5 w-5" />
-            </button>
-          )}
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            {showBackButton && onBack && (
+              <button
+                onClick={onBack}
+                className="hover:bg-gray-100 rounded-lg p-1.5 dark:hover:bg-meta-4 transition-colors"
+              >
+                <FaArrowLeft className="h-4 w-4" />
+              </button>
+            )}
 
-          <h2 className="text-lg font-semibold">{title}</h2>
+            <h2 className="text-lg font-bold text-black dark:text-white">{title}</h2>
+          </div>
+
+          {headerAction && <div className="shrink-0">{headerAction}</div>}
         </div>
       )}
 

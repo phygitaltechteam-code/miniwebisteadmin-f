@@ -39,7 +39,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           <h3 className="text-lg font-bold leading-tight text-[#0d131c] dark:text-white">
             Recent Transactions
           </h3>
-          <button className="text-sm font-semibold text-primary transition-colors hover:text-orange-600">
+          <button className="text-sm font-semibold text-primary transition-colors hover:text-blue-700">
             See All
           </button>
         </div>
