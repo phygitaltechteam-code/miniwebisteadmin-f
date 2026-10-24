@@ -111,40 +111,8 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
     { accessor: 'renewalAmount', header: 'Renewal (₹)' },
     { accessor: 'startDate', header: 'Start Date' },
     { accessor: 'endDate', header: 'End Date' },
-    { accessor: 'address', header: 'Address' },
-    ...(onOpenCardForge
-      ? [
-          {
-            header: 'Digital Card Forge',
-            accessor: 'id' as const,
-            render: (row: AdminRow) => {
-              const adminObj = row.raw || row;
-              return (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const targetId = adminObj.id || adminObj._id || row.id;
-                    try {
-                      const url = new URL(window.location.href);
-                      url.searchParams.set('view', 'card-builder');
-                      url.searchParams.set('adminId', targetId);
-                      window.history.pushState({ view: 'card-builder', adminId: targetId }, '', url.toString());
-                    } catch {}
-                    onOpenCardForge(adminObj);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white dark:bg-indigo-950/50 dark:text-indigo-300 dark:hover:bg-indigo-600 dark:hover:text-white border border-indigo-200 dark:border-indigo-800 transition-all shadow-xs group cursor-pointer"
-                  title={`Open Digital Card Forge for ${row.fullname}`}
-                >
-                  <span className="text-[13px]">📇</span>
-                  <span>Card Forge</span>
-                  <span className="group-hover:translate-x-0.5 transition-transform font-mono">→</span>
-                </button>
-              );
-            },
-          } as Column<AdminRow>,
-        ]
-      : []),
+    { accessor: 'address', header: 'Address' }, 
+    
   ];
 
   const rawAdminList: any[] = Array.isArray(adminData)

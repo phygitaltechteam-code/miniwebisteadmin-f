@@ -342,12 +342,12 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
                 <div className="flex items-start gap-2.5 sm:gap-3.5 flex-1 min-w-0">
-                  <span className="w-6 h-6 rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs flex items-center justify-center font-bold shrink-0 mt-0.5">
+                  <span className="hidden sm:flex w-6 h-6 rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs items-center justify-center font-bold shrink-0 mt-0.5">
                     {index + 1}
                   </span>
 
                   {/* Thumbnail */}
-                  <div className="w-14 h-14 rounded-lg bg-white border border-stroke overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-white border border-stroke overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
                     {product.image ? (
                       <img
                         src={product.image}
@@ -414,8 +414,8 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
 
       {/* MODAL: Add Product/Service details (matching backend createProductSchema / updateProductSchema) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-stroke overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-md w-full border border-stroke overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-stroke">
               <h3 className="text-base font-bold text-[#091426]">
@@ -632,12 +632,12 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
           type="button"
           onClick={handleSaveAndNext}
           disabled={isSubmitting}
-          className="!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 shadow-md shadow-[#2563EB]/25 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="!px-4 sm:!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 whitespace-nowrap shadow-md shadow-[#2563EB]/25 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Syncing products to server...</span>
+              <span>Saving...</span>
             </>
           ) : (
             <>

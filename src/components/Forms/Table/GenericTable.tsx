@@ -166,16 +166,16 @@ export const GenericTable = <T,>({
       <div className="max-w-full overflow-x-auto rounded-lg border border-slate-200 dark:border-strokedark">
         <table className="w-full table-auto">
           <thead>
-            <tr className="bg-[#1E40AF] text-left text-white shadow-xs dark:bg-blue-950">
+            <tr className="bg-[#EBF3FE] border-b border-[#C7DCFE] text-left text-[#1E3A8A] dark:bg-slate-800 dark:border-strokedark">
               {showSrNo && (
-                <th className="w-14 px-3 py-2.5 font-bold text-white text-xs sm:text-sm text-center">
+                <th className="w-14 px-3 py-2.5 font-bold text-[#1E3A8A] text-xs sm:text-sm text-center dark:text-blue-300">
                   Sr. No.
                 </th>
               )}
               {columns.map((column, index) => (
                 <th
                   key={index}
-                  className={`min-w-[110px] px-3.5 py-2.5 font-semibold text-white tracking-wide text-xs sm:text-sm ${column.className || ''}`}
+                  className={`min-w-[110px] px-3.5 py-2.5 font-bold text-[#1E3A8A] tracking-wide text-xs sm:text-sm dark:text-blue-300 ${column.className || ''}`}
                   onClick={
                     column.sortable
                       ? () => handleSort(column.accessor as keyof T)
@@ -183,10 +183,10 @@ export const GenericTable = <T,>({
                   }
                   style={{cursor: column.sortable ? 'pointer' : 'default'}}
                 >
-                  <div className="flex items-center gap-1 font-bold text-white">
+                  <div className="flex items-center gap-1 font-bold text-[#1E3A8A] dark:text-blue-300">
                     <span>{column.header}</span>
                     {sortConfig?.key === column.accessor && (
-                      <span className="text-xs text-blue-200 font-bold">
+                      <span className="text-xs text-[#2563EB] font-bold">
                         {sortConfig.direction === 'asc' ? '↑' : '↓'}
                       </span>
                     )}
@@ -194,7 +194,7 @@ export const GenericTable = <T,>({
                 </th>
               ))}
               {action && (
-                <th className="min-w-[90px] px-3.5 py-2.5 font-bold text-white text-xs sm:text-sm">
+                <th className="min-w-[90px] px-3.5 py-2.5 font-bold text-[#1E3A8A] text-xs sm:text-sm dark:text-blue-300">
                   <div>Action</div>
                 </th>
               )}
@@ -205,14 +205,14 @@ export const GenericTable = <T,>({
               const isEven = rowIndex % 2 === 0;
               const rowBg = isEven
                 ? 'bg-white dark:bg-boxdark'
-                : 'bg-[#F0F6FF] dark:bg-boxdark-2/60';
+                : 'bg-[#F4F8FE] dark:bg-boxdark-2/60';
 
               return (
                 <tr
                   key={rowIndex}
                   className={`text-sm ${rowBg} ${
                     onRowClick
-                      ? 'cursor-pointer hover:bg-blue-100/70 dark:hover:bg-meta-4 transition-colors'
+                      ? 'cursor-pointer hover:bg-blue-100/60 dark:hover:bg-meta-4 transition-colors'
                       : 'hover:bg-blue-100/40 dark:hover:bg-meta-4 transition-colors'
                   }`}
                   onClick={(e) => {

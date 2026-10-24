@@ -55,7 +55,6 @@ export const TabStepper: React.FC<TabStepperProps> = ({
           </span>
           <span className="text-gray-400 font-normal">({currentStep}/8)</span>
         </div>
-        <span className="text-[10px] font-medium text-gray-400">Swipe for steps →</span>
       </div>
 
       <div className="flex items-center gap-1">

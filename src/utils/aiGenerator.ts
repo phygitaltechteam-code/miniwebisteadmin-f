@@ -552,6 +552,7 @@ export function generateAiServices(
     );
   }
 
-  // Deduplicate and return top 6
-  return Array.from(new Set(servicePool)).slice(0, 6);
+  // Deduplicate and return proportional to number of selected categories
+  const limit = Math.max(6, Math.min(15, (categories.length || 1) * 5));
+  return Array.from(new Set(servicePool)).slice(0, limit);
 }

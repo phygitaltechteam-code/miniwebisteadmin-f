@@ -4,19 +4,34 @@ import {
   CheckCircle2, Plus, X, Bold, Italic,
   Underline, List, ListOrdered, Link2,
   Image as ImageIcon, FileText, Download,
-  Trash2, Upload, ArrowRight, ArrowLeft, Sparkles, RefreshCw, Loader2
+  Trash2, Upload, ArrowRight, ArrowLeft, Sparkles, Loader2, Check
 } from 'lucide-react';
 import { ProfileData, CompanyDocument } from '../../types/profile';
 import GenericInputField from '@/components/Forms/Input/GenericInputField';
 import GenericButton from '@/components/Forms/Buttons/GenericButton';
 import { step2AboutSpecialitiesSchema } from '@/schemas/cardProfileSchema';
-import { generateAiKeywords, generateAiNarrative } from '@/utils/aiGenerator';
+import { generateAiKeywords, generateAiNarrative, generateAiServices } from '@/utils/aiGenerator';
+import { getCustomerCategories, CustomerCategory } from '@/lib/api/customerCategoriesApi';
+import {
+  getCustomerInfo,
+  updateCustomerInfo,
+  formatAdminInfoPayload,
+  isUuidOrId,
+} from '@/lib/api/customerInfoApi';
 import {
   getCustomerAbout,
   saveOrUpdateCustomerAbout,
   formatAdminAboutPayload,
   formatAboutFormData,
 } from '@/lib/api/customerAboutApi';
+
+const cleanServiceString = (s: any): string => {
+  if (!s) return '';
+  return String(s)
+    .replace(/[\[\]]/g, '')
+    .replace(/^['"`\s]+|['"`\s]+$/g, '')
+    .trim();
+};
 
 interface Step2Props {
   profile: ProfileData;
@@ -37,9 +52,13 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newSpeciality, setNewSpeciality] = useState('');
-  const [newNature, setNewNature] = useState('');
+  const [newService, setNewService] = useState('');
+  const [availableCategories, setAvailableCategories] = useState<CustomerCategory[]>([]);
+  const [catDropdownOpen, setCatDropdownOpen] = useState(false);
+  const [catSearch, setCatSearch] = useState('');
   const [isAddingDoc, setIsAddingDoc] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState('');
+  const [newDocDescription, setNewDocDescription] = useState('');
   const [selectedDocFile, setSelectedDocFile] = useState<{ file: File; base64: string } | null>(null);
   const [hasExistingAbout, setHasExistingAbout] = useState(false);
   const [backendServices, setBackendServices] = useState<string[]>([]);
@@ -131,6 +150,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
                 id: d.id || d._id || `doc_${idx}`,
                 name: docName,
                 fileName: docName,
+                description: d.description || '',
                 url: fileUrl,
                 size: d.size || '',
                 uploadedAt: d.createdAt ? new Date(d.createdAt).toLocaleDateString() : d.uploadedAt || '',
@@ -147,6 +167,243 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
     loadAbout();
     return () => { isMounted = false; };
   }, [adminId]);
+
+  // Fetch available categories (customers/categories or superAdmin/admin/:adminId/categories)
+  useEffect(() => {
+    let isMounted = true;
+    getCustomerCategories(adminId)
+      .then((cats) => {
+        if (isMounted && Array.isArray(cats) && cats.length > 0) setAvailableCategories(cats);
+      })
+      .catch(() => {
+        // silent – list stays empty, custom categories can still be added
+      });
+    return () => { isMounted = false; };
+  }, [adminId]);
+
+  // Categories & services are stored with customer info; hydrate them if Step 1 hasn't loaded them yet
+  useEffect(() => {
+    if ((profile.categories || []).length > 0 || (profile.categoryIds || []).length > 0) return;
+    let isMounted = true;
+    getCustomerInfo(adminId)
+      .then((res: any) => {
+        const data = res?.data || res?.customer || res?.info || res;
+        if (!isMounted || !data || typeof data !== 'object') return;
+
+        const ids: string[] = [];
+        const names: string[] = [];
+        const addId = (v: any) => { const x = v ? String(v).trim() : ''; if (x && !ids.includes(x)) ids.push(x); };
+        const addName = (v: any) => { const x = v ? String(v).trim() : ''; if (x && !names.includes(x)) names.push(x); };
+
+        (Array.isArray(data.categoryIds) ? data.categoryIds : []).forEach(addId);
+        (Array.isArray(data.adminCategoryIds) ? data.adminCategoryIds : []).forEach(addId);
+        (Array.isArray(data.adminCategories) ? data.adminCategories : []).forEach((c: any) => {
+          addId(c.categoryId || c.adminCategoryId || c.category?.id || c.category?._id || (typeof c === 'string' ? c : c.id || c._id));
+          addName(c.category?.name || c.name || c.categoryName || c.adminCategory?.name);
+        });
+        (Array.isArray(data.categories) ? data.categories : []).forEach((c: any) =>
+          typeof c === 'string' ? addName(c) : (addName(c?.name || c?.CategoryName), addId(c?.id || c?._id))
+        );
+
+        if (ids.length > 0) {
+          onChange('categoryIds', ids);
+          onChange('adminCategoryIds', ids);
+          onChange('categoryId', ids[0]);
+        }
+        const labels = names.length > 0 ? names : ids;
+        if (labels.length > 0) {
+          onChange('categories', labels);
+          onChange('categoryNames', labels);
+          onChange('categoryName', labels[0]);
+        }
+        if ((!profile.servicesOffered || profile.servicesOffered.length === 0) && data.servicesOffered) {
+          const list = Array.isArray(data.servicesOffered)
+            ? data.servicesOffered
+            : String(data.servicesOffered).split(',');
+          const cleaned = list.map(cleanServiceString).filter(Boolean);
+          if (cleaned.length > 0) onChange('servicesOffered', cleaned);
+        }
+      })
+      .catch(() => {
+        // no customer info yet
+      });
+    return () => { isMounted = false; };
+  }, [adminId]);
+
+  // Category chips: show readable names (ids are mapped through the category list)
+  const selectedCategoryLabels = Array.from(
+    new Set(
+      ((profile.categories || []).length > 0
+        ? profile.categories || []
+        : (profile.categoryIds || []).filter((id) => isUuidOrId(id))
+      ).map((c) => availableCategories.find((a) => a.id === c)?.name || c)
+    )
+  ).filter(Boolean);
+
+  const setServices = (list: string[]) => {
+    onChange('servicesOffered', list);
+    onChange('natureOfBusiness', list);
+    onChange('businessNatures', list);
+  };
+
+  const toSpecialityText = (item: any) =>
+    typeof item === 'object' ? String(item.specialities || item.name || item.title || '') : String(item);
+
+  // Selecting a category auto-adds its services and matching keywords (manual entries are kept)
+  const handleAddCategory = (catToAdd?: string, catIdToAdd?: string) => {
+    const name = (catToAdd || '').trim();
+    if (!name) return;
+
+    const matched = availableCategories.find(
+      (c) => c.name.toLowerCase() === name.toLowerCase() || c.id === name || (catIdToAdd && c.id === catIdToAdd)
+    );
+    const resolvedId = catIdToAdd || matched?.id || name;
+    const resolvedName = matched?.name || name;
+
+    const currentCats = profile.categories || [];
+    if (!currentCats.some((c) => c.toLowerCase() === resolvedName.toLowerCase())) {
+      onChange('categories', [...currentCats, resolvedName]);
+    }
+
+    const currentCatIds = profile.categoryIds || [];
+    if (!currentCatIds.includes(resolvedId)) {
+      const updatedIds = [...currentCatIds, resolvedId];
+      onChange('categoryIds', updatedIds);
+      onChange('adminCategoryIds', updatedIds);
+      onChange('categoryId', updatedIds[0]);
+    }
+
+    const currentNames = profile.categoryNames || [];
+    if (!currentNames.includes(resolvedName)) {
+      onChange('categoryNames', [...currentNames, resolvedName]);
+    }
+    onChange('categoryName', resolvedName);
+
+    const allSelectedCats = Array.from(new Set([...updatedNames, resolvedName]));
+    const currentServices = (profile.servicesOffered || []).map(cleanServiceString).filter(Boolean);
+    const newServices = generateAiServices(allSelectedCats, profile.businessName, [])
+      .map(cleanServiceString)
+      .filter((srv) => srv && !currentServices.some((c) => c.toLowerCase() === srv.toLowerCase()));
+
+    const combinedServices = [...currentServices, ...newServices];
+    if (newServices.length > 0) {
+      setServices(combinedServices);
+    }
+
+    // Automatically generate & append keywords matching all selected categories and services
+    const currentSpecs = (profile.specialities || []).map(toSpecialityText).filter(Boolean);
+    const generatedKeywords = generateAiKeywords(
+      profile.businessName,
+      combinedServices.length > 0 ? combinedServices : allSelectedCats,
+      currentSpecs
+    );
+    if (generatedKeywords.length > 0) {
+      const mergedKeywords = Array.from(new Set([...currentSpecs, ...generatedKeywords])).slice(0, 15);
+      onChange('specialities', mergedKeywords);
+    }
+
+    if (newServices.length > 0) {
+      onToast(`Added category: ${resolvedName} (+${newServices.length} services & keywords auto-generated)`);
+    } else {
+      onToast(`Added category: ${resolvedName} (keywords updated)`);
+    }
+  };
+
+  const handleRemoveCategory = (cat: string) => {
+    const matched = availableCategories.find((c) => c.name.toLowerCase() === cat.toLowerCase() || c.id === cat);
+    const namesToRemove = [cat, matched?.name, matched?.id].filter(Boolean) as string[];
+
+    onChange('categories', (profile.categories || []).filter((c) => !namesToRemove.includes(c)));
+
+    const updatedIds = (profile.categoryIds || []).filter((id) => !namesToRemove.includes(id));
+    onChange('categoryIds', updatedIds);
+    onChange('adminCategoryIds', updatedIds);
+    onChange('categoryId', updatedIds[0] || '');
+
+    const updatedNames = (profile.categoryNames || []).filter((n) => !namesToRemove.includes(n));
+    onChange('categoryNames', updatedNames);
+    if (profile.categoryName && namesToRemove.includes(profile.categoryName)) {
+      onChange('categoryName', updatedNames[0] || '');
+    }
+  };
+
+  const activeCategories = selectedCategoryLabels.length > 0
+    ? selectedCategoryLabels
+    : profile.category
+      ? [profile.category]
+      : [];
+
+  const suggestedServices = generateAiServices(
+    activeCategories,
+    profile.businessName,
+    profile.natureOfBusiness || []
+  ).filter((srv) => !(profile.servicesOffered || []).includes(srv));
+
+  const handleAutoGenerateServices = () => {
+    const generated = generateAiServices(activeCategories, profile.businessName, [])
+      .map(cleanServiceString)
+      .filter(Boolean);
+
+    if (generated.length === 0) {
+      onToast('Please select a business category or enter your business name first.');
+      return;
+    }
+    setServices(generated);
+
+    // Also automatically generate keywords matching the selected categories & services
+    const currentSpecs = (profile.specialities || []).map(toSpecialityText).filter(Boolean);
+    const generatedKeywords = generateAiKeywords(profile.businessName, generated, currentSpecs);
+    onChange('specialities', generatedKeywords);
+
+    onToast(`Auto-generated ${generated.length} key services & ${generatedKeywords.length} keywords for ${activeCategories.join(', ')}!`);
+  };
+
+  const handleAddSuggestedService = (srvName: string) => {
+    const cleaned = cleanServiceString(srvName);
+    if (!cleaned) return;
+    const current = (profile.servicesOffered || []).map(cleanServiceString);
+    if (current.some((c) => c.toLowerCase() === cleaned.toLowerCase())) return;
+    setServices([...current, cleaned]);
+    onToast(`Added service: ${cleaned}`);
+  };
+
+  const handleAddAllSuggestedServices = () => {
+    if (suggestedServices.length === 0) return;
+    const current = (profile.servicesOffered || []).map(cleanServiceString);
+    const cleanedSuggested = suggestedServices.map(cleanServiceString).filter(Boolean);
+    setServices(Array.from(new Set([...current, ...cleanedSuggested])));
+    onToast(`Added all ${suggestedServices.length} suggested services!`);
+  };
+
+  const handleAddService = () => {
+    const name = cleanServiceString(newService);
+    if (!name) return;
+    const current = (profile.servicesOffered || []).map(cleanServiceString);
+    if (current.some((c) => c.toLowerCase() === name.toLowerCase())) {
+      onToast(`"${name}" service is already listed.`);
+      return;
+    }
+    setServices([...current, name]);
+    setNewService('');
+    onToast(`Added service: ${name}`);
+  };
+
+  const handleRemoveService = (service: string) => {
+    const cleaned = cleanServiceString(service);
+    const updated = (profile.servicesOffered || [])
+      .map(cleanServiceString)
+      .filter((c) => c && c.toLowerCase() !== cleaned.toLowerCase());
+    setServices(updated);
+
+    // Also remove any specialities that reference the removed service
+    if (Array.isArray(profile.specialities) && profile.specialities.length > 0) {
+      onChange(
+        'specialities',
+        profile.specialities.filter((spec: any) => !toSpecialityText(spec).toLowerCase().includes(cleaned.toLowerCase()))
+      );
+    }
+    onToast(`Removed service: ${cleaned}`);
+  };
 
   // Auto-sync services from Step 1 so removed services are never kept in Step 2
   useEffect(() => {
@@ -228,32 +485,6 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
     onToast(`Removed speciality: "${item}"`);
   };
 
-  const handleSyncFromServices = () => {
-    const services = profile.servicesOffered || [];
-    if (services.length === 0) {
-      onToast('No services found in Basic Details (Step 1) to sync.');
-      return;
-    }
-    const merged = Array.from(new Set([...(profile.natureOfBusiness || []), ...services]));
-    onChange('natureOfBusiness', merged);
-    onToast(`✅ Synced ${services.length} service(s) from Basic Details into Nature of Business!`);
-  };
-
-  const handleAddNature = () => {
-    if (!newNature.trim()) return;
-    if (profile.natureOfBusiness.includes(newNature.trim())) {
-      onToast('Nature of business already added!');
-      return;
-    }
-    onChange('natureOfBusiness', [...profile.natureOfBusiness, newNature.trim()]);
-    setNewNature('');
-    onToast(`Added nature of business: "${newNature.trim()}"`);
-  };
-
-  const handleRemoveNature = (item: string) => {
-    onChange('natureOfBusiness', profile.natureOfBusiness.filter(n => n !== item));
-  };
-
   const handleSaveAndNext = async () => {
     const rawNatures = (profile.natureOfBusiness && profile.natureOfBusiness.length > 0)
       ? profile.natureOfBusiness
@@ -297,6 +528,17 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
     setIsSubmitting(true);
     const toastId = toast.loading('Saving About & Specialities to customers/about API...');
     onToast('Submitting to customers/about...');
+
+    // Categories & services are part of customers/info; only sync when Step 1 data is present
+    // so an empty basic profile is never written over the saved one
+    if (profile.businessName && profile.contactName) {
+      try {
+        await updateCustomerInfo(formatAdminInfoPayload(profile), adminId);
+      } catch (infoErr) {
+        console.warn('[Step2AboutSpecialities] Could not sync categories/services to customer info:', infoErr);
+        onToast('⚠️ Categories & services could not be saved. Please save Basic Details first.');
+      }
+    }
 
     try {
       const jsonPayload = formatAdminAboutPayload(profile);
@@ -356,7 +598,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
       </div>
 
       {/* Statutory & Business Profile Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-3">
         <div>
           <GenericInputField
             label="Establishment Year"
@@ -378,100 +620,187 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
             placeholder="27AAAAA0000A1Z5"
           />
         </div>
+      </div>
 
-        <div className="col-span-2 sm:col-span-1 flex flex-col justify-end">
-          <label className="flex items-center gap-2 p-2 sm:p-2.5 rounded-xl border border-stroke bg-[#f8f9ff] cursor-pointer hover:border-[#2563EB] transition-colors">
-            <input
-              type="checkbox"
-              checked={profile.showCategoryInCard}
-              onChange={(e) => onChange('showCategoryInCard', e.target.checked)}
-              className="w-4 h-4 text-[#2563EB] rounded border-[#c5c6cd] focus:ring-[#2563EB]"
-            />
-            <span className="text-xs font-semibold text-[#091426]">
-              Show category in digital card
-            </span>
-          </label>
+      {/* ─── Business Categories (Multi-Select Dropdown) ───────────── */}
+      <div className="mb-3 pt-3 border-t border-[#c5c6cd]/40">
+        <label className="text-xs font-bold text-[#091426] block mb-1.5">
+          Business Categories <span className="text-red-500">*</span>
+        </label>
+
+        {/* Multi-select Dropdown */}
+        <div className="relative">
+          {/* Trigger */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setCatDropdownOpen((prev) => !prev)}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setCatDropdownOpen((prev) => !prev))}
+            className={`w-full cursor-pointer flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border text-xs font-medium transition-all bg-white shadow-2xs ${
+              catDropdownOpen
+                ? 'border-[#2563EB] ring-1 ring-[#2563EB]/20'
+                : 'border-stroke hover:border-[#2563EB]/50'
+            }`}
+          >
+            <div className="flex flex-wrap gap-1.5 flex-1 min-h-[22px] items-center">
+              {selectedCategoryLabels.length === 0 ? (
+                <span className="text-gray-400">Select or add categories...</span>
+              ) : (
+                selectedCategoryLabels.map((label) => {
+                  return (
+                    <span
+                      key={label}
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE] text-[11px] font-semibold"
+                    >
+                      {label}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleRemoveCategory(label); }}
+                        className="hover:text-red-600 ml-0.5"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </span>
+                  );
+                })
+              )}
+            </div>
+            <span className="text-gray-400 shrink-0 text-[11px]">{catDropdownOpen ? '▲' : '▼'}</span>
+          </div>
+
+          {/* Dropdown Panel */}
+          {catDropdownOpen && (
+            <div className="absolute z-30 mt-1 w-full bg-white border border-[#c5c6cd] rounded-xl shadow-xl overflow-hidden animate-in slide-in-from-top-2 duration-150">
+              {/* Search */}
+              <div className="px-3 pt-3 pb-2 border-b border-stroke">
+                <input
+                  type="text"
+                  value={catSearch}
+                  onChange={(e) => setCatSearch(e.target.value)}
+                  placeholder="Search or type a new category..."
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-stroke focus:outline-none focus:border-[#2563EB] bg-[#f8f9fc]"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && catSearch.trim()) {
+                      e.preventDefault();
+                      const match = availableCategories.find((c) => c.name.toLowerCase() === catSearch.trim().toLowerCase());
+                      handleAddCategory(match?.name || catSearch.trim(), match?.id);
+                      setCatSearch('');
+                    }
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              {/* Options */}
+              <div className="max-h-52 overflow-y-auto">
+                {availableCategories
+                  .filter((c) =>
+                    c.name.toLowerCase().includes(catSearch.toLowerCase())
+                  )
+                  .map((cat) => {
+                    const isSelected = (profile.categoryIds || []).includes(cat.id);
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            handleRemoveCategory(cat.name);
+                          } else {
+                            handleAddCategory(cat.name, cat.id);
+                          }
+                        }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs text-left transition-colors ${
+                          isSelected
+                            ? 'bg-[#EFF6FF] text-[#2563EB]'
+                            : 'text-[#091426] hover:bg-[#f8f9fc]'
+                        }`}
+                      >
+                        <span
+                          className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                            isSelected
+                              ? 'bg-[#2563EB] border-[#2563EB]'
+                              : 'border-[#c5c6cd] bg-white'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                        </span>
+                        <span className="font-medium">{cat.name}</span>
+                      </button>
+                    );
+                  })}
+
+                {/* Manually add a custom category when it's not in the list */}
+                {catSearch.trim() &&
+                  !availableCategories.some((c) => c.name.toLowerCase() === catSearch.trim().toLowerCase()) && (
+                    <button
+                      type="button"
+                      onClick={() => { handleAddCategory(catSearch.trim()); setCatSearch(''); }}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left text-[#2563EB] font-semibold hover:bg-[#EFF6FF] border-t border-stroke"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add "{catSearch.trim()}"</span>
+                    </button>
+                  )}
+
+                {availableCategories.length === 0 && !catSearch.trim() && (
+                  <div className="px-4 py-4 text-xs text-gray-400 text-center">
+                    Type to add a category
+                  </div>
+                )}
+              </div>
+
+              {/* Done button */}
+              <div className="px-3 py-2 border-t border-stroke">
+                <button
+                  type="button"
+                  onClick={() => { setCatDropdownOpen(false); setCatSearch(''); }}
+                  className="w-full py-1.5 rounded-lg bg-[#2563EB] text-white text-[11px] font-bold hover:bg-[#1D4ED8] transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Nature of Business */}
+      {/* ─── Key Services Offered (Multiple Entry) ───────────────── */}
       <div className="mb-3 pt-3 border-t border-[#c5c6cd]/40">
-        <div className="flex items-center justify-between gap-2 mb-1.5">
-          <label className="block text-xs font-bold text-[#091426]">
-            Nature of Business
+        <div className="flex items-center justify-between gap-1.5 mb-1.5">
+          <label className="text-xs font-bold text-[#091426] block">
+            Key Services Offered
           </label>
 
           <button
             type="button"
-            onClick={handleSyncFromServices}
-            className="px-2.5 py-1 rounded-lg bg-blue-50 text-[#2563EB] border border-blue-200 text-xs font-bold hover:bg-blue-100 flex items-center gap-1.5 transition-colors shrink-0 shadow-2xs"
-            title="Sync all services from Step 1 into Nature of Business"
+            onClick={handleAutoGenerateServices}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#2563EB] text-[11px] font-bold border border-[#BFDBFE] transition-colors shadow-2xs active:scale-95 shrink-0"
+            title="Automatically generate services matching your business category"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Sync Services</span>
+            <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
+            <span>Auto Generate</span>
           </button>
         </div>
 
-        {/* Available services chips from Step 1 & backend that can be quickly added if not already */}
-        {(() => {
-          const available = Array.from(new Set([
-            ...(profile.servicesOffered || []),
-            ...(profile.basicDetailsServices || []),
-            ...backendServices,
-          ])).filter(Boolean);
-
-          if (available.length === 0) return null;
-
-          return (
-            <div className="mb-2 p-2 rounded-xl bg-[#f8faff] border border-blue-100 flex flex-wrap items-center gap-1.5 text-xs">
-              {available.map((srv, idx) => {
-                const srvText = typeof srv === 'object' ? String((srv as any).businessNature || (srv as any).name || '') : String(srv);
-                const isAdded = (profile.natureOfBusiness || []).some(n => {
-                  const nText = typeof n === 'object' ? String((n as any).businessNature || (n as any).name || '') : String(n);
-                  return nText.toLowerCase() === srvText.toLowerCase();
-                });
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      if (isAdded) {
-                        handleRemoveNature(srvText);
-                      } else {
-                        onChange('natureOfBusiness', [...(profile.natureOfBusiness || []), srvText]);
-                        onToast(`Added "${srvText}" to Nature of Business!`);
-                      }
-                    }}
-                    className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 ${
-                      isAdded
-                        ? 'bg-[#EFF6FF] text-[#2563EB] font-bold border border-[#BFDBFE]'
-                        : 'bg-white text-gray-600 border border-stroke hover:border-[#2563EB]'
-                    }`}
-                  >
-                    <span>{isAdded ? '✓' : '+'}</span>
-                    <span>{srvText}</span>
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })()}
-
-        <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl border border-stroke bg-white min-h-[42px]">
-          {(profile.natureOfBusiness || []).map((nature, idx) => {
-            const natureText = typeof nature === 'object' ? String((nature as any).businessNature || (nature as any).name || '') : String(nature);
+        <div className="flex flex-wrap gap-1.5 p-2 sm:p-2.5 rounded-xl border border-stroke bg-[#f8f9fc] items-center min-h-[42px]">
+          {(profile.servicesOffered || []).map((srv, idx) => {
+            const cleanSrv = cleanServiceString(srv);
+            if (!cleanSrv) return null;
             return (
               <span
                 key={idx}
-                className="px-2.5 py-1 rounded-lg bg-[#EFF6FF] text-[#2563EB] text-xs font-semibold flex items-center gap-1.5 border border-[#BFDBFE]"
+                className="px-2.5 py-1 rounded-lg bg-white text-[#091426] text-xs font-semibold flex items-center gap-1.5 border border-stroke shadow-2xs"
               >
-                <span>{natureText}</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]" />
+                <span>{cleanSrv}</span>
                 <button
                   type="button"
-                  onClick={() => handleRemoveNature(natureText)}
-                  className="text-[#45474c] hover:text-rose-600 text-xs"
+                  onClick={() => handleRemoveService(cleanSrv)}
+                  className="hover:text-red-600 text-[11px] p-0.5"
+                  title={`Remove ${cleanSrv}`}
                 >
-                  ✕
+                  <X className="w-3 h-3" />
                 </button>
               </span>
             );
@@ -480,23 +809,56 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
           <div className="flex items-center gap-1 flex-1 min-w-[150px]">
             <input
               type="text"
-              value={newNature}
-              onChange={(e) => setNewNature(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddNature())}
-              placeholder="+ Add custom nature..."
-              className="border-none text-xs text-[#091426] focus:ring-0 p-1 w-full focus:outline-none"
+              value={newService}
+              onChange={(e) => setNewService(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddService())}
+              placeholder="+ Type service & Enter (e.g. Corporate Consulting)..."
+              className="w-full text-xs bg-transparent border-none text-[#091426] focus:outline-none p-1 placeholder:text-gray-400"
             />
-            {newNature && (
+            {newService && (
               <button
                 type="button"
-                onClick={handleAddNature}
-                className="text-[11px] font-bold text-[#2563EB] px-2 py-0.5 rounded bg-[#EFF6FF]"
+                onClick={handleAddService}
+                className="px-2.5 py-1 rounded-lg bg-[#2563EB] text-white text-[11px] font-bold shrink-0 shadow-2xs"
               >
                 Add
               </button>
             )}
           </div>
         </div>
+
+        {/* Smart Suggestions based on Business Category / Services */}
+        {suggestedServices.length > 0 && (
+          <div className="mt-2 p-2 sm:p-2.5 rounded-xl bg-[#EFF6FF]/70 border border-[#BFDBFE] text-xs animate-in fade-in duration-200">
+            <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-blue-200/50">
+              <span className="text-[10px] font-bold text-[#2563EB] uppercase tracking-wide flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-[#2563EB]" />
+                Suggested Services:
+              </span>
+              <button
+                type="button"
+                onClick={handleAddAllSuggestedServices}
+                className="text-[10px] font-bold text-[#2563EB] hover:underline px-1 py-0.5"
+              >
+                + Add All
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {suggestedServices.slice(0, 6).map((srv, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleAddSuggestedService(srv)}
+                  className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-white hover:bg-[#EFF6FF] text-[#091426] hover:text-[#2563EB] border border-stroke hover:border-[#2563EB] transition-all flex items-center gap-1 shadow-2xs"
+                  title={`Add ${srv}`}
+                >
+                  <Plus className="w-2.5 h-2.5 text-[#2563EB]" />
+                  <span className="truncate max-w-[200px]">{srv}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Core Specialities (Configured tags) */}
@@ -667,6 +1029,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
                 onClick={() => {
                   setIsAddingDoc(false);
                   setNewDocTitle('');
+                  setNewDocDescription('');
                   setSelectedDocFile(null);
                 }}
                 className="p-1 rounded-lg hover:bg-blue-100 text-slate-500 hover:text-slate-700 transition-colors"
@@ -684,6 +1047,18 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
                   onChange={(e) => setNewDocTitle(e.target.value)}
                   placeholder="e.g. MEA Annual Corporate Profile 2026, Product Catalogue, GST Certificate"
                   required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Description</label>
+                <textarea
+                  rows={2}
+                  maxLength={300}
+                  value={newDocDescription}
+                  onChange={(e) => setNewDocDescription(e.target.value)}
+                  placeholder="Short note about this document (optional)"
+                  className="w-full px-3 py-2 rounded-xl border border-stroke bg-white text-xs text-[#091426] focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]/25 resize-y"
                 />
               </div>
 
@@ -744,6 +1119,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
                   onClick={() => {
                     setIsAddingDoc(false);
                     setNewDocTitle('');
+                    setNewDocDescription('');
                     setSelectedDocFile(null);
                   }}
                   className="px-3.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
@@ -766,6 +1142,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
                       id: `doc_${Date.now()}`,
                       name: title,
                       fileName: title,
+                      description: newDocDescription.trim(),
                       url: selectedDocFile?.base64 || '',
                       size: sizeText,
                       uploadedAt: 'Uploaded Just Now',
@@ -777,6 +1154,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
                     onChange('documents', updated);
                     setIsAddingDoc(false);
                     setNewDocTitle('');
+                    setNewDocDescription('');
                     setSelectedDocFile(null);
                     onToast(`✅ Added document: "${title}"`);
                   }}
@@ -856,9 +1234,14 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
                     }`}>
                       {badgeLabel}
                     </div>
-                    <p className="text-xs font-bold text-[#091426] truncate group-hover:text-[#2563EB] transition-colors">
-                      {fileName}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-[#091426] truncate group-hover:text-[#2563EB] transition-colors">
+                        {fileName}
+                      </p>
+                      {doc.description && (
+                        <p className="text-[10px] text-gray-500 truncate">{doc.description}</p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex items-center shrink-0 ml-1">
@@ -921,12 +1304,12 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
           type="button"
           onClick={handleSaveAndNext}
           disabled={isSubmitting}
-          className="!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 shadow-md shadow-[#2563EB]/25 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="!px-4 sm:!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 whitespace-nowrap shadow-md shadow-[#2563EB]/25 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Syncing to server...</span>
+              <span>Saving...</span>
             </>
           ) : (
             <>

@@ -836,12 +836,7 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
       <section
         className={`relative overflow-hidden bg-gradient-to-r ${themeConfig.heroBgGradient} text-white pt-6 sm:pt-10 pb-8 sm:pb-12 w-full max-w-full`}
       >
-        {/* Glow ambient background ring */}
-        <div className="absolute right-0 top-0 bottom-0 w-full lg:w-1/2 pointer-events-none overflow-hidden opacity-60 sm:opacity-80 flex items-center justify-end">
-          <div
-            className={`w-[320px] sm:w-[620px] h-[320px] sm:h-[620px] rounded-full border-[16px] sm:border-[24px] ${themeConfig.heroRingBorder} -mr-16 sm:-mr-24 -mt-10 blur-[1px]`}
-          />
-        </div>
+        {/* Ambient background ring removed as requested */}
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
           <div

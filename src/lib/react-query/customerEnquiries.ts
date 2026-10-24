@@ -10,12 +10,20 @@ import toast from 'react-hot-toast';
 export const CUSTOMER_ENQUIRIES_QUERY_KEY = ['customers', 'enquires'];
 
 /**
- * Hook to fetch customer enquiries via GET customers/enquires
+ * Admin panel (no adminId)  -> GET customers/enquires
+ * Super admin (with adminId) -> GET superAdmin/admin/:adminId/enquires
  */
-export const useCustomerEnquiries = (options?: { enabled?: boolean }) => {
+const enquiriesQueryKey = (adminId?: string) =>
+  adminId ? ['superAdmin', 'admin', adminId, 'enquires'] : CUSTOMER_ENQUIRIES_QUERY_KEY;
+
+/**
+ * Hook to fetch customer enquiries
+ */
+export const useCustomerEnquiries = (adminId?: string, options?: { enabled?: boolean }) => {
   return useQuery<CustomerEnquiry[]>({
-    queryKey: CUSTOMER_ENQUIRIES_QUERY_KEY,
-    queryFn: getCustomerEnquiries,
+    queryKey: enquiriesQueryKey(adminId),
+    // Wrap the call: react-query passes its own context object as the first argument
+    queryFn: () => getCustomerEnquiries(adminId),
     staleTime: 1000 * 60 * 2, // 2 minutes
     refetchOnWindowFocus: true,
     ...options,
@@ -23,16 +31,16 @@ export const useCustomerEnquiries = (options?: { enabled?: boolean }) => {
 };
 
 /**
- * Hook to update status of an enquiry (PATCH customers/enquires/:id)
+ * Hook to update status of an enquiry (PATCH customers/enquires/:id or superAdmin route)
  */
-export const useUpdateCustomerEnquiryStatus = () => {
+export const useUpdateCustomerEnquiryStatus = (adminId?: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: CustomerEnquiry['status'] }) =>
-      updateCustomerEnquiryStatus(id, status),
+      updateCustomerEnquiryStatus(id, status, adminId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CUSTOMER_ENQUIRIES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: enquiriesQueryKey(adminId) });
       toast.success('Enquiry status updated');
     },
     onError: (err: any) => {
@@ -44,13 +52,13 @@ export const useUpdateCustomerEnquiryStatus = () => {
 /**
  * Hook to delete an enquiry
  */
-export const useDeleteCustomerEnquiry = () => {
+export const useDeleteCustomerEnquiry = (adminId?: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => deleteCustomerEnquiry(id),
+    mutationFn: (id: string) => deleteCustomerEnquiry(id, adminId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CUSTOMER_ENQUIRIES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: enquiriesQueryKey(adminId) });
       toast.success('Enquiry removed');
     },
   });

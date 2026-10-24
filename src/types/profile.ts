@@ -51,6 +51,7 @@ export interface CompanyDocument {
   id: string;
   name: string;
   fileName?: string;
+  description?: string;
   url: string;
   size?: string;
   uploadedAt?: string;

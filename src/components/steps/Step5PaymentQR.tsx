@@ -355,12 +355,12 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
           type="button"
           onClick={handleSaveAndNext}
           disabled={isSubmitting}
-          className="!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 shadow-md shadow-[#2563EB]/25 disabled:opacity-60"
+          className="!px-4 sm:!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 whitespace-nowrap shadow-md shadow-[#2563EB]/25 disabled:opacity-60"
         >
           {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Saving Payment Details...</span>
+              <span>Saving...</span>
             </>
           ) : (
             <>

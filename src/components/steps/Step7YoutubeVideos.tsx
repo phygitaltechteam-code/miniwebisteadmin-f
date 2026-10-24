@@ -310,7 +310,7 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
           type="button"
           onClick={handleSaveAndNext}
           disabled={isSubmitting}
-          className="!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 shadow-md shadow-[#2563EB]/25 disabled:opacity-60"
+          className="!px-4 sm:!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 whitespace-nowrap shadow-md shadow-[#2563EB]/25 disabled:opacity-60"
         >
           {isSubmitting ? (
             <>

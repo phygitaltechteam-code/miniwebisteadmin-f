@@ -3,8 +3,8 @@ import toast from 'react-hot-toast';
 import {
   ArrowRight, ArrowLeft, ExternalLink, Globe, MapPin, Store,
   MessageCircle, Send, Twitter, Facebook, Instagram, Linkedin,
-  Youtube, Mail, Phone, Loader2, X, Link2, Save, ShoppingBag,
-  FileText, Video, Image as ImageIcon, Music, ShoppingCart,
+  Youtube, Loader2, X, Link2, Save, ShoppingBag,
+  Music, ShoppingCart,
   Smartphone, Hash, Slack, Calendar, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { ProfileData } from '../../types/profile';
@@ -131,20 +131,14 @@ const LinkRow: React.FC<LinkRowProps> = ({ icon, label, value, onEdit }) => {
 
 // ─── Popup Configs ─────────────────────────────────────────────────────────────
 
-type PopupKey = keyof typeof POPUP_CONFIGS;
-
 const POPUP_CONFIGS = {
   webSiteLink:       { title: 'Website', label: 'Website URL', placeholder: 'https://www.yourbusiness.com', helperText: 'Include https://' },
-  location:          { title: 'Location / Google Maps', label: 'Google Maps Link', placeholder: 'https://maps.app.goo.gl/...', helperText: 'Paste your Google Maps or GMB location link' },
   googleMyBussiness: { title: 'Google My Business', label: 'GMB Profile Link', placeholder: 'https://g.page/yourbusiness', helperText: 'Your Google My Business profile URL' },
   instagramLink:     { title: 'Instagram', label: 'Instagram Profile URL', placeholder: 'https://instagram.com/yourhandle' },
   facebookLink:      { title: 'Facebook Page', label: 'Facebook Page URL', placeholder: 'https://facebook.com/yourpage' },
   youTubeLink:       { title: 'YouTube Channel', label: 'YouTube URL', placeholder: 'https://youtube.com/@yourchannel' },
   linkedinLink:      { title: 'LinkedIn', label: 'LinkedIn Profile / Company URL', placeholder: 'https://linkedin.com/in/yourprofile' },
   twitter:           { title: 'X (Twitter)', label: 'Twitter Profile URL or @handle', placeholder: 'https://twitter.com/yourhandle' },
-  whatsappLinks:     { title: 'WhatsApp Direct', label: 'WhatsApp Chat Link', placeholder: 'https://wa.me/919876543210', helperText: 'Format: https://wa.me/<countrycode><number>' },
-  emailLinks:        { title: 'Email', label: 'Email Address or mailto link', placeholder: 'mailto:you@business.com', type: 'email' as const },
-  callLinks:         { title: 'Phone Call', label: 'Phone Number or tel link', placeholder: 'tel:+919876543210', type: 'tel' as const },
   whatsappGroup:     { title: 'WhatsApp Group', label: 'WhatsApp Group Invite Link', placeholder: 'https://chat.whatsapp.com/...', helperText: 'Group invite link from WhatsApp' },
   facebookGroup:     { title: 'Facebook Group', label: 'Facebook Group URL', placeholder: 'https://facebook.com/groups/yourgroup' },
   telegram:          { title: 'Telegram', label: 'Telegram Channel / Group Link', placeholder: 'https://t.me/yourchannel' },
@@ -166,6 +160,8 @@ const POPUP_CONFIGS = {
   spotifyLink:       { title: 'Spotify', label: 'Spotify Profile / Playlist Link', placeholder: 'https://open.spotify.com/...' },
   customLink:        { title: 'Custom Link', label: 'Custom Destination URL', placeholder: 'https://yoursite.com/page' },
 } as const satisfies Record<string, LinkPopupConfig>;
+
+type PopupKey = keyof typeof POPUP_CONFIGS;
 
 // ─── Step 4 Component ─────────────────────────────────────────────────────────
 
@@ -272,12 +268,6 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
         <div className="space-y-3">
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            <LinkRow icon={ico(<Globe className="w-4 h-4 text-[#2563EB]" />)} label="Website" value={profile.webSiteLink || profile.website} onEdit={() => openPopup('webSiteLink')} />
-            <LinkRow icon={ico(<MapPin className="w-4 h-4 text-[#2563EB]" />)} label="Location / Maps" value={profile.location || profile.mapLink} onEdit={() => openPopup('location')} />
-            <LinkRow icon={ico(<MapPin className="w-4 h-4 text-emerald-600" />)} label="Google My Business" value={profile.googleMyBussiness} onEdit={() => openPopup('googleMyBussiness')} />
-            <LinkRow icon={ico(<MessageCircle className="w-4 h-4 text-emerald-600" />)} label="WhatsApp Direct" value={profile.whatsappLinks} onEdit={() => openPopup('whatsappLinks')} />
-            <LinkRow icon={ico(<Mail className="w-4 h-4 text-rose-500" />)} label="Email" value={profile.emailLinks} onEdit={() => openPopup('emailLinks')} />
-            <LinkRow icon={ico(<Phone className="w-4 h-4 text-[#2563EB]" />)} label="Phone Call" value={profile.callLinks} onEdit={() => openPopup('callLinks')} />
             <LinkRow icon={ico(<Instagram className="w-4 h-4 text-pink-600" />)} label="Instagram" value={profile.instagramLink} onEdit={() => openPopup('instagramLink')} />
             <LinkRow icon={ico(<Facebook className="w-4 h-4 text-blue-600" />)} label="Facebook" value={profile.facebookLink} onEdit={() => openPopup('facebookLink')} />
             <LinkRow icon={ico(<Youtube className="w-4 h-4 text-red-600" />)} label="YouTube" value={profile.youTubeLink} onEdit={() => openPopup('youTubeLink')} />
@@ -295,7 +285,8 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
             <LinkRow icon={ico(<ShoppingCart className="w-4 h-4 text-gray-700" />)} label="Uber Eats" value={profile.uberLink} onEdit={() => openPopup('uberLink')} />
           </div>
 
-          {/* ── More Links (collapsible) ── */}
+          {/* ── More Links (collapsible) [Commented out as requested] ── */}
+          {/*
           <div>
             <button
               type="button"
@@ -314,13 +305,11 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
                 <LinkRow icon={ico(<Smartphone className="w-4 h-4 text-blue-500" />)} label="App Store / Play Store" value={profile.appStoreLink} onEdit={() => openPopup('appStoreLink')} />
                 <LinkRow icon={ico(<Store className="w-4 h-4 text-pink-500" />)} label="Meshow" value={profile.meshowLink} onEdit={() => openPopup('meshowLink')} />
                 <LinkRow icon={ico(<ExternalLink className="w-4 h-4 text-gray-500" />)} label="Go Link / Short URL" value={profile.goLink} onEdit={() => openPopup('goLink')} />
-                <LinkRow icon={ico(<FileText className="w-4 h-4 text-rose-500" />)} label="PDF / Brochure" value={profile.pdfLink} onEdit={() => openPopup('pdfLink')} />
-                <LinkRow icon={ico(<Video className="w-4 h-4 text-red-500" />)} label="Video Link" value={profile.videoLink} onEdit={() => openPopup('videoLink')} />
-                <LinkRow icon={ico(<ImageIcon className="w-4 h-4 text-teal-500" />)} label="Image / Portfolio" value={profile.imageLink} onEdit={() => openPopup('imageLink')} />
                 <LinkRow icon={ico(<ExternalLink className="w-4 h-4 text-[#2563EB]" />)} label="Custom Link" value={profile.customLink} onEdit={() => openPopup('customLink')} />
               </div>
             )}
           </div>
+          */}
         </div>
 
         {/* Navigation */}
@@ -339,7 +328,7 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
             type="button"
             onClick={handleSaveAndNext}
             disabled={isSubmitting}
-            className="!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 shadow-md shadow-[#2563EB]/25 disabled:opacity-60"
+            className="!px-4 sm:!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 whitespace-nowrap shadow-md shadow-[#2563EB]/25 disabled:opacity-60"
           >
             {isSubmitting ? (
               <><Loader2 className="w-4 h-4 animate-spin" /><span>Saving Links...</span></>

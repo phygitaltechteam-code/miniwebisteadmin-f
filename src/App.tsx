@@ -29,6 +29,7 @@ import { Step6GalleryMedia } from './components/steps/Step6GalleryMedia';
 import { Step7YoutubeVideos } from './components/steps/Step7YoutubeVideos';
 import { Step7SettingsHeadings } from './components/steps/Step7SettingsHeadings';
 import { SuperAdminCardForge } from './pages/superadmin/SuperAdminCardForge';
+import { EnquiriesDropdown } from './components/EnquiriesDropdown';
 
 // ─── Super Admin Layout (sidebar only, no header) ─────────────────────────────
 function SuperAdminPortal({ onSignOut }: { onSignOut: () => void }) {
@@ -137,6 +138,10 @@ function SuperAdminPortal({ onSignOut }: { onSignOut: () => void }) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* Super admin enquiries: superAdmin/admin/:adminId/enquires only */}
+            {activeView === 'card-builder' && (selectedAdminForCard?.id || selectedAdminForCard?._id) && (
+              <EnquiriesDropdown adminId={selectedAdminForCard?.id || selectedAdminForCard?._id} />
+            )}
             {activeView === 'card-builder' && (
               <button
                 type="button"
@@ -144,7 +149,7 @@ function SuperAdminPortal({ onSignOut }: { onSignOut: () => void }) {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-2xs"
               >
                 <span>←</span>
-                <span>Back to Admins</span>
+                <span className="hidden sm:inline">Back to Admins</span>
               </button>
             )}
 

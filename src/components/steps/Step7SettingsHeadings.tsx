@@ -249,7 +249,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
 
       {/* 11 Visibility Toggles */}
       <div className="mb-3 pt-3 border-t border-[#c5c6cd]/40">
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 p-3 rounded-xl border border-stroke bg-[#f8f9ff]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 p-3 rounded-xl border border-stroke bg-[#f8f9ff]">
           {visibilityItems.map((item) => (
             <label
               key={item.key}
@@ -267,11 +267,10 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
         </div>
       </div>
 
-      {/* Customise Section Headings */}
-      <div className="mb-3 pt-3 border-t border-[#c5c6cd]/40">
+      {/* Customise Section Headings — COMMENTED OUT (not needed in current flow) */}
+      {/* <div className="mb-3 pt-3 border-t border-[#c5c6cd]/40">
         <label className="block text-xs font-bold text-[#091426] mb-2">Section Headings</label>
-
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
           {headingFields.map((field) => (
             <div key={field.key}>
               <GenericInputField
@@ -282,7 +281,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
 
       {/* Customise Footer Labels */}
       <div className="pt-3 border-t border-[#c5c6cd]/40">
@@ -321,7 +320,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
           type="button"
           onClick={handleSaveAndFinish}
           disabled={isSubmitting}
-          className="!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 shadow-md shadow-[#2563EB]/25 disabled:opacity-60"
+          className="!px-4 sm:!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 whitespace-nowrap shadow-md shadow-[#2563EB]/25 disabled:opacity-60"
         >
           {isSubmitting ? (
             <>
@@ -331,7 +330,8 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
           ) : (
             <>
               <Save className="w-4 h-4" />
-              <span>Save All & Complete Card</span>
+              <span className="hidden sm:inline">Save All & Complete Card</span>
+              <span className="sm:hidden">Save All</span>
             </>
           )}
         </GenericButton>

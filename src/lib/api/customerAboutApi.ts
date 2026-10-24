@@ -84,6 +84,7 @@ export const formatAdminAboutPayload = (profile: Partial<ProfileData>): Customer
       id: doc.id || `doc_${Date.now()}`,
       name,
       fileName,
+      description: doc.description || '',
       url: doc.url || '',
       size: doc.size || '',
       uploadedAt: doc.uploadedAt || '',
@@ -197,6 +198,7 @@ export const formatAboutFormData = (profile: Partial<ProfileData>): FormData => 
       formData.append('documents', doc.url);
     }
     formData.append('fileName', doc.fileName || ''); // never skip; '' = use original filename
+    formData.append('description', doc.description || ''); // kept index-aligned with documents/fileName
   });
 
   return formData;

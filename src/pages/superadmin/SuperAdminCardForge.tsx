@@ -52,8 +52,12 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
     const phone = adm.phoneNumber || adm.user?.phoneNumber || adm.phone || '';
     const email = adm.email || adm.user?.email || '';
     const address = adm.address || adm.user?.address || '';
-    const businessName = adm.cardBusinessName || adm.businessName || adm.companyName || fullName || '';
-    const contactName = adm.cardContactName || fullName || '';
+    // Do NOT put personal name (fullName) into businessName; keep it in contactName
+    const businessName = adm.cardBusinessName || adm.businessName || adm.companyName || '';
+    const contactName = adm.cardContactName || adm.contactName || fullName || '';
+    const vanitySlug = businessName
+      ? businessName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+      : '';
 
     return {
       ...initialProfileData,
@@ -71,7 +75,7 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
       whatsappNumber: phone,
       email,
       address,
-      vanityUrl: businessName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'business',
+      vanityUrl: adm.vanityUrl || vanitySlug || '',
     };
   };
 
@@ -158,6 +162,7 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
             if (data && typeof data === 'object') {
               if (data.businessName) updated.businessName = data.businessName;
               if (data.contactName) updated.contactName = data.contactName;
+              else if (prev.contactName) updated.contactName = prev.contactName;
               if (data.prefix) updated.prefix = data.prefix;
               if (data.designation) updated.designation = data.designation;
               if (data.primaryPhone) updated.primaryPhone = data.primaryPhone;
@@ -429,7 +434,7 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
       />
 
       {toastMessage && (
-        <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-50 bg-[#091426] text-white px-5 py-2.5 rounded-xl shadow-2xl border border-slate-700/80 text-xs font-semibold flex items-center gap-2">
+        <div className="fixed bottom-20 sm:bottom-12 left-1/2 -translate-x-1/2 z-50 w-max max-w-[calc(100vw-2rem)] bg-[#091426] text-white px-4 sm:px-5 py-2.5 rounded-xl shadow-2xl border border-slate-700/80 text-xs font-semibold flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
