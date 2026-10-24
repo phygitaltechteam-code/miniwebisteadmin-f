@@ -148,60 +148,55 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
     return () => { isMounted = false; };
   }, [adminId]);
 
-  // Also auto-sync services from Step 1 or backendServices if natureOfBusiness is currently empty
+  // Auto-sync services from Step 1 so removed services are never kept in Step 2
   useEffect(() => {
-    const available = profile.servicesOffered?.length ? profile.servicesOffered : backendServices;
-    if ((!profile.natureOfBusiness || profile.natureOfBusiness.length === 0) && available && available.length > 0) {
-      const cleanAvailable = available
+    if (Array.isArray(profile.servicesOffered) && profile.servicesOffered.length > 0) {
+      const cleanActive = profile.servicesOffered
         .map((s: any) => typeof s === 'object' ? String((s as any).businessNature || (s as any).name || '') : String(s))
+        .map(s => s.trim())
         .filter(Boolean);
-      onChange('natureOfBusiness', cleanAvailable);
+      const currentNatures = (profile.natureOfBusiness || []).map(String);
+      const isMismatch = currentNatures.some(n => !cleanActive.some(a => a.toLowerCase() === n.toLowerCase()));
+      if (isMismatch || currentNatures.length === 0) {
+        onChange('natureOfBusiness', cleanActive);
+      }
     }
-  }, [profile.servicesOffered, backendServices]);
+  }, [profile.servicesOffered]);
+
+  // Active services list strictly respecting Step 1 user selections
+  const activeServicesList = (profile.servicesOffered && profile.servicesOffered.length > 0)
+    ? profile.servicesOffered.map(String).map(s => s.trim()).filter(Boolean)
+    : (profile.natureOfBusiness && profile.natureOfBusiness.length > 0)
+    ? profile.natureOfBusiness.map(String).map(s => s.trim()).filter(Boolean)
+    : backendServices;
 
   // Auto-generate initial specialities and narrative if empty once services / businessName are ready
   useEffect(() => {
-    const combinedServices = Array.from(new Set([
-      ...(profile.servicesOffered || []),
-      ...(profile.natureOfBusiness || []),
-      ...backendServices,
-    ])).filter(Boolean);
-
-    if (combinedServices.length > 0 && profile.businessName) {
+    if (activeServicesList.length > 0 && profile.businessName) {
       if (!profile.specialities || profile.specialities.length === 0) {
-        const generatedKeywords = generateAiKeywords(profile.businessName, combinedServices);
+        const generatedKeywords = generateAiKeywords(profile.businessName, activeServicesList);
         onChange('specialities', generatedKeywords);
       }
       if (!profile.aboutNarrative) {
-        const generatedNarrative = generateAiNarrative(profile.businessName, combinedServices, profile.contactName);
+        const generatedNarrative = generateAiNarrative(profile.businessName, activeServicesList, profile.contactName);
         onChange('aboutNarrative', generatedNarrative);
       }
     }
-  }, [profile.servicesOffered, profile.natureOfBusiness, backendServices, profile.businessName]);
+  }, [profile.servicesOffered, profile.natureOfBusiness, profile.businessName]);
 
   const handleAiGenerateKeywords = () => {
-    const combinedServices = Array.from(new Set([
-      ...(profile.servicesOffered || []),
-      ...(profile.natureOfBusiness || []),
-      ...backendServices,
-    ])).filter(Boolean);
     const generated = generateAiKeywords(
       profile.businessName,
-      combinedServices
+      activeServicesList
     );
     onChange('specialities', generated);
     onToast(`AI generated ${generated.length} SEO keywords & speciality tags! Click again to regenerate.`);
   };
 
   const handleAiGenerateNarrative = () => {
-    const combinedServices = Array.from(new Set([
-      ...(profile.servicesOffered || []),
-      ...(profile.natureOfBusiness || []),
-      ...backendServices,
-    ])).filter(Boolean);
     const text = generateAiNarrative(
       profile.businessName,
-      combinedServices,
+      activeServicesList,
       profile.contactName
     );
     onChange('aboutNarrative', text);
@@ -665,9 +660,6 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
                 {(profile.documents?.length || 0) + (profile.brochureName ? 1 : 0)} Attached
               </span>
             </div>
-            <p className="text-[11px] text-[#75777d] mt-0.5">
-              Attach multiple brochures, corporate profiles, product catalogues, or GST certificates (PDF, DOC, PNG, JPG).
-            </p>
           </div>
 
           <button

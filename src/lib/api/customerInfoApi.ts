@@ -71,19 +71,61 @@ export const formatAdminInfoPayload = (
     addCatName(profile.categoryName);
   }
 
-  // Format business natures & specialities as string arrays
-  const natures = Array.isArray(profile.natureOfBusiness)
-    ? profile.natureOfBusiness
-    : (profile.businessNatures ? (Array.isArray(profile.businessNatures) ? profile.businessNatures : [profile.businessNatures]) : []);
+  // Determine exact active services chosen by the user in Step 1
+  let activeServicesList: string[] = [];
+  if (Array.isArray(profile.servicesOffered) && profile.servicesOffered.length > 0) {
+    activeServicesList = profile.servicesOffered
+      .map(s => String(s || '').trim())
+      .filter(Boolean);
+  } else if (typeof profile.servicesOffered === 'string' && profile.servicesOffered.trim().length > 0) {
+    activeServicesList = profile.servicesOffered
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+  } else if (Array.isArray(profile.natureOfBusiness) && profile.natureOfBusiness.length > 0) {
+    activeServicesList = profile.natureOfBusiness
+      .map(s => (typeof s === 'string' ? s : s?.name || s?.businessNature || '').trim())
+      .filter(Boolean);
+  } else if (Array.isArray(profile.businessNatures) && profile.businessNatures.length > 0) {
+    activeServicesList = profile.businessNatures
+      .map(s => (typeof s === 'string' ? s : s?.name || s?.businessNature || '').trim())
+      .filter(Boolean);
+  }
 
-  const specialitiesList = Array.isArray(profile.specialities)
-    ? profile.specialities
-    : [];
+  // Deduplicate active services
+  const seenNatures = new Set<string>();
+  const natures: string[] = [];
+  activeServicesList.forEach(s => {
+    const lower = s.toLowerCase();
+    if (!seenNatures.has(lower)) {
+      seenNatures.add(lower);
+      natures.push(s);
+    }
+  });
 
-  // Services offered as comma-separated string
-  const services = Array.isArray(profile.servicesOffered)
-    ? profile.servicesOffered.join(', ')
-    : (profile.servicesOffered || '');
+  // Services offered as clean comma-separated string matching active services only
+  const services = natures.join(', ');
+
+  // Filter specialities so only those matching active services are sent (never send specialities for removed services)
+  const rawSpecialities = Array.isArray(profile.specialities) ? profile.specialities : [];
+  let specialitiesList: string[] = [];
+
+  if (natures.length > 0 && rawSpecialities.length > 0) {
+    specialitiesList = rawSpecialities
+      .map((s: any) => (typeof s === 'string' ? s : s?.name || s?.title || s?.specialities || '').trim())
+      .filter(spec => {
+        if (!spec) return false;
+        return natures.some(srv =>
+          spec.toLowerCase().includes(srv.toLowerCase()) || srv.toLowerCase().includes(spec.toLowerCase())
+        );
+      });
+
+    if (specialitiesList.length === 0) {
+      specialitiesList = natures.slice(0, 6).map(srv => `${srv} Solutions`);
+    }
+  } else if (natures.length > 0) {
+    specialitiesList = natures.slice(0, 6).map(srv => `${srv} Solutions`);
+  }
 
   // Clean email
   let emailClean = profile.email || '';
@@ -127,7 +169,7 @@ export const formatAdminInfoPayload = (
     categoryName: categoryNamesList[0] || undefined,
     categoryNames: categoryNamesList.length > 0 ? categoryNamesList : undefined,
 
-    // Multiple business natures & specialities
+    // Multiple business natures & specialities strictly matching active services
     businessNatures: natures,
     businessNature: natures,
     specialities: specialitiesList,

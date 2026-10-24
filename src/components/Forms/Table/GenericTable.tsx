@@ -40,6 +40,7 @@ type GenericTableProps<T> = {
   showBackButton?: boolean;
   onBack?: () => void;
   headerAction?: React.ReactNode;
+  showSrNo?: boolean;
 };
 
 export const GenericTable = <T,>({
@@ -57,6 +58,7 @@ export const GenericTable = <T,>({
   showBackButton = false,
   onBack,
   headerAction,
+  showSrNo = false,
 }: GenericTableProps<T>) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -165,10 +167,15 @@ export const GenericTable = <T,>({
         <table className="w-full table-auto">
           <thead>
             <tr className="bg-[#1E40AF] text-left text-white shadow-xs dark:bg-blue-950">
+              {showSrNo && (
+                <th className="w-14 px-3 py-2.5 font-bold text-white text-xs sm:text-sm text-center">
+                  Sr. No.
+                </th>
+              )}
               {columns.map((column, index) => (
                 <th
                   key={index}
-                  className={`min-w-[120px] px-3.5 py-3 font-semibold text-white tracking-wide text-xs sm:text-sm ${column.className || ''}`}
+                  className={`min-w-[110px] px-3.5 py-2.5 font-semibold text-white tracking-wide text-xs sm:text-sm ${column.className || ''}`}
                   onClick={
                     column.sortable
                       ? () => handleSort(column.accessor as keyof T)
@@ -187,7 +194,7 @@ export const GenericTable = <T,>({
                 </th>
               ))}
               {action && (
-                <th className="min-w-[100px] px-3.5 py-3 font-bold text-white text-xs sm:text-sm">
+                <th className="min-w-[90px] px-3.5 py-2.5 font-bold text-white text-xs sm:text-sm">
                   <div>Action</div>
                 </th>
               )}
@@ -213,6 +220,11 @@ export const GenericTable = <T,>({
                     onRowClick?.(item);
                   }}
                 >
+                  {showSrNo && (
+                    <td className="w-14 border-b border-slate-100 px-3 py-2 text-center text-xs font-semibold text-slate-700 dark:border-strokedark dark:text-slate-300">
+                      {(currentPage - 1) * itemsPerPage + rowIndex + 1}
+                    </td>
+                  )}
                   {columns.map((column, colIndex) => {
                     const value =
                       typeof column.accessor === 'function'
@@ -222,7 +234,7 @@ export const GenericTable = <T,>({
                     return (
                       <td
                         key={colIndex}
-                        className="border-b border-slate-100 px-3.5 py-2.5 text-slate-800 dark:border-strokedark dark:text-slate-200"
+                        className="border-b border-slate-100 px-3.5 py-2 text-slate-800 dark:border-strokedark dark:text-slate-200"
                         onClick={() => {
                           if (column.onCellClick) {
                             column.onCellClick(item);
@@ -236,7 +248,7 @@ export const GenericTable = <T,>({
                             : 'default',
                         }}
                       >
-                        <div className="py-1.5">
+                        <div className="py-0.5">
                           {column.render
                             ? column.render(item)
                             : React.isValidElement(value)
@@ -247,12 +259,12 @@ export const GenericTable = <T,>({
                             ? ''
                             : String(value)}
                           {column.buttons && (
-                            <div className="mt-1.5 space-x-2">
+                            <div className="mt-1 space-x-1.5">
                               {column.buttons.map((button, btnIndex) => (
                                 <button
                                   key={btnIndex}
                                   onClick={() => button.onClick(item)}
-                                  className={`rounded px-2 py-1 text-xs ${button.className || ''}`}
+                                  className={`rounded px-2 py-0.5 text-xs ${button.className || ''}`}
                                 >
                                   {button.icon || button.label}
                                 </button>
@@ -264,28 +276,31 @@ export const GenericTable = <T,>({
                     );
                   })}
                   {action && (
-                    <td className="border-b border-slate-100 px-3.5 py-2.5 dark:border-strokedark">
-                      <div className="flex items-center space-x-2 py-1.5 sm:block sm:space-x-0 sm:space-y-2">
+                    <td className="border-b border-slate-100 px-3.5 py-2 dark:border-strokedark">
+                      <div className="flex items-center gap-1.5 py-0.5">
                         {onView && (
                           <button
-                            className="hover:bg-blue-100 rounded p-1.5 text-slate-600 hover:text-blue-700 dark:hover:bg-meta-4 transition-colors"
+                            className="hover:bg-blue-100 rounded p-1 text-slate-600 hover:text-blue-700 dark:hover:bg-meta-4 transition-colors"
                             onClick={() => onView(item)}
+                            title="View"
                           >
                             <FiEye className="h-4 w-4" />
                           </button>
                         )}
                         {handleEdit && (
                           <button
-                            className="hover:bg-blue-100 rounded p-1.5 text-slate-600 hover:text-blue-700 dark:hover:bg-meta-4 transition-colors"
+                            className="hover:bg-blue-100 rounded p-1 text-slate-600 hover:text-blue-700 dark:hover:bg-meta-4 transition-colors"
                             onClick={() => handleEdit(item)}
+                            title="Edit"
                           >
                             <FiEdit className="h-4 w-4" />
                           </button>
                         )}
                         {handleDelete && (
                           <button
-                            className="hover:bg-rose-100 rounded p-1.5 text-slate-600 hover:text-rose-600 dark:hover:bg-meta-4 transition-colors"
+                            className="hover:bg-rose-100 rounded p-1 text-slate-600 hover:text-rose-600 dark:hover:bg-meta-4 transition-colors"
                             onClick={() => handleDelete(item)}
+                            title="Delete"
                           >
                             <MdDelete className="h-4 w-4" />
                           </button>

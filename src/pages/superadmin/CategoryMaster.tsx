@@ -167,6 +167,7 @@ const CategoryMaster: React.FC = () => {
           itemsPerPage={10}
           searchAble
           action
+          showSrNo={true}
           onDelete={(row) => deleteCategory(row?.id)}
           onEdit={(row) => handleEdit(row)}
         />

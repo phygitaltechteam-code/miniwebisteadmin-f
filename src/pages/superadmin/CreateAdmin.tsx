@@ -54,6 +54,7 @@ type AdminRow = {
   address: string;
   startDate: string;
   endDate: string;
+  dateTime: string;
   raw?: any;
 };
 
@@ -103,7 +104,8 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
   };
 
   const columns: Column<AdminRow>[] = [
-    { accessor: 'fullname', header: 'Name' },
+    { accessor: 'dateTime', header: 'Date & Time', sortable: true },
+    { accessor: 'fullname', header: 'Name', sortable: true },
     { accessor: 'phoneNumber', header: 'Phone' },
     { accessor: 'price', header: 'Price (₹)' },
     { accessor: 'renewalAmount', header: 'Renewal (₹)' },
@@ -176,6 +178,27 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
         : 'N/A';
 
     const endRaw = each.expiryDate || each.endDate;
+    const createdRaw = each.createdAt || each.created_at || each.user?.createdAt || each.startDate;
+    let formattedDateTime = '-';
+    if (createdRaw) {
+      try {
+        const d = new Date(createdRaw);
+        if (!isNaN(d.getTime())) {
+          formattedDateTime =
+            d.toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            }) +
+            ' ' +
+            d.toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+            });
+        }
+      } catch {}
+    }
 
     return {
       id: each.id || each._id || '',
@@ -187,6 +210,7 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
       address: each?.user?.address || each.address || '',
       startDate: each.startDate ? String(each.startDate).split('T')[0] : '',
       endDate: endRaw ? String(endRaw).split('T')[0] : '',
+      dateTime: formattedDateTime,
       email: each.user?.email || each.email || '',
       secondaryPhoneNumber: each.user?.secondaryPhoneNumber || each.secondaryPhoneNumber,
       raw: each,
@@ -486,6 +510,7 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
           itemsPerPage={10}
           searchAble
           action
+          showSrNo={true}
           onRowClick={(row) => {
             const adminObj = row.raw || row;
             const targetId = adminObj.id || adminObj._id || row.id;

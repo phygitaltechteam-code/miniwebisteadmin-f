@@ -40,11 +40,92 @@ export function generateAiNarrative(
   contactName: string = ''
 ): string {
   const name = businessName.trim() || 'Our Enterprise';
-  const servicesList = services.length > 0 ? services.join(', ') : 'commercial networking and business development';
+  const cleanServices = services
+    .map((s) => (typeof s === 'object' ? String((s as any).businessNature || (s as any).name || '') : String(s)))
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const servicesList =
+    cleanServices.length > 0
+      ? cleanServices.join(', ')
+      : 'professional business solutions, customer care, and quality services';
+
+  const topServices =
+    cleanServices.length > 0
+      ? cleanServices.slice(0, 3).join(' and ')
+      : 'our specialized offerings';
 
   const templates = [
-    `About ${name}\n\n${name} is a premier organization dedicated to fostering growth, trusted partnerships, and transformative business excellence. Specializing in ${servicesList}, we empower businesses and professionals to scale seamlessly.\n\nमराठी सारांश:\nआमच्या संस्थेचे मुख्य उद्दिष्ट दर्जेदार सेवा, परस्पर सहकार्य आणि व्यवसाय वृद्धीसाठी सर्वोत्तम व्यासपीठ उपलब्ध करून देणे हे आहे.\n\n"सहकार्य, समृद्धी आणि यश!"`,
-    `Welcome to ${name}\n\nGuided by visionary leadership, ${name} stands at the forefront of ${servicesList}. We deliver reliable solutions, connecting stakeholders to meaningful market opportunities with unmatched credibility.\n\n"Growing Together, Succeeding Together."`,
+    `Welcome to ${name}
+
+${name} is a premier enterprise committed to delivering end-to-end excellence, high-precision execution, and dependable solutions. With a firm dedication to professional integrity and customer-centric values, we specialize in ${servicesList}.
+
+Our Mission & Core Expertise:
+We empower our clients by providing high-standard, compliant, and cost-effective services customized to individual and corporate requirements. From strategic planning to prompt execution, our seasoned professionals ensure uncompromising quality, complete transparency, and seamless service delivery.
+
+Why Partner With Us?
+✓ Uncompromising Quality & Verified Standards
+✓ Customer-First Approach with Transparent Advisory
+✓ Proven Track Record in ${topServices}
+✓ Prompt, Dedicated & Scalable Support
+
+मराठी सारांश:
+${name} ही आपल्या क्षेत्रातील एक अग्रगण्य आणि विश्वासू संस्था आहे. आम्ही ग्राहकांच्या गरजा ओळखून दर्जेदार, वेळेवर आणि पारदर्शक सेवा पुरवण्यासाठी कटिबद्ध आहोत. आमच्या तज्ज्ञ टीमच्या सहकार्याने आपल्या व्यवसायाला आणि कामांना नवी दिशा द्या.
+
+"विश्वसनीयता, उत्कृष्ट गुणवत्ता आणि ग्राहकांचे समाधान हेच आमचे अंतिम ध्येय!"`,
+
+    `About ${name}
+
+Established with a clear vision for excellence and innovation, ${name} stands as a trusted name in ${topServices}. We take immense pride in helping our valued clients navigate challenges through reliable solutions, technical mastery, and personalized support.
+
+What Sets Us Apart:
+Our expertise spans across ${servicesList}, crafted to cater to both emerging needs and established requirements. Guided by ethical business practices, our focus remains on building lasting relationships based on trust, efficiency, and measurable outcomes.
+
+Key Strengths:
+• Deep domain expertise in ${topServices}
+• Tailored, cost-effective solutions with zero compromises on quality
+• Proactive communication and seamless post-service assistance
+• Commitment to total customer satisfaction and compliance
+
+मराठी सारांश:
+आमच्या संस्थेचे मुख्य ध्येय ग्राहकांना सर्वोत्तम, विश्वासार्ह आणि आधुनिक सेवा उपलब्ध करून देणे हे आहे. आपल्या प्रत्येक गरजेनुसार परिपूर्ण उपाययोजना करून आम्ही ग्राहकांचा विश्वास संपादन केला आहे.
+
+"उत्कृष्ट सेवा, प्रामाणिक सहकार्य आणि यशाची हमी!"`,
+
+    `Welcome to ${name} — Your Trusted Partner in Excellence
+
+At ${name}, we believe that sustainable success is built on a foundation of reliability, skill, and genuine customer care. Specializing in ${servicesList}, we deliver tailored services designed to maximize value, ensure safety, and exceed expectations.
+
+Our Approach:
+Every client requirement is handled with meticulous attention to detail. Whether providing ${topServices} or ongoing consulting, our experienced team ensures timely delivery, verified industry standards, and effortless collaboration.
+
+Our Core Commitments:
+1. Precision & Reliability in Every Deliverable
+2. Ethical, Transparent & Fair Practices
+3. Dedicated Assistance & End-to-End Guidance
+
+मराठी सारांश:
+${name} कडून आपल्याला मिळतात खात्रीशीर, दर्जेदार आणि परवडणाऱ्या सेवा. ग्राहकांच्या समाधानाला सर्वोच्च प्राधान्य देत आम्ही अविरत कार्यरत आहोत.
+
+"एकत्र वाढूया, एकत्र प्रगती करूया!"`,
+
+    `About ${name}
+
+${name} is dedicated to setting new benchmarks in quality, professionalism, and client satisfaction. As a trusted partner for ${servicesList}, we blend deep domain knowledge with an agile, responsive workflow to provide standout results for clients across the region.
+
+Our Service Philosophy:
+We view every client engagement as a long-term partnership. By listening closely to your goals and delivering dependable solutions in ${topServices}, we make your journey smooth, predictable, and rewarding.
+
+What We Offer:
+✦ End-to-End Solutions in ${topServices}
+✦ Certified Standards, Compliance & Expert Supervision
+✦ Flexible, Customized Packages Suited to Your Budget
+✦ Prompt Turnaround & Continuous Support
+
+मराठी सारांश:
+आम्ही आपल्या विश्वासाला पात्र ठरणाऱ्या दर्जेदार आणि वेळेवर सेवा देण्यासाठी सदैव तत्पर आहोत. व्यवसाय वृद्धी आणि कार्यक्षम सेवेसाठी आजच आमच्याशी संपर्क साधा.
+
+"विश्वास, गुणवत्ता आणि प्रगतीची नवी दिशा!"`,
   ];
 
   return templates[Math.floor(Math.random() * templates.length)];

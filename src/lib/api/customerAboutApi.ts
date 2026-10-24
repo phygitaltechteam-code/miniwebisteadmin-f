@@ -34,10 +34,17 @@ export interface CustomerAboutResponse {
  * Ensures documents array items include both fileName and name
  */
 export const formatAdminAboutPayload = (profile: Partial<ProfileData>): CustomerAboutPayload => {
-  // Sync business natures from natureOfBusiness or fallback to servicesOffered from Step 1
-  const rawNatures = (profile.natureOfBusiness && profile.natureOfBusiness.length > 0)
-    ? profile.natureOfBusiness
-    : (profile.servicesOffered || []);
+  // Sync business natures strictly from active servicesOffered (Step 1) if present
+  let rawNatures: any[] = [];
+  if (Array.isArray(profile.servicesOffered) && profile.servicesOffered.length > 0) {
+    rawNatures = profile.servicesOffered;
+  } else if (typeof profile.servicesOffered === 'string' && profile.servicesOffered.trim().length > 0) {
+    rawNatures = profile.servicesOffered.split(',').map(s => s.trim()).filter(Boolean);
+  } else if (Array.isArray(profile.natureOfBusiness) && profile.natureOfBusiness.length > 0) {
+    rawNatures = profile.natureOfBusiness;
+  } else if (Array.isArray(profile.businessNatures) && profile.businessNatures.length > 0) {
+    rawNatures = profile.businessNatures;
+  }
 
   const seen = new Set<string>();
   const natures = rawNatures

@@ -373,7 +373,7 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
     const generated = generateAiServices(
       activeCategories,
       profile.businessName,
-      profile.natureOfBusiness || []
+      []
     ).map(cleanServiceString).filter(Boolean);
 
     if (generated.length === 0) {
@@ -382,9 +382,8 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
     }
 
     onChange('servicesOffered', generated);
-    if (!profile.natureOfBusiness || profile.natureOfBusiness.length === 0) {
-      onChange('natureOfBusiness', generated);
-    }
+    onChange('natureOfBusiness', generated);
+    onChange('businessNatures', generated);
     onToast(`Auto-generated ${generated.length} key services for ${profile.businessName || 'your business'}!`);
   };
 
@@ -392,12 +391,11 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
     const cleaned = cleanServiceString(srv);
     if (!cleaned) return;
     const current = (profile.servicesOffered || []).map(cleanServiceString);
-    if (current.includes(cleaned)) return;
+    if (current.some(s => s.toLowerCase() === cleaned.toLowerCase())) return;
     const updated = [...current, cleaned];
     onChange('servicesOffered', updated);
-    if (!profile.natureOfBusiness || profile.natureOfBusiness.length === 0) {
-      onChange('natureOfBusiness', updated);
-    }
+    onChange('natureOfBusiness', updated);
+    onChange('businessNatures', updated);
     onToast(`Added service: ${cleaned}`);
   };
 
@@ -407,9 +405,8 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
     const cleanedSuggested = suggestedServices.map(cleanServiceString).filter(Boolean);
     const merged = Array.from(new Set([...current, ...cleanedSuggested]));
     onChange('servicesOffered', merged);
-    if (!profile.natureOfBusiness || profile.natureOfBusiness.length === 0) {
-      onChange('natureOfBusiness', merged);
-    }
+    onChange('natureOfBusiness', merged);
+    onChange('businessNatures', merged);
     onToast(`Added all ${suggestedServices.length} suggested services!`);
   };
 
@@ -418,22 +415,38 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
     const name = cleanServiceString(newService);
     if (!name) return;
     const current = (profile.servicesOffered || []).map(cleanServiceString);
-    if (current.includes(name)) {
+    if (current.some(s => s.toLowerCase() === name.toLowerCase())) {
       onToast(`"${name}" service is already listed.`);
       return;
     }
     const updated = [...current, name];
     onChange('servicesOffered', updated);
-    if (!profile.natureOfBusiness || profile.natureOfBusiness.length === 0) {
-      onChange('natureOfBusiness', updated);
-    }
+    onChange('natureOfBusiness', updated);
+    onChange('businessNatures', updated);
     setNewService('');
     onToast(`Added service: ${name}`);
   };
 
   const handleRemoveService = (service: string) => {
     const cleaned = cleanServiceString(service);
-    onChange('servicesOffered', (profile.servicesOffered || []).filter(s => cleanServiceString(s) !== cleaned));
+    const updated = (profile.servicesOffered || [])
+      .map(cleanServiceString)
+      .filter(s => s && s.toLowerCase() !== cleaned.toLowerCase());
+
+    onChange('servicesOffered', updated);
+    onChange('natureOfBusiness', updated);
+    onChange('businessNatures', updated);
+
+    // Also remove any specialities that reference the removed service
+    if (Array.isArray(profile.specialities) && profile.specialities.length > 0) {
+      const updatedSpecs = profile.specialities.filter((spec: any) => {
+        const specStr = typeof spec === 'string' ? spec : spec.name || spec.title || spec.specialities || '';
+        return !specStr.toLowerCase().includes(cleaned.toLowerCase());
+      });
+      onChange('specialities', updatedSpecs);
+    }
+
+    onToast(`Removed service: ${cleaned}`);
   };
 
   // Pincode auto-lookup
@@ -1053,11 +1066,14 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
                 onChange={(e) => onChange('prefix', e.target.value)}
                 className="w-full h-10 px-2 rounded-xl border border-stroke bg-white text-xs font-medium focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]/25 focus:outline-none shadow-2xs"
               >
-                <option>Mr.</option>
-                <option>Mrs.</option>
-                <option>Dr.</option>
-                <option>Adv.</option>
-                <option>Prof.</option>
+                <option value="Mr.">Mr.</option>
+                <option value="Mrs.">Mrs.</option>
+                <option value="Ms.">Ms.</option>
+                <option value="Ms">Ms</option>
+                <option value="Miss">Miss</option>
+                <option value="Dr.">Dr.</option>
+                <option value="Adv.">Adv.</option>
+                <option value="Prof.">Prof.</option>
               </select>
             </div>
 
