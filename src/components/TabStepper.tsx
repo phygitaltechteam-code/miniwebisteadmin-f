@@ -10,7 +10,6 @@ interface TabStepperProps {
 export const TabStepper: React.FC<TabStepperProps> = ({
   currentStep,
   onSelectStep,
-  productCount = 0,
 }) => {
   const activeTabRef = useRef<HTMLButtonElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -33,7 +32,7 @@ export const TabStepper: React.FC<TabStepperProps> = ({
   const steps = [
     { number: 1, name: '1. Basic Details', shortName: '1. Basic' },
     { number: 2, name: '2. About & Specialities', shortName: '2. About' },
-    { number: 3, name: '3. Products & Services', shortName: '3. Products', badge: productCount },
+    { number: 3, name: '3. Products & Services', shortName: '3. Products' },
     { number: 4, name: '4. Links & Social', shortName: '4. Links' },
     { number: 5, name: '5. Payment & QR', shortName: '5. Payment' },
     { number: 6, name: '6. Photo Gallery', shortName: '6. Gallery' },
@@ -96,17 +95,6 @@ export const TabStepper: React.FC<TabStepperProps> = ({
                 }`}
               >
                 <span>{step.name}</span>
-                {step.badge !== undefined && step.badge > 0 && (
-                  <span
-                    className={`text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                      isActive
-                        ? 'bg-white text-[#2563EB]'
-                        : 'bg-[#2563EB] text-white'
-                    }`}
-                  >
-                    {step.badge}
-                  </span>
-                )}
                 {isCompleted && !isActive && (
                   <CheckCircle className="w-3 h-3 text-[#2563EB] shrink-0" />
                 )}

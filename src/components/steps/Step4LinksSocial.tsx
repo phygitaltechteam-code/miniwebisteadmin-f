@@ -76,9 +76,6 @@ const LinkPopup: React.FC<LinkPopupProps> = ({ config, currentValue, onSave, onC
           placeholder={config.placeholder}
           className="w-full px-3 py-2.5 rounded-xl border border-[#c5c6cd] text-sm text-[#091426] placeholder:text-gray-400 focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 transition-all"
         />
-        {config.helperText && (
-          <p className="text-[11px] text-gray-400 mt-1.5">{config.helperText}</p>
-        )}
 
         <div className="flex gap-2 mt-4">
           <button type="button" onClick={onClose}
@@ -109,17 +106,13 @@ interface LinkRowProps {
 const LinkRow: React.FC<LinkRowProps> = ({ icon, label, value, onEdit }) => {
   const isLinked = !!value;
   return (
-    <div className="flex items-center justify-between text-xs p-2 sm:p-2.5 rounded-xl bg-white border border-stroke hover:border-[#2563EB]/40 transition-colors">
+    <div
+      className="flex items-center justify-between text-xs p-2 rounded-xl bg-white border border-stroke hover:border-[#2563EB]/40 transition-colors"
+      title={value || undefined}
+    >
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <span className="shrink-0">{icon}</span>
-        <div className="min-w-0 flex-1">
-          <span className="font-semibold text-[#091426] block truncate">{label}</span>
-          {isLinked && (
-            <span className="text-[10px] text-gray-400 font-mono truncate block max-w-[140px] sm:max-w-xs">
-              {value!.replace(/^https?:\/\//, '').replace(/^mailto:/, '').replace(/^tel:/, '')}
-            </span>
-          )}
-        </div>
+        <span className="font-semibold text-[#091426] truncate">{label}</span>
       </div>
       <button
         type="button"
@@ -269,76 +262,37 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
 
       <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-4">
         {/* Header */}
-        <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-[#c5c6cd]/40 mb-3.5 sm:mb-5">
+        <div className="flex items-center justify-between pb-2.5 border-b border-[#c5c6cd]/40 mb-3">
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">4</div>
             <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">Links & Social Store</h2>
           </div>
         </div>
 
-        <div className="space-y-4 sm:space-y-5">
+        <div className="space-y-3">
 
-          {/* ── Core Web & Location ── */}
-          <div>
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2.5">Web & Location</span>
-            <div className="space-y-2">
-              <LinkRow icon={ico(<Globe className="w-4 h-4 text-[#2563EB]" />)} label="Website" value={profile.webSiteLink || profile.website} onEdit={() => openPopup('webSiteLink')} />
-              <LinkRow icon={ico(<MapPin className="w-4 h-4 text-[#2563EB]" />)} label="Location / Maps" value={profile.location || profile.mapLink} onEdit={() => openPopup('location')} />
-              <LinkRow icon={ico(<MapPin className="w-4 h-4 text-emerald-600" />)} label="Google My Business" value={profile.googleMyBussiness} onEdit={() => openPopup('googleMyBussiness')} />
-            </div>
-          </div>
-
-          {/* ── Contact / Messaging ── */}
-          <div>
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2.5">Contact & Messaging</span>
-            <div className="space-y-2">
-              <LinkRow icon={ico(<MessageCircle className="w-4 h-4 text-emerald-600" />)} label="WhatsApp Direct" value={profile.whatsappLinks} onEdit={() => openPopup('whatsappLinks')} />
-              <LinkRow icon={ico(<Mail className="w-4 h-4 text-rose-500" />)} label="Email" value={profile.emailLinks} onEdit={() => openPopup('emailLinks')} />
-              <LinkRow icon={ico(<Phone className="w-4 h-4 text-[#2563EB]" />)} label="Phone Call" value={profile.callLinks} onEdit={() => openPopup('callLinks')} />
-            </div>
-          </div>
-
-          {/* ── Social Media ── */}
-          <div>
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2.5">Social Media</span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <LinkRow icon={ico(<Instagram className="w-4 h-4 text-pink-600" />)} label="Instagram" value={profile.instagramLink} onEdit={() => openPopup('instagramLink')} />
-              <LinkRow icon={ico(<Facebook className="w-4 h-4 text-blue-600" />)} label="Facebook" value={profile.facebookLink} onEdit={() => openPopup('facebookLink')} />
-              <LinkRow icon={ico(<Youtube className="w-4 h-4 text-red-600" />)} label="YouTube" value={profile.youTubeLink} onEdit={() => openPopup('youTubeLink')} />
-              <LinkRow icon={ico(<Linkedin className="w-4 h-4 text-sky-600" />)} label="LinkedIn" value={profile.linkedinLink} onEdit={() => openPopup('linkedinLink')} />
-              <LinkRow icon={ico(<Twitter className="w-4 h-4 text-slate-700" />)} label="X (Twitter)" value={profile.twitter} onEdit={() => openPopup('twitter')} />
-            </div>
-          </div>
-
-          {/* ── Groups & Channels ── */}
-          <div>
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2.5">Groups & Channels</span>
-            <div className="space-y-2">
-              <LinkRow icon={ico(<MessageCircle className="w-4 h-4 text-emerald-500" />)} label="WhatsApp Group" value={profile.whatsappGroup} onEdit={() => openPopup('whatsappGroup')} />
-              <LinkRow icon={ico(<Send className="w-4 h-4 text-sky-500" />)} label="Telegram" value={profile.telegram} onEdit={() => openPopup('telegram')} />
-              <LinkRow icon={ico(<Facebook className="w-4 h-4 text-blue-500" />)} label="Facebook Group" value={profile.facebookGroup} onEdit={() => openPopup('facebookGroup')} />
-            </div>
-          </div>
-
-          {/* ── Store & Catalogue ── */}
-          <div>
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2.5">Store & Catalogue</span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <LinkRow icon={ico(<Store className="w-4 h-4 text-[#2563EB]" />)} label="Catalogue / Store" value={profile.catalogue} onEdit={() => openPopup('catalogue')} />
-              <LinkRow icon={ico(<ShoppingBag className="w-4 h-4 text-green-600" />)} label="Shopify" value={profile.shopify} onEdit={() => openPopup('shopify')} />
-              <LinkRow icon={ico(<ShoppingCart className="w-4 h-4 text-orange-500" />)} label="Amazon" value={profile.amazonLink} onEdit={() => openPopup('amazonLink')} />
-              <LinkRow icon={ico(<Calendar className="w-4 h-4 text-violet-600" />)} label="Booking / Appointment" value={profile.bookingLink} onEdit={() => openPopup('bookingLink')} />
-            </div>
-          </div>
-
-          {/* ── Food Delivery ── */}
-          <div>
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2.5">Food Delivery</span>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <LinkRow icon={ico(<ShoppingCart className="w-4 h-4 text-red-500" />)} label="Zomato" value={profile.zomatoLink} onEdit={() => openPopup('zomatoLink')} />
-              <LinkRow icon={ico(<ShoppingCart className="w-4 h-4 text-orange-600" />)} label="Swiggy" value={profile.swiggyLink} onEdit={() => openPopup('swiggyLink')} />
-              <LinkRow icon={ico(<ShoppingCart className="w-4 h-4 text-gray-700" />)} label="Uber Eats" value={profile.uberLink} onEdit={() => openPopup('uberLink')} />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            <LinkRow icon={ico(<Globe className="w-4 h-4 text-[#2563EB]" />)} label="Website" value={profile.webSiteLink || profile.website} onEdit={() => openPopup('webSiteLink')} />
+            <LinkRow icon={ico(<MapPin className="w-4 h-4 text-[#2563EB]" />)} label="Location / Maps" value={profile.location || profile.mapLink} onEdit={() => openPopup('location')} />
+            <LinkRow icon={ico(<MapPin className="w-4 h-4 text-emerald-600" />)} label="Google My Business" value={profile.googleMyBussiness} onEdit={() => openPopup('googleMyBussiness')} />
+            <LinkRow icon={ico(<MessageCircle className="w-4 h-4 text-emerald-600" />)} label="WhatsApp Direct" value={profile.whatsappLinks} onEdit={() => openPopup('whatsappLinks')} />
+            <LinkRow icon={ico(<Mail className="w-4 h-4 text-rose-500" />)} label="Email" value={profile.emailLinks} onEdit={() => openPopup('emailLinks')} />
+            <LinkRow icon={ico(<Phone className="w-4 h-4 text-[#2563EB]" />)} label="Phone Call" value={profile.callLinks} onEdit={() => openPopup('callLinks')} />
+            <LinkRow icon={ico(<Instagram className="w-4 h-4 text-pink-600" />)} label="Instagram" value={profile.instagramLink} onEdit={() => openPopup('instagramLink')} />
+            <LinkRow icon={ico(<Facebook className="w-4 h-4 text-blue-600" />)} label="Facebook" value={profile.facebookLink} onEdit={() => openPopup('facebookLink')} />
+            <LinkRow icon={ico(<Youtube className="w-4 h-4 text-red-600" />)} label="YouTube" value={profile.youTubeLink} onEdit={() => openPopup('youTubeLink')} />
+            <LinkRow icon={ico(<Linkedin className="w-4 h-4 text-sky-600" />)} label="LinkedIn" value={profile.linkedinLink} onEdit={() => openPopup('linkedinLink')} />
+            <LinkRow icon={ico(<Twitter className="w-4 h-4 text-slate-700" />)} label="X (Twitter)" value={profile.twitter} onEdit={() => openPopup('twitter')} />
+            <LinkRow icon={ico(<MessageCircle className="w-4 h-4 text-emerald-500" />)} label="WhatsApp Group" value={profile.whatsappGroup} onEdit={() => openPopup('whatsappGroup')} />
+            <LinkRow icon={ico(<Send className="w-4 h-4 text-sky-500" />)} label="Telegram" value={profile.telegram} onEdit={() => openPopup('telegram')} />
+            <LinkRow icon={ico(<Facebook className="w-4 h-4 text-blue-500" />)} label="Facebook Group" value={profile.facebookGroup} onEdit={() => openPopup('facebookGroup')} />
+            <LinkRow icon={ico(<Store className="w-4 h-4 text-[#2563EB]" />)} label="Catalogue / Store" value={profile.catalogue} onEdit={() => openPopup('catalogue')} />
+            <LinkRow icon={ico(<ShoppingBag className="w-4 h-4 text-green-600" />)} label="Shopify" value={profile.shopify} onEdit={() => openPopup('shopify')} />
+            <LinkRow icon={ico(<ShoppingCart className="w-4 h-4 text-orange-500" />)} label="Amazon" value={profile.amazonLink} onEdit={() => openPopup('amazonLink')} />
+            <LinkRow icon={ico(<Calendar className="w-4 h-4 text-violet-600" />)} label="Booking / Appointment" value={profile.bookingLink} onEdit={() => openPopup('bookingLink')} />
+            <LinkRow icon={ico(<ShoppingCart className="w-4 h-4 text-red-500" />)} label="Zomato" value={profile.zomatoLink} onEdit={() => openPopup('zomatoLink')} />
+            <LinkRow icon={ico(<ShoppingCart className="w-4 h-4 text-orange-600" />)} label="Swiggy" value={profile.swiggyLink} onEdit={() => openPopup('swiggyLink')} />
+            <LinkRow icon={ico(<ShoppingCart className="w-4 h-4 text-gray-700" />)} label="Uber Eats" value={profile.uberLink} onEdit={() => openPopup('uberLink')} />
           </div>
 
           {/* ── More Links (collapsible) ── */}
@@ -346,14 +300,14 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
             <button
               type="button"
               onClick={() => setShowMore((p) => !p)}
-              className="flex items-center gap-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5 hover:text-[#2563EB] transition-colors"
+              className="flex items-center gap-1.5 text-xs font-bold text-[#2563EB] mb-2 hover:underline"
             >
               {showMore ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              More Links {showMore ? '(hide)' : '(show)'}
+              {showMore ? 'Hide more links' : 'Show more links'}
             </button>
 
             {showMore && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 animate-in slide-in-from-top-2 duration-150">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 animate-in slide-in-from-top-2 duration-150">
                 <LinkRow icon={ico(<Slack className="w-4 h-4 text-purple-600" />)} label="Slack" value={profile.slackLink} onEdit={() => openPopup('slackLink')} />
                 <LinkRow icon={ico(<Hash className="w-4 h-4 text-indigo-600" />)} label="Discord" value={profile.discordLink} onEdit={() => openPopup('discordLink')} />
                 <LinkRow icon={ico(<Music className="w-4 h-4 text-green-500" />)} label="Spotify" value={profile.spotifyLink} onEdit={() => openPopup('spotifyLink')} />
@@ -370,7 +324,7 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
         </div>
 
         {/* Navigation */}
-        <div className="mt-5 pt-4 sm:mt-8 sm:pt-5 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
+        <div className="mt-4 pt-3 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={onPrev}

@@ -205,13 +205,13 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
   return (
     <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-7">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b border-[#c5c6cd]/40 mb-3.5 sm:mb-5">
+      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#c5c6cd]/40 mb-3">
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
           <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
             8
           </div>
           <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
-            Card Settings & Section Headings
+            Card Settings
           </h2>
         </div>
 
@@ -227,13 +227,10 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
       </div>
 
       {/* Pricing & Renewal Amount Configuration */}
-      <div className="mb-6 p-4 rounded-xl border border-stroke bg-[#f8f9fc]">
-        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-3">
-          Card Pricing & Renewal Configuration
-        </span>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="mb-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <GenericInputField
-            label="Card Creation Pricing Amount (₹)"
+            label="Card Price (₹)"
             type="number"
             value={profile.amount}
             onChange={(e) => onChange('amount', Number(e.target.value) || 0)}
@@ -241,7 +238,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
           />
 
           <GenericInputField
-            label="Annual Renewal Pricing Amount (₹)"
+            label="Annual Renewal (₹)"
             type="number"
             value={profile.renewalAmount}
             onChange={(e) => onChange('renewalAmount', Number(e.target.value) || 0)}
@@ -251,12 +248,8 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
       </div>
 
       {/* 11 Visibility Toggles */}
-      <div className="mb-6">
-        <span className="text-[11px] font-bold text-[#75777d] uppercase tracking-wider block mb-3">
-          Visibility & Privacy Flags
-        </span>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 rounded-xl border border-stroke bg-[#f8f9ff]">
+      <div className="mb-3 pt-3 border-t border-[#c5c6cd]/40">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 p-3 rounded-xl border border-stroke bg-[#f8f9ff]">
           {visibilityItems.map((item) => (
             <label
               key={item.key}
@@ -275,12 +268,10 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
       </div>
 
       {/* Customise Section Headings */}
-      <div className="mb-6 pt-4 border-t border-[#c5c6cd]/40">
-        <span className="text-[11px] font-bold text-[#75777d] uppercase tracking-wider block mb-3">
-          Customise Card Section Headings
-        </span>
+      <div className="mb-3 pt-3 border-t border-[#c5c6cd]/40">
+        <label className="block text-xs font-bold text-[#091426] mb-2">Section Headings</label>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
           {headingFields.map((field) => (
             <div key={field.key}>
               <GenericInputField
@@ -294,10 +285,8 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
       </div>
 
       {/* Customise Footer Labels */}
-      <div className="pt-4 border-t border-[#c5c6cd]/40">
-        <span className="text-[11px] font-bold text-[#75777d] uppercase tracking-wider block mb-3">
-          Customise Live Card Bottom Navigation Labels
-        </span>
+      <div className="pt-3 border-t border-[#c5c6cd]/40">
+        <label className="block text-xs font-bold text-[#091426] mb-2">Bottom Nav Labels</label>
 
         <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
           {navFields.map((field) => (
@@ -317,7 +306,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
       </div>
 
       {/* Step Navigation Buttons */}
-      <div className="mt-5 pt-4 sm:mt-8 sm:pt-5 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
+      <div className="mt-4 pt-3 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={onPrev}

@@ -162,19 +162,14 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
   return (
     <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-7">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b border-[#c5c6cd]/40 mb-3.5 sm:mb-5">
+      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#c5c6cd]/40 mb-3">
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
           <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
             7
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
-            <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
+          <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
               YouTube Video Gallery
             </h2>
-            <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-[#2563EB] text-white font-bold shrink-0">
-              {profile.youtubeVideos.length}
-            </span>
-          </div>
         </div>
 
         <GenericButton
@@ -190,12 +185,8 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
 
       {/* Add Video Inline Form */}
       {showAddForm && (
-        <div className="mb-4 sm:mb-6 p-3.5 sm:p-5 rounded-2xl bg-[#EFF6FF] border border-[#DBEAFE] space-y-3.5 sm:space-y-4 animate-in fade-in zoom-in-95 duration-150">
-          <h4 className="text-xs font-bold text-[#091426] uppercase tracking-wider">
-            Add YouTube Video Embed
-          </h4>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mb-3 p-3 sm:p-4 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE] space-y-3 animate-in fade-in zoom-in-95 duration-150">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <GenericInputField
               label="Video Title"
               value={videoTitle}
@@ -215,10 +206,7 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
 
           {/* Live Preview if valid link */}
           {videoUrl.trim() && (
-            <div className="pt-2">
-              <span className="text-[11px] font-bold text-[#75777d] uppercase tracking-wider block mb-2">
-                Live Embed Preview
-              </span>
+            <div>
               <div className="rounded-xl overflow-hidden border border-stroke aspect-video max-w-md bg-black">
                 <iframe
                   src={getEmbedUrl(videoUrl)}
@@ -251,21 +239,18 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
 
       {/* Video List */}
       {profile.youtubeVideos.length === 0 ? (
-        <div className="p-8 border-2 border-dashed border-stroke rounded-2xl text-center flex flex-col items-center justify-center gap-3 bg-[#f8f9ff]">
-          <Video className="w-10 h-10 text-gray-300" />
-          <div>
-            <p className="text-xs font-bold text-gray-700">No YouTube videos added yet</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">Click "+ Add YouTube Video" to embed presentations into your digital card</p>
-          </div>
+        <div className="p-5 border-2 border-dashed border-stroke rounded-xl text-center flex flex-col items-center justify-center gap-2 bg-[#f8f9ff]">
+          <Video className="w-8 h-8 text-gray-300" />
+          <p className="text-xs font-bold text-gray-700">No YouTube videos added yet</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {profile.youtubeVideos.map((video) => {
             const embed = video.embedUrl || getEmbedUrl(video.url || video.videoUrl || '');
             return (
               <div
                 key={video.id}
-                className="border border-stroke rounded-2xl overflow-hidden bg-white hover:border-[#2563EB]/40 transition-all shadow-2xs flex flex-col"
+                className="border border-stroke rounded-xl overflow-hidden bg-white hover:border-[#2563EB]/40 transition-all shadow-2xs flex flex-col"
               >
                 {/* Embedded Player */}
                 <div className="aspect-video w-full bg-black">
@@ -278,7 +263,7 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
                 </div>
 
                 {/* Details Bar */}
-                <div className="p-3.5 flex items-center justify-between gap-3">
+                <div className="p-2.5 flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <h4 className="text-xs font-bold text-[#091426] truncate">
                       {video.title}
@@ -310,7 +295,7 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
       )}
 
       {/* Step Navigation Buttons */}
-      <div className="mt-5 pt-4 sm:mt-8 sm:pt-5 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
+      <div className="mt-4 pt-3 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={onPrev}

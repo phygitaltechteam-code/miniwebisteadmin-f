@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { 
-  CheckCircle2, Upload, MapPin, Phone, MessageSquare, Plus, ArrowRight,
+  CheckCircle2, Upload, MapPin, Phone, Plus, ArrowRight,
   Image as ImageIcon, Sparkles, X, Palette, Check, Loader2
 } from 'lucide-react';
 import { ProfileData } from '../../types/profile';
@@ -628,7 +628,7 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
   return (
     <section className="bg-white border border-[#c5c6cd]/50 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-1">
       {/* Step Header */}
-      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between pb-2.5 sm:pb-3 border-b border-stroke mb-3.5 sm:mb-4 gap-2">
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between pb-2.5 border-b border-stroke mb-3 gap-2">
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
           <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
             1
@@ -644,16 +644,16 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
         </span>
       </div>
 
-      <div className="space-y-4 sm:space-y-5">
+      <div className="space-y-3">
         {/* ─── Card Theme Selector (Dropdown & Preview) ─────────────── */}
         <div>
           <label className="text-xs font-bold text-[#091426] flex items-center gap-1.5 mb-1.5">
             <Palette className="w-3.5 h-3.5 text-[#2563EB]" />
-            <span>Card Theme (Two-Color Sets)</span>
+            <span>Card Theme</span>
           </label>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 items-center">
-            <div className="relative">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
               <select
                 value={profile.theme || 'navy-orange'}
                 onChange={(e) => onChange('theme', e.target.value as ProfileData['theme'])}
@@ -674,18 +674,11 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
             {(() => {
               const currentTh = themes.find((t) => t.id === profile.theme) || themes[0];
               return (
-                <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl border border-stroke bg-[#f8f9fc] min-w-0">
-                  <div className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold border shadow-2xs shrink-0 ${currentTh.previewClass}`}>
-                    Theme Sample
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-xs font-bold text-[#091426] block truncate">
-                      {currentTh.name}
-                    </span>
-                    <span className="text-[10px] text-gray-500 block truncate">
-                      {currentTh.desc}
-                    </span>
-                  </div>
+                <div
+                  className={`h-10 sm:h-11 px-3 flex items-center rounded-xl text-[10px] sm:text-[11px] font-bold border shadow-2xs shrink-0 ${currentTh.previewClass}`}
+                  title={currentTh.desc}
+                >
+                  Theme Sample
                 </div>
               );
             })()}
@@ -694,19 +687,9 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
 
         {/* ─── Business Categories (Multi-Select Dropdown) ───────────── */}
         <div className="pt-3 border-t border-stroke">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <label className="text-xs font-bold text-[#091426] block">
-                Business Categories <span className="text-red-500">*</span>
-              </label>
-              <p className="text-[11px] text-gray-500">
-                Select one or more categories from the dropdown
-              </p>
-            </div>
-            <span className="text-[11px] text-[#2563EB] font-semibold bg-[#EFF6FF] px-2 py-0.5 rounded border border-[#BFDBFE]">
-              {(profile.categoryIds || []).filter(id => isUuidOrId(id)).length} selected
-            </span>
-          </div>
+          <label className="text-xs font-bold text-[#091426] block mb-1.5">
+            Business Categories <span className="text-red-500">*</span>
+          </label>
 
           {/* Multi-select Dropdown */}
           <div className="relative">
@@ -829,26 +812,16 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
         </div>
 
         {/* ─── Key Services Offered (Multiple Entry) ───────────────── */}
-        <div className="pt-2.5 sm:pt-3 border-t border-stroke">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-2">
-            <div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-bold text-[#091426] block">
-                  Key Services Offered (Add Multiple)
-                </label>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE]">
-                  {(profile.servicesOffered || []).length} added
-                </span>
-              </div>
-              <p className="text-[11px] text-gray-400 mt-0.5">
-                List the services provided by your business or auto-generate from category
-              </p>
-            </div>
+        <div className="pt-3 border-t border-stroke">
+          <div className="flex items-center justify-between gap-1.5 mb-1.5">
+            <label className="text-xs font-bold text-[#091426] block">
+              Key Services Offered
+            </label>
 
             <button
               type="button"
               onClick={handleAutoGenerateServices}
-              className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#2563EB] text-[11px] font-bold border border-[#BFDBFE] transition-colors shadow-2xs active:scale-95 shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#2563EB] text-[11px] font-bold border border-[#BFDBFE] transition-colors shadow-2xs active:scale-95 shrink-0"
               title="Automatically generate services matching your business category"
             >
               <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
@@ -935,9 +908,9 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
         </div>
 
         {/* ─── Business Title & Vanity URL ────────────────────────── */}
-        <div className="pt-3 border-t border-stroke space-y-3.5">
+        <div className="pt-3 border-t border-stroke grid grid-cols-1 md:grid-cols-2 gap-3">
           <GenericInputField
-            label="Business Name (Official Display Title)"
+            label="Business Name"
             value={profile.businessName}
             onChange={(e) => onChange('businessName', e.target.value)}
             placeholder="e.g. MARATHA ENTREPRENEUR ASSOCIATION"
@@ -946,10 +919,10 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-              Display Link Name (Digital Card Vanity URL) <span className="text-red-500 font-bold">*</span>
+              Display Link Name <span className="text-red-500 font-bold">*</span>
             </label>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex-1 flex items-center rounded-xl border border-stroke bg-[#EFF6FF]/30 overflow-hidden focus-within:border-[#2563EB] focus-within:ring-1 focus-within:ring-[#2563EB]/25">
+            <div className="flex gap-2">
+              <div className="flex-1 min-w-0 flex items-center rounded-xl border border-stroke bg-[#EFF6FF]/30 overflow-hidden focus-within:border-[#2563EB] focus-within:ring-1 focus-within:ring-[#2563EB]/25">
                 <span className="px-3 py-2 text-xs font-mono text-gray-500 border-r border-stroke bg-gray-50">
                   digiwebcard.in/
                 </span>
@@ -957,7 +930,7 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
                   type="text"
                   value={profile.vanityUrl}
                   onChange={(e) => onChange('vanityUrl', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                  className="flex-1 h-10 px-3 bg-white text-[#091426] text-xs font-mono font-medium focus:outline-none border-none"
+                  className="flex-1 min-w-0 h-10 px-3 bg-white text-[#091426] text-xs font-mono font-medium focus:outline-none border-none"
                   placeholder="vanity-url"
                 />
               </div>
@@ -967,16 +940,16 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
                 disabled={checkingUrl}
                 className="h-10 px-3 rounded-xl bg-[#EFF6FF] text-[#2563EB] text-xs font-bold border border-[#BFDBFE] hover:bg-[#DBEAFE] transition-colors shrink-0"
               >
-                {checkingUrl ? 'Checking...' : 'Check availability'}
+                {checkingUrl ? 'Checking...' : 'Check'}
               </button>
             </div>
           </div>
         </div>
 
         {/* ─── Branding Images Uploads (with Compression) ─────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-3 border-t border-stroke">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-stroke">
           {/* Logo Upload */}
-          <div className="p-3.5 rounded-xl border border-stroke bg-[#f8f9fc] flex flex-col gap-2.5">
+          <div className="p-3 rounded-xl border border-stroke bg-[#f8f9fc] flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-[#091426]">
                 Business Logo / Profile Pic
@@ -1009,30 +982,30 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
                 )}
               </div>
 
-              <div className="flex-1 space-y-1">
-                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stroke bg-white text-[#091426] text-xs font-semibold hover:bg-[#EFF6FF] hover:border-[#2563EB] transition-colors shadow-2xs">
-                  <Upload className="w-3.5 h-3.5 text-[#2563EB]" />
-                  <span>Upload Logo (Compressed)</span>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleLogoUpload} 
-                    className="hidden" 
-                  />
-                </label>
-                <p className="text-[10px] text-gray-500">
-                  Compressed automatically for optimal mobile speed
-                </p>
-              </div>
+              <label
+                className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stroke bg-white text-[#091426] text-xs font-semibold hover:bg-[#EFF6FF] hover:border-[#2563EB] transition-colors shadow-2xs"
+                title="Compressed automatically for optimal mobile speed"
+              >
+                <Upload className="w-3.5 h-3.5 text-[#2563EB]" />
+                <span>Upload Logo</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+              </label>
             </div>
           </div>
 
           {/* Banner Upload */}
-          <div className="p-3.5 rounded-xl border border-stroke bg-[#f8f9fc] flex flex-col gap-2.5">
+          <div className="p-3 rounded-xl border border-stroke bg-[#f8f9fc] flex flex-col gap-2">
             <label className="text-xs font-bold text-[#091426]">
               Header Banner (1200×400)
             </label>
-            <label className="h-14 rounded-lg border-2 border-dashed border-stroke bg-white hover:bg-[#EFF6FF] flex items-center justify-center gap-2 cursor-pointer transition-colors p-2 text-center group">
+            <label
+              title="Auto-compressed JPEG/PNG up to 5MB"
+              className="h-14 rounded-lg border-2 border-dashed border-stroke bg-white hover:bg-[#EFF6FF] flex items-center justify-center gap-2 cursor-pointer transition-colors p-2 text-center group">
               <ImageIcon className="w-4 h-4 text-[#2563EB]" />
               <span className="text-xs text-gray-500 group-hover:text-[#2563EB]">
                 {profile.bannerUrl ? 'Banner loaded (click to replace)' : 'Browse banner image'}
@@ -1044,18 +1017,11 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
                 className="hidden" 
               />
             </label>
-            <p className="text-[10px] text-gray-500">
-              Auto-compressed JPEG/PNG up to 5MB
-            </p>
           </div>
         </div>
 
         {/* ─── Executive Details ──────────────────────────────────── */}
-        <div className="pt-2.5 sm:pt-3 border-t border-stroke">
-          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2">
-            Executive / Owner Contact Details
-          </span>
-
+        <div className="pt-3 border-t border-stroke">
           <div className="grid grid-cols-12 gap-2 sm:gap-3">
             <div className="col-span-4 sm:col-span-2">
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
@@ -1097,41 +1063,35 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
               />
             </div>
           </div>
-        </div>
 
-        {/* ─── Contact Numbers (Primary & WhatsApp only) ───────────── */}
-        <div className="pt-2.5 sm:pt-3 border-t border-stroke">
-          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2">
-            Official Direct Phone Numbers
-          </span>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+          {/* Contact Numbers & Email */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mt-3">
             <GenericInputField
               label="Primary Phone"
               value={profile.primaryPhone}
-              onChange={(e) => onChange('primaryPhone', e.target.value)}
+              onChange={(e) => {
+                onChange('primaryPhone', e.target.value);
+                // WhatsApp field removed from the form — keep it synced with the primary number
+                onChange('whatsappPhone', e.target.value);
+              }}
               placeholder="e.g. 9876543210"
               prefix={<Phone className="w-3.5 h-3.5 text-gray-400" />}
               required
             />
 
             <GenericInputField
-              label="WhatsApp Phone"
-              value={profile.whatsappPhone}
-              onChange={(e) => onChange('whatsappPhone', e.target.value)}
-              placeholder="e.g. 9876543210"
-              prefix={<MessageSquare className="w-3.5 h-3.5 text-[#2563EB]" />}
+              label="Official Email"
+              type="email"
+              value={profile.email}
+              onChange={(e) => onChange('email', e.target.value)}
+              placeholder="info@company.com"
               required
             />
           </div>
         </div>
 
         {/* ─── Location & Automatic Pincode Lookup ─────────────────── */}
-        <div className="pt-2.5 sm:pt-3 border-t border-stroke space-y-2.5 sm:space-y-3">
-          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">
-            Location & Physical Coordinates
-          </span>
-
+        <div className="pt-3 border-t border-stroke space-y-3">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
             <div>
               <GenericInputField
@@ -1168,19 +1128,19 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
             />
           </div>
 
-          <GenericTextArea
-            label="Physical Head Office Address"
-            rows={2}
-            value={profile.address}
-            onChange={(e) => onChange('address', e.target.value)}
-            placeholder="Enter full office or registered address"
-            required
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
+            <GenericTextArea
+              label="Head Office Address"
+              rows={2}
+              value={profile.address}
+              onChange={(e) => onChange('address', e.target.value)}
+              placeholder="Enter full office or registered address"
+              required
+            />
 
-          <div className="space-y-2.5 sm:space-y-3">
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-                Google Maps Location Link
+                Google Maps Link
               </label>
               <div className="flex gap-2">
                 <GenericInputField
@@ -1198,21 +1158,12 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
                 </button>
               </div>
             </div>
-
-            <GenericInputField
-              label="Official Email"
-              type="email"
-              value={profile.email}
-              onChange={(e) => onChange('email', e.target.value)}
-              placeholder="info@company.com"
-              required
-            />
           </div>
         </div>
       </div>
 
       {/* Step Footer Navigation */}
-      <div className="mt-5 sm:mt-6 pt-3.5 sm:pt-4 border-t border-stroke flex justify-end">
+      <div className="mt-4 pt-3 border-t border-stroke flex justify-end">
         <GenericButton
           type="button"
           onClick={handleSaveAndNext}

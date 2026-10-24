@@ -4,15 +4,41 @@
  * based on the registered enterprise name and key services.
  */
 
+function shuffle<T>(items: T[]): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/**
+ * Pass the currently shown keywords as `previous` so every regenerate
+ * returns a fresh set (unused keywords are preferred first).
+ */
 export function generateAiKeywords(
   businessName: string,
-  services: string[] = []
+  services: string[] = [],
+  previous: string[] = []
 ): string[] {
-  const serviceKeywords = services.flatMap((s) => [
-    s.trim(),
-    `${s.trim()} Solutions`,
-    `Premium ${s.trim()}`,
-  ]);
+  const servicePatterns = [
+    (s: string) => s,
+    (s: string) => `${s} Solutions`,
+    (s: string) => `Premium ${s}`,
+    (s: string) => `Expert ${s}`,
+    (s: string) => `Professional ${s}`,
+    (s: string) => `${s} Specialist`,
+    (s: string) => `Affordable ${s}`,
+    (s: string) => `${s} Consultation`,
+    (s: string) => `Best ${s} Near Me`,
+    (s: string) => `Certified ${s}`,
+  ];
+
+  const serviceKeywords = services
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .flatMap((s) => servicePatterns.map((fn) => fn(s)));
 
   const defaultPool = [
     'Trusted Vendor Network',
@@ -25,19 +51,47 @@ export function generateAiKeywords(
     'Innovative Solutions',
     'Market Expansion',
     'Verified Services',
+    'Quality Assured Work',
+    'Timely Project Delivery',
+    'Transparent Pricing',
+    'Experienced Team',
+    'Client Satisfaction Guaranteed',
+    'End-to-End Support',
+    'Local Business Leader',
+    'Reliable & Trusted Partner',
+    'Customized Solutions',
+    'Industry Best Practices',
+    'Dedicated Customer Care',
+    'Value for Money',
+    'Fast Turnaround',
+    'Modern Techniques',
+    'Long-Term Partnerships',
   ];
 
-  const combined = Array.from(
-    new Set([...serviceKeywords, ...defaultPool])
-  ).slice(0, 10);
+  const pool = Array.from(new Set([...serviceKeywords, ...defaultPool]));
+  const prevSet = new Set(previous.map((p) => String(p).toLowerCase()));
 
-  return combined;
+  // Keep a few service keywords so tags stay relevant, then fill with the rest
+  const fresh = shuffle(pool.filter((k) => !prevSet.has(k.toLowerCase())));
+  const used = shuffle(pool.filter((k) => prevSet.has(k.toLowerCase())));
+  const freshService = fresh.filter((k) => serviceKeywords.includes(k));
+  const freshOther = fresh.filter((k) => !serviceKeywords.includes(k));
+
+  const picked = [
+    ...freshService.slice(0, 5),
+    ...freshOther,
+    ...freshService.slice(5),
+    ...used,
+  ].slice(0, 10);
+
+  return shuffle(picked);
 }
 
 export function generateAiNarrative(
   businessName: string,
   services: string[] = [],
-  contactName: string = ''
+  contactName: string = '',
+  previous: string = ''
 ): string {
   const name = businessName.trim() || 'Our Enterprise';
   const cleanServices = services
@@ -69,10 +123,7 @@ Why Partner With Us?
 ✓ Proven Track Record in ${topServices}
 ✓ Prompt, Dedicated & Scalable Support
 
-मराठी सारांश:
-${name} ही आपल्या क्षेत्रातील एक अग्रगण्य आणि विश्वासू संस्था आहे. आम्ही ग्राहकांच्या गरजा ओळखून दर्जेदार, वेळेवर आणि पारदर्शक सेवा पुरवण्यासाठी कटिबद्ध आहोत. आमच्या तज्ज्ञ टीमच्या सहकार्याने आपल्या व्यवसायाला आणि कामांना नवी दिशा द्या.
-
-"विश्वसनीयता, उत्कृष्ट गुणवत्ता आणि ग्राहकांचे समाधान हेच आमचे अंतिम ध्येय!"`,
+"Reliability, excellent quality and customer satisfaction are our ultimate goals!"`,
 
     `About ${name}
 
@@ -87,10 +138,7 @@ Key Strengths:
 • Proactive communication and seamless post-service assistance
 • Commitment to total customer satisfaction and compliance
 
-मराठी सारांश:
-आमच्या संस्थेचे मुख्य ध्येय ग्राहकांना सर्वोत्तम, विश्वासार्ह आणि आधुनिक सेवा उपलब्ध करून देणे हे आहे. आपल्या प्रत्येक गरजेनुसार परिपूर्ण उपाययोजना करून आम्ही ग्राहकांचा विश्वास संपादन केला आहे.
-
-"उत्कृष्ट सेवा, प्रामाणिक सहकार्य आणि यशाची हमी!"`,
+"Excellent service, honest cooperation and a guarantee of success!"`,
 
     `Welcome to ${name} — Your Trusted Partner in Excellence
 
@@ -104,10 +152,7 @@ Our Core Commitments:
 2. Ethical, Transparent & Fair Practices
 3. Dedicated Assistance & End-to-End Guidance
 
-मराठी सारांश:
-${name} कडून आपल्याला मिळतात खात्रीशीर, दर्जेदार आणि परवडणाऱ्या सेवा. ग्राहकांच्या समाधानाला सर्वोच्च प्राधान्य देत आम्ही अविरत कार्यरत आहोत.
-
-"एकत्र वाढूया, एकत्र प्रगती करूया!"`,
+"Let's grow together, let's progress together!"`,
 
     `About ${name}
 
@@ -122,13 +167,13 @@ What We Offer:
 ✦ Flexible, Customized Packages Suited to Your Budget
 ✦ Prompt Turnaround & Continuous Support
 
-मराठी सारांश:
-आम्ही आपल्या विश्वासाला पात्र ठरणाऱ्या दर्जेदार आणि वेळेवर सेवा देण्यासाठी सदैव तत्पर आहोत. व्यवसाय वृद्धी आणि कार्यक्षम सेवेसाठी आजच आमच्याशी संपर्क साधा.
-
-"विश्वास, गुणवत्ता आणि प्रगतीची नवी दिशा!"`,
+"A new direction of trust, quality and progress!"`,
   ];
 
-  return templates[Math.floor(Math.random() * templates.length)];
+  // Never return the narrative that is currently shown
+  const options = templates.filter((t) => t.trim() !== previous.trim());
+  const pickFrom = options.length > 0 ? options : templates;
+  return pickFrom[Math.floor(Math.random() * pickFrom.length)];
 }
 
 export function generateProductDescription(

@@ -303,19 +303,14 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
   return (
     <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-3">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b border-[#c5c6cd]/40 mb-3.5 sm:mb-5">
+      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#c5c6cd]/40 mb-3">
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
           <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
             3
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
-            <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
-              Products & Services
-            </h2>
-            <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-[#2563EB] text-white font-bold shrink-0">
-              {profile.products.length}
-            </span>
-          </div>
+          <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
+            Products & Services
+          </h2>
         </div>
 
         <GenericButton
@@ -330,23 +325,20 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
       </div>
 
       {/* Product List Container */}
-      <div className="space-y-2.5 sm:space-y-3.5">
+      <div className="space-y-2.5">
         {profile.products.length === 0 ? (
-          <div className="p-6 sm:p-8 rounded-xl border border-dashed border-slate-200 text-center bg-slate-50/50">
+          <div className="p-5 rounded-xl border border-dashed border-slate-200 text-center bg-slate-50/50">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center mx-auto mb-2">
               <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <p className="text-xs sm:text-sm font-bold text-slate-800">No products or services added yet</p>
-            <p className="text-[11px] sm:text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              Click "+ Add Product" above to list your offerings, prices, and enquiry options.
-            </p>
           </div>
         ) : (
           profile.products.map((product, index) => {
           return (
             <div 
               key={product.id}
-              className="border border-stroke rounded-xl p-2.5 sm:p-4 bg-[#f8f9ff]/60 hover:bg-white hover:border-[#2563EB]/40 transition-all shadow-2xs"
+              className="border border-stroke rounded-xl p-2.5 sm:p-3 bg-[#f8f9ff]/60 hover:bg-white hover:border-[#2563EB]/40 transition-all shadow-2xs"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
                 <div className="flex items-start gap-2.5 sm:gap-3.5 flex-1 min-w-0">
@@ -425,9 +417,9 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-stroke overflow-hidden flex flex-col max-h-[90vh]">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-stroke">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-stroke">
               <h3 className="text-base font-bold text-[#091426]">
-                {editingId ? 'Edit Product/Service details' : 'Add Product/Service details'}
+                {editingId ? 'Edit Product/Service' : 'Add Product/Service'}
               </h3>
               <button
                 type="button"
@@ -439,18 +431,13 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
             </div>
 
             {/* Modal Body */}
-            <div className="p-5 overflow-y-auto space-y-4">
-              <div className="rounded-xl border border-sky-100 bg-[#f0f7ff]/70 p-4 space-y-3.5">
+            <div className="p-4 overflow-y-auto">
+              <div className="space-y-3">
                 {/* Product Name */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-semibold text-gray-700">
-                      Product Name <span className="text-rose-500">*</span>
-                    </label>
-                    <span className={`text-[10px] ${name.length > 140 ? 'text-rose-500 font-bold' : 'text-gray-400'}`}>
-                      {name.length}/150
-                    </span>
-                  </div>
+                  <label className="text-xs font-semibold text-gray-700 mb-1 block">
+                    Product Name <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     type="text"
                     maxLength={150}
@@ -465,14 +452,9 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
                 {/* Product Description */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-semibold text-gray-700">
-                        Product Description
-                      </label>
-                      <span className={`text-[10px] ${description.length > 1900 ? 'text-rose-500 font-bold' : 'text-gray-400'}`}>
-                        {description.length}/2000
-                      </span>
-                    </div>
+                    <label className="text-xs font-semibold text-gray-700">
+                      Product Description
+                    </label>
                     <button
                       type="button"
                       onClick={handleAiGenerateDesc}
@@ -501,7 +483,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
                       maxLength={2000}
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Write brief description (max 2000 chars)..."
+                      placeholder="Write brief description..."
                       className="w-full p-3 text-xs text-[#091426] focus:outline-none resize-y"
                     />
                   </div>
@@ -614,7 +596,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-stroke bg-gray-50/50">
+            <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-stroke bg-gray-50/50">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
@@ -635,7 +617,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
       )}
 
       {/* Step Navigation Buttons */}
-      <div className="mt-5 pt-4 sm:mt-8 sm:pt-5 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
+      <div className="mt-4 pt-3 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={onPrev}

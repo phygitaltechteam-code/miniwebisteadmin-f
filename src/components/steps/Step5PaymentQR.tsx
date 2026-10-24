@@ -182,32 +182,25 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
   return (
     <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-5">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-[#c5c6cd]/40 mb-3.5 sm:mb-5">
+      <div className="flex items-center justify-between pb-2.5 border-b border-[#c5c6cd]/40 mb-3">
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
           <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
             5
           </div>
           <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
-            Payment Methods & Dynamic UPI QR
+            Payment & UPI QR
           </h2>
         </div>
       </div>
 
-      <div className="space-y-4 sm:space-y-5">
+      <div className="space-y-3">
         {/* ─── Dynamic UPI Address & Live Generated QR ─────────────── */}
-        <div className="p-3 sm:p-5 rounded-2xl border border-blue-200 bg-[#f8faff]">
-          <div className="flex items-center gap-2 mb-2.5 sm:mb-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB] animate-ping" />
-            <h3 className="text-xs font-bold text-[#091426] uppercase tracking-wider">
-              Automatic Dynamic UPI QR Generator
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+        <div>
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
             {/* Input Coordinates */}
-            <div className="lg:col-span-7 space-y-3">
+            <div className="sm:col-span-7 space-y-3">
               <GenericInputField
-                label="UPI ID /UPI Address"
+                label="UPI ID"
                 value={profile.upiId || ''}
                 onChange={(e) => onChange('upiId', e.target.value.trim().toLowerCase())}
                 placeholder="e.g. 9225812831@ybl or company@sbi"
@@ -216,7 +209,7 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
               />
 
               <GenericInputField
-                label="UPI Registered Phone Number"
+                label="UPI Phone Number"
                 value={profile.paymentPhoneNo || profile.upiNumber || ''}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -231,8 +224,8 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
             </div>
 
             {/* Live Generated QR Code Card */}
-            <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 rounded-xl bg-white border border-stroke shadow-xs text-center">
-              <div className="w-36 h-36 p-2 rounded-xl border-2 border-dashed border-[#2563EB]/60 bg-white flex items-center justify-center relative mb-2">
+            <div className="sm:col-span-5 flex flex-col items-center justify-center p-3 rounded-xl bg-[#f8faff] border border-stroke text-center">
+              <div className="w-32 h-32 p-1.5 rounded-xl border border-stroke bg-white flex items-center justify-center relative">
                 <img
                   src={dynamicQrUrl}
                   alt="Dynamic UPI QR Code"
@@ -240,20 +233,13 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
                 />
               </div>
 
-              <span className="text-xs font-bold text-[#091426]">
-                {profile.businessName || 'Business UPI QR'}
-              </span>
-              <span className="text-[11px] font-mono text-[#2563EB] font-bold">
-                {upiId}
-              </span>
-
               <button
                 type="button"
                 onClick={handleDownloadQr}
                 className="mt-2.5 px-3 py-1.5 rounded-lg bg-[#EFF6FF] text-[#2563EB] text-xs font-bold border border-[#BFDBFE] hover:bg-[#2563EB] hover:text-white transition-all flex items-center gap-1.5 shadow-2xs"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Download QR Image</span>
+                <span>Download QR</span>
               </button>
             </div>
           </div>
@@ -263,10 +249,6 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
 
         {/* ─── Institutional Bank Account Details ─────────────────── */}
         <div className="pt-3 border-t border-stroke">
-          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-3">
-            Institutional Bank Account Coordinates
-          </span>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <GenericInputField
               label="Bank Name"
@@ -328,13 +310,13 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
                 if (isValid) {
                   return (
                     <span className="text-[10px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                      ✓ Valid IFSC Code format ({ifsc.length}/11)
+                      ✓ Valid IFSC
                     </span>
                   );
                 }
                 return (
                   <span className="text-[10px] text-amber-600 font-medium mt-1 block">
-                    Must be 11 characters: 4 letters + 0 + 6 letters/digits (current: {ifsc.length}/11)
+                    Format: 4 letters + 0 + 6 letters/digits
                   </span>
                 );
               })()}
@@ -358,7 +340,7 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
       </div>
 
       {/* Step Navigation Buttons */}
-      <div className="mt-5 pt-4 sm:mt-8 sm:pt-5 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
+      <div className="mt-4 pt-3 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={onPrev}
