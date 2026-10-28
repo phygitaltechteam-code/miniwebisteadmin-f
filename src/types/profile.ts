@@ -13,6 +13,7 @@ export interface ProductItem {
   status?: 'Active' | 'Coming Soon' | 'Draft';
   image?: string;
   imageFile?: File;
+  imageFiles?: File[];
   isHideEnquiry?: boolean;
   hideEnquiry?: boolean;
   isHideDownloadProductCart?: boolean;
@@ -20,6 +21,7 @@ export interface ProductItem {
   removeImage?: boolean;
   customiseMessage?: boolean;
   customEnquiryMessage?: string;
+  images?: string[];
 }
 
 export interface QuickLink {
@@ -34,6 +36,14 @@ export interface SocialLink {
   platform: string;
   url: string;
   label?: string;
+}
+
+export interface LinkDetailItem {
+  id: string;
+  name: string;
+  description?: string;
+  url: string;
+  icon?: string;
 }
 
 export interface CustomerEnquiry {
@@ -87,14 +97,22 @@ export interface ProfileData {
   categories: string[];
   servicesOffered: string[];
   businessName: string;
+  tagline?: string;
+  businessTagline?: string;
   vanityUrl: string;
   isUrlAvailable: boolean;
   hasGoldenBorder: boolean;
   logoUrl: string;
+  logoFile?: File;
   bannerUrl: string;
+  banners?: string[];
   prefix: string;
   contactName: string;
+  firstName?: string;
+  lastName?: string;
   designation: string;
+  extraOwners?: Array<{ prefix: string; firstName: string; lastName: string; designation: string }>;
+  additionalOwners?: Array<{ prefix: string; firstName: string; lastName: string; designation: string }>;
   primaryPhone: string;
   whatsappPhone: string;
   whatsappNumber?: string;
@@ -104,15 +122,25 @@ export interface ProfileData {
   categoryIds?: string[];
   adminCategoryIds?: string[];
   altPhone?: string;
+  alternatePhone?: string;
   landline?: string;
+  landlineCode?: string;
+  landlineNumber?: string;
+  extraPhones?: Array<{ code: string; phone: string; type: string }>;
+  additionalPhones?: string[];
   pincode: string;
   city: string;
   district: string;
   state: string;
   address: string;
   mapLink: string;
+  extraAddresses?: Array<{ address: string; mapLink: string }>;
+  additionalAddresses?: Array<{ address: string; mapLink?: string }>;
   email: string;
+  extraEmails?: Array<{ email: string }>;
+  additionalEmails?: string[];
   website: string;
+  websiteProtocol?: string;
   enquiryFields: {
     requireName: boolean;
     requirePhone: boolean;
@@ -184,6 +212,7 @@ export interface ProfileData {
   shopify?: string;
   appStoreLink?: string;
   discordLink?: string;
+  linksDetails?: Record<string, LinkDetailItem>;
 
   // Step 5: Payment & QR (exact backend fields: upiId, paymentPhoneNo, bankName, bankAccountNumber, bankIfscCode, bankHolderName, accountType)
   upiId: string;
@@ -195,6 +224,12 @@ export interface ProfileData {
   paytmQrUploaded: boolean;
   phonePeQrUploaded: boolean;
   gPayQrUploaded: boolean;
+  paytmQrUrl?: string;
+  phonePeQrUrl?: string;
+  gPayQrUrl?: string;
+  paytmQrProviderName?: string;
+  phonePeQrProviderName?: string;
+  gPayQrProviderName?: string;
   bankName: string;
   accountHolderName: string;
   bankHolderName?: string;
@@ -246,4 +281,5 @@ export interface ProfileData {
     videos: string;
     feedback: string;
   };
+  typography?: import('./typography').TypographySettings;
 }

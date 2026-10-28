@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
-import { Eye } from 'lucide-react';
+import { Eye, Menu, LogOut } from 'lucide-react';
 import QueryProvider from './lib/react-query/QueryProvider';
 import AuthContextProvider from './context/AuthContextProvider';
 
@@ -11,7 +11,14 @@ import Signin from './features/Registration/pages/Signin';
 // Super Admin
 import CategoryMaster from './pages/superadmin/CategoryMaster';
 import CreateAdmin from './pages/superadmin/CreateAdmin';
+import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
+import BillingManagement from './pages/superadmin/BillingManagement';
+import CustomerPricingManagement from './pages/superadmin/CustomerPricingManagement';
+import ReportsAnalytics from './pages/superadmin/ReportsAnalytics';
+import GreetingsManagement from './pages/superadmin/GreetingsManagement';
+import AiCreditLedger from './pages/superadmin/AiCreditLedger';
 import { SuperAdminSidebar, SuperAdminView } from './components/superadmin/SuperAdminSidebar';
+import { MobileBottomNav } from './components/superadmin/MobileBottomNav';
 
 // Card Builder (Admin)
 import { initialProfileData } from './data/initialProfile';
@@ -29,16 +36,30 @@ import { Step6GalleryMedia } from './components/steps/Step6GalleryMedia';
 import { Step7YoutubeVideos } from './components/steps/Step7YoutubeVideos';
 import { Step7SettingsHeadings } from './components/steps/Step7SettingsHeadings';
 import { SuperAdminCardForge } from './pages/superadmin/SuperAdminCardForge';
+import { FranchiseMaster } from './pages/superadmin/FranchiseMaster';
 import { EnquiriesDropdown } from './components/EnquiriesDropdown';
 
-// ─── Super Admin Layout (sidebar only, no header) ─────────────────────────────
-function SuperAdminPortal({ onSignOut }: { onSignOut: () => void }) {
+// ─── Super Admin / Franchise Layout ───────────────────────────────────────────
+function SuperAdminPortal({
+  onSignOut,
+  userRole = 'SUPERADMIN',
+}: {
+  onSignOut: () => void;
+  userRole?: string;
+}) {
+  const isFranchise = userRole?.trim().toUpperCase() === 'FRANCHISE';
+  const defaultInitialView: SuperAdminView = 'home';
+
   const [activeView, setActiveView] = useState<SuperAdminView>(() => {
     try {
       const p = new URLSearchParams(window.location.search);
-      return (p.get('view') as SuperAdminView) || 'categories';
+      const req = p.get('view') as SuperAdminView;
+      if (isFranchise && (req === 'categories' || req === 'franchise')) {
+        return 'home';
+      }
+      return req || defaultInitialView;
     } catch {
-      return 'categories';
+      return defaultInitialView;
     }
   });
   const [selectedAdminForCard, setSelectedAdminForCard] = useState<any | null>(() => {
@@ -67,6 +88,9 @@ function SuperAdminPortal({ onSignOut }: { onSignOut: () => void }) {
   };
 
   const handleSelectView = (view: SuperAdminView) => {
+    if (isFranchise && (view === 'categories' || view === 'franchise')) {
+      return;
+    }
     setActiveView(view);
     try {
       const url = new URL(window.location.href);
@@ -78,6 +102,33 @@ function SuperAdminPortal({ onSignOut }: { onSignOut: () => void }) {
     } catch {}
   };
 
+  const getViewTitle = (view: SuperAdminView): string => {
+    switch (view) {
+      case 'home':
+        return 'Dashboard';
+      case 'admins':
+        return 'All Businesses';
+      case 'categories':
+        return 'Category Master';
+      case 'franchise':
+        return 'Franchisee List';
+      case 'billing':
+        return 'Billing Management';
+      case 'pricing':
+        return 'Customer Pricing';
+      case 'report':
+        return 'Reports & Analytics';
+      case 'greetings':
+        return 'Greetings Management';
+      case 'ai-ledger':
+        return 'AI Credit Ledger';
+      case 'card-builder':
+        return 'Card Forge';
+      default:
+        return 'Admin Portal';
+    }
+  };
+
   return (
     <div className="h-screen overflow-hidden flex bg-[#f8f9fc] font-satoshi">
       {/* Desktop Sidebar (Fixed on the left, does NOT scroll) */}
@@ -85,6 +136,8 @@ function SuperAdminPortal({ onSignOut }: { onSignOut: () => void }) {
         <SuperAdminSidebar
           currentView={activeView}
           onSelectView={handleSelectView}
+          userRole={userRole}
+          onSignOut={onSignOut}
         />
       </div>
 
@@ -100,78 +153,92 @@ function SuperAdminPortal({ onSignOut }: { onSignOut: () => void }) {
               currentView={activeView}
               onSelectView={handleSelectView}
               onClose={() => setIsMobileMenuOpen(false)}
+              userRole={userRole}
+              onSignOut={onSignOut}
             />
           </div>
         </div>
       )}
 
       {/* Main Content Area (Only page content scrolls smoothly) */}
-      <main className="flex-1 h-screen overflow-y-auto flex flex-col min-w-0">
-        {/* Top Breadcrumb & Actions Bar */}
-        <div className="bg-white border-b border-stroke px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20 shadow-xs shrink-0">
-          <div className="flex items-center gap-2 sm:gap-3 text-sm min-w-0">
-            {/* Hamburger Button for Mobile */}
+      <main className="flex-1 h-screen overflow-y-auto flex flex-col min-w-0 pb-20 md:pb-6">
+        {/* Mobile Top Menu Bar Header for Sidebar Drawer */}
+        <header className="md:hidden sticky top-0 z-30 bg-white border-b border-[#E0E0E0] px-3 py-2 flex items-center justify-between shadow-xs font-['Roboto',Helvetica,Arial,sans-serif]">
+          <div className="flex items-center gap-2.5 min-w-0">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden p-2 rounded-xl border border-stroke text-gray-700 hover:bg-gray-100 transition-colors"
-              title="Open menu"
+              className="p-1.5 rounded border border-[#C4C4C4] text-[#000000DE] hover:bg-gray-100 hover:text-[#2196F3] transition-colors shrink-0"
+              title="Open Navigation Menu"
+              aria-label="Open Navigation Menu"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <Menu className="w-5 h-5 stroke-[2.2]" />
             </button>
-
-            <span className="px-2.5 py-1 rounded-xl bg-blue-50 text-[#2563EB] font-bold text-[11px] sm:text-xs border border-blue-200 shrink-0">
-              Super Admin Area
-            </span>
-            <span className="text-gray-400 font-medium">/</span>
-            <span className="font-bold text-gray-800 text-xs sm:text-sm truncate">
-              {activeView === 'categories'
-                ? 'Category Master'
-                : activeView === 'admins'
-                ? 'Admin Create Master'
-                : selectedAdminForCard
-                ? `Card Forge: ${selectedAdminForCard.fullname || selectedAdminForCard.user?.fullname || 'Admin'}`
-                : 'Digital Card Forge'}
-            </span>
+            <div className="min-w-0">
+              <h1 className="font-bold text-[14px] sm:text-[15px] text-[#000000DE] tracking-tight truncate">
+                {getViewTitle(activeView)}
+              </h1>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Super admin enquiries: superAdmin/admin/:adminId/enquires only */}
-            {activeView === 'card-builder' && (selectedAdminForCard?.id || selectedAdminForCard?._id) && (
-              <EnquiriesDropdown adminId={selectedAdminForCard?.id || selectedAdminForCard?._id} />
-            )}
-            {activeView === 'card-builder' && (
-              <button
-                type="button"
-                onClick={() => handleSelectView('admins')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-2xs"
-              >
-                <span>←</span>
-                <span className="hidden sm:inline">Back to Admins</span>
-              </button>
-            )}
-
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#2196F3] border border-blue-200 uppercase">
+              {userRole}
+            </span>
             <button
               type="button"
               onClick={onSignOut}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-all shadow-2xs shrink-0"
+              className="p-1.5 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+              title="Sign Out"
             >
-              <span>🚪</span>
-              <span className="hidden sm:inline">Sign Out</span>
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
-        </div>
+        </header>
 
+        {activeView === 'home' && (
+          <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
+            <SuperAdminDashboard onNavigate={handleSelectView} userRole={userRole} />
+          </div>
+        )}
         {activeView === 'categories' && (
-          <div className="max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-5 flex-1">
+          <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
             <CategoryMaster />
           </div>
         )}
         {activeView === 'admins' && (
-          <div className="max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-5 flex-1">
+          <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
             <CreateAdmin onOpenCardForge={handleOpenCardForge} />
+          </div>
+        )}
+        {activeView === 'franchise' && (
+          <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
+            <FranchiseMaster />
+          </div>
+        )}
+        {activeView === 'billing' && (
+          <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
+            <BillingManagement />
+          </div>
+        )}
+        {activeView === 'pricing' && (
+          <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
+            <CustomerPricingManagement />
+          </div>
+        )}
+        {activeView === 'report' && (
+          <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
+            <ReportsAnalytics />
+          </div>
+        )}
+        {activeView === 'greetings' && (
+          <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
+            <GreetingsManagement />
+          </div>
+        )}
+        {activeView === 'ai-ledger' && (
+          <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
+            <AiCreditLedger />
           </div>
         )}
         {activeView === 'card-builder' && (
@@ -183,6 +250,14 @@ function SuperAdminPortal({ onSignOut }: { onSignOut: () => void }) {
             />
           </div>
         )}
+
+        {/* Mobile Bottom Navigation Footer (HOME in the middle) */}
+        <MobileBottomNav
+          currentView={activeView}
+          onSelectView={handleSelectView}
+          onOpenSidebar={() => setIsMobileMenuOpen(true)}
+          isFranchise={isFranchise}
+        />
       </main>
     </div>
   );
@@ -234,7 +309,7 @@ function AdminCardBuilder({
     <div className={`text-[#0b1c30] flex flex-col font-sans overflow-x-hidden w-full max-w-full ${
       isInsideSuperAdmin ? 'bg-transparent' : 'min-h-screen bg-[#f8f9ff]'
     }`}>
-      {!isInsideSuperAdmin && (
+      {/* {!isInsideSuperAdmin && (
         <Header
           profile={profile}
           searchQuery={searchQuery}
@@ -242,7 +317,7 @@ function AdminCardBuilder({
           onSelectStep={handleSelectStep}
           onSignOut={onSignOut}
         />
-      )}
+      )} */}
 
       <main className="flex-1 w-full max-w-[1520px] mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-3.5 flex flex-col gap-2.5 sm:gap-4 pb-24 sm:pb-14 overflow-x-hidden">
         <TabStepper
@@ -322,7 +397,13 @@ function AppContent() {
       const raw = localStorage.getItem('token');
       if (!raw) return '';
       const parsed = JSON.parse(raw);
-      return parsed?.user?.role || parsed?.role || '';
+      return (
+        parsed?.user?.role ||
+        parsed?.role ||
+        parsed?.data?.user?.role ||
+        parsed?.data?.role ||
+        ''
+      );
     } catch { return ''; }
   });
 
@@ -343,15 +424,18 @@ function AppContent() {
     );
   }
 
-  const isSuperAdmin = userRole?.trim().toUpperCase() === 'SUPERADMIN';
+  const normalizedRole = userRole?.trim().toUpperCase();
+  const isSuperAdmin = normalizedRole === 'SUPERADMIN';
+  const isFranchise = normalizedRole === 'FRANCHISE';
 
   return (
     <>
       <Toaster position="top-right" />
-      {isSuperAdmin
-        ? <SuperAdminPortal onSignOut={handleSignOut} />
-        : <AdminCardBuilder onSignOut={handleSignOut} />
-      }
+      {isSuperAdmin || isFranchise ? (
+        <SuperAdminPortal onSignOut={handleSignOut} userRole={normalizedRole} />
+      ) : (
+        <AdminCardBuilder onSignOut={handleSignOut} />
+      )}
     </>
   );
 }

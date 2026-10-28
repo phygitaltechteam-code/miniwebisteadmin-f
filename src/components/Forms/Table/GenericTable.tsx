@@ -132,20 +132,20 @@ export const GenericTable = <T,>({
     : filteredData.slice(startIdx, startIdx + itemsPerPage);
 
   return (
-    <div className="rounded-xl border border-stroke bg-white px-4 pb-3 pt-4 shadow-xs dark:border-strokedark dark:bg-boxdark sm:px-6">
+    <div className="w-full bg-white font-['Roboto',Helvetica,Arial,sans-serif]">
       {title && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {showBackButton && onBack && (
               <button
                 onClick={onBack}
-                className="hover:bg-gray-100 rounded-lg p-1.5 dark:hover:bg-meta-4 transition-colors"
+                className="hover:bg-gray-100 rounded-lg p-1.5 transition-colors"
               >
                 <FaArrowLeft className="h-4 w-4" />
               </button>
             )}
 
-            <h2 className="text-lg font-bold text-black dark:text-white">{title}</h2>
+            <h2 className="text-[18px] font-medium text-[#000000DE]">{title}</h2>
           </div>
 
           {headerAction && <div className="shrink-0">{headerAction}</div>}
@@ -159,23 +159,23 @@ export const GenericTable = <T,>({
             placeholder="Search..."
             value={searchQuery}
             onChange={handleSearch}
-            className="w-full rounded border-[1.5px] border-stroke bg-transparent px-3 py-1.5 text-sm outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
+            className="w-full rounded border border-[#C4C4C4] bg-white px-3 py-2 text-[14px] text-[#000000DE] outline-none font-['Roboto',Helvetica,Arial,sans-serif] placeholder:text-[#9E9E9E] focus:border-[#2196F3] focus:ring-1 focus:ring-[#2196F3] transition"
           />
         </div>
       )}
-      <div className="max-w-full overflow-x-auto rounded-lg border border-slate-200 dark:border-strokedark">
-        <table className="w-full table-auto">
+      <div className="max-w-full overflow-x-auto rounded border border-[#E0E0E0] bg-white shadow-xs">
+        <table className="w-full table-auto text-left font-['Roboto',Helvetica,Arial,sans-serif]">
           <thead>
-            <tr className="bg-[#EBF3FE] border-b border-[#C7DCFE] text-left text-[#1E3A8A] dark:bg-slate-800 dark:border-strokedark">
+            <tr className="bg-[#2196F3] text-white border-none select-none">
               {showSrNo && (
-                <th className="w-14 px-3 py-2.5 font-bold text-[#1E3A8A] text-xs sm:text-sm text-center dark:text-blue-300">
+                <th className="w-14 px-3 py-2.5 font-medium text-white text-[14px] text-center">
                   Sr. No.
                 </th>
               )}
               {columns.map((column, index) => (
                 <th
                   key={index}
-                  className={`min-w-[110px] px-3.5 py-2.5 font-bold text-[#1E3A8A] tracking-wide text-xs sm:text-sm dark:text-blue-300 ${column.className || ''}`}
+                  className={`px-3 py-2.5 font-medium text-white text-[14px] tracking-normal ${column.className || ''}`}
                   onClick={
                     column.sortable
                       ? () => handleSort(column.accessor as keyof T)
@@ -183,10 +183,10 @@ export const GenericTable = <T,>({
                   }
                   style={{cursor: column.sortable ? 'pointer' : 'default'}}
                 >
-                  <div className="flex items-center gap-1 font-bold text-[#1E3A8A] dark:text-blue-300">
+                  <div className="flex items-center gap-1 font-medium text-white text-[14px]">
                     <span>{column.header}</span>
                     {sortConfig?.key === column.accessor && (
-                      <span className="text-xs text-[#2563EB] font-bold">
+                      <span className="text-xs text-white font-bold ml-1">
                         {sortConfig.direction === 'asc' ? '↑' : '↓'}
                       </span>
                     )}
@@ -194,26 +194,19 @@ export const GenericTable = <T,>({
                 </th>
               ))}
               {action && (
-                <th className="min-w-[90px] px-3.5 py-2.5 font-bold text-[#1E3A8A] text-xs sm:text-sm dark:text-blue-300">
+                <th className="min-w-[90px] px-3 py-2.5 font-medium text-white text-[14px]">
                   <div>Action</div>
                 </th>
               )}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white">
             {paginatedData.map((item, rowIndex) => {
-              const isEven = rowIndex % 2 === 0;
-              const rowBg = isEven
-                ? 'bg-white dark:bg-boxdark'
-                : 'bg-[#F4F8FE] dark:bg-boxdark-2/60';
-
               return (
                 <tr
                   key={rowIndex}
-                  className={`text-sm ${rowBg} ${
-                    onRowClick
-                      ? 'cursor-pointer hover:bg-blue-100/60 dark:hover:bg-meta-4 transition-colors'
-                      : 'hover:bg-blue-100/40 dark:hover:bg-meta-4 transition-colors'
+                  className={`text-[14px] text-[#000000DE] bg-white hover:bg-[#F5F5F5] transition-colors ${
+                    onRowClick ? 'cursor-pointer' : ''
                   }`}
                   onClick={(e) => {
                     if ((e.target as HTMLElement).closest('button, a, input, select, svg, .no-row-click')) return;
@@ -221,7 +214,7 @@ export const GenericTable = <T,>({
                   }}
                 >
                   {showSrNo && (
-                    <td className="w-14 border-b border-slate-100 px-3 py-2 text-center text-xs font-semibold text-slate-700 dark:border-strokedark dark:text-slate-300">
+                    <td className="w-14 border-b border-[#E0E0E0] px-3 py-2 text-center text-[14px] text-[#000000DE]">
                       {(currentPage - 1) * itemsPerPage + rowIndex + 1}
                     </td>
                   )}
@@ -234,7 +227,7 @@ export const GenericTable = <T,>({
                     return (
                       <td
                         key={colIndex}
-                        className="border-b border-slate-100 px-3.5 py-2 text-slate-800 dark:border-strokedark dark:text-slate-200"
+                        className="border-b border-[#E0E0E0] px-3 py-2 text-[14px] text-[#000000DE]"
                         onClick={() => {
                           if (column.onCellClick) {
                             column.onCellClick(item);
@@ -276,21 +269,29 @@ export const GenericTable = <T,>({
                     );
                   })}
                   {action && (
-                    <td className="border-b border-slate-100 px-3.5 py-2 dark:border-strokedark">
+                    <td className="border-b border-[#E0E0E0] px-3.5 py-2 text-[#000000DE]">
                       <div className="flex items-center gap-1.5 py-0.5">
                         {onView && (
                           <button
-                            className="hover:bg-blue-100 rounded p-1 text-slate-600 hover:text-blue-700 dark:hover:bg-meta-4 transition-colors"
-                            onClick={() => onView(item)}
-                            title="View"
+                            type="button"
+                            className="hover:bg-blue-100 rounded p-1 text-slate-600 hover:text-[#2196F3] transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onView(item);
+                            }}
+                            title="View Digital Card"
                           >
                             <FiEye className="h-4 w-4" />
                           </button>
                         )}
                         {handleEdit && (
                           <button
-                            className="hover:bg-blue-100 rounded p-1 text-slate-600 hover:text-blue-700 dark:hover:bg-meta-4 transition-colors"
-                            onClick={() => handleEdit(item)}
+                            type="button"
+                            className="hover:bg-amber-100 rounded p-1 text-slate-600 hover:text-amber-600 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(item);
+                            }}
                             title="Edit"
                           >
                             <FiEdit className="h-4 w-4" />
@@ -298,8 +299,12 @@ export const GenericTable = <T,>({
                         )}
                         {handleDelete && (
                           <button
-                            className="hover:bg-rose-100 rounded p-1 text-slate-600 hover:text-rose-600 dark:hover:bg-meta-4 transition-colors"
-                            onClick={() => handleDelete(item)}
+                            type="button"
+                            className="hover:bg-rose-100 rounded p-1 text-slate-600 hover:text-rose-600 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(item);
+                            }}
                             title="Delete"
                           >
                             <MdDelete className="h-4 w-4" />
@@ -317,8 +322,8 @@ export const GenericTable = <T,>({
 
       {/* Pagination Controls */}
       {!paginationOff && (
-        <div className="mt-3 flex items-center justify-between">
-          <span className="text-sm">
+        <div className="mt-3 flex items-center justify-between text-[14px] text-[#000000DE] font-['Roboto',Helvetica,Arial,sans-serif]">
+          <span>
             Page {currentPage} of {totalPages}
           </span>
           <div className="space-x-2">

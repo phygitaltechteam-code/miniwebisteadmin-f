@@ -4,11 +4,12 @@ import {
   Plus, GripVertical, Edit3, Trash2, 
   Check, ArrowRight, ArrowLeft, Image as ImageIcon,
   CheckCircle2, X, Bold, Italic, Link2, List, MoreVertical,
-  Upload, Sparkles, Loader2
+  Upload, Sparkles, Loader2, Type
 } from 'lucide-react';
 import { ProfileData, ProductItem } from '../../types/profile';
 import GenericInputField from '@/components/Forms/Input/GenericInputField';
 import GenericButton from '@/components/Forms/Buttons/GenericButton';
+import { RichTextEditor } from '@/components/Forms/RichTextEditor';
 import { 
   step3ProductsServicesSchema, 
   createProductSchema, 
@@ -20,7 +21,9 @@ import {
   getCustomerProducts, 
   syncCustomerProducts, 
   deleteCustomerProduct,
-  normalizeBackendProduct
+  normalizeBackendProduct,
+  isTempProductId
+
 } from '@/lib/api/customerProductsApi';
 
 interface Step3Props {
@@ -43,7 +46,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | number | null>(null);
-  const [deletedProductIds, setDeletedProductIds] = useState<(string | number)[]>([]);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
 
   // Auto-fetch existing products from GET customers/products or superAdmin/admin/:adminId/products
   useEffect(() => {
@@ -71,11 +74,23 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
   const [price, setPrice] = useState('');
   const [hideEnquiry, setHideEnquiry] = useState(false);
   const [customiseMessage, setCustomiseMessage] = useState(false);
-  const [customMessageText, setCustomMessageText] = useState('');
+  const [customMessageText, setCustomMessageText] = useState('आम्हाला आपल्या सेव्हेसेस मध्ये इंटरेस्ट आहे. कृपया लवकरात लवकर संपर्क साधावा.');
+  const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
   const [hideDownload, setHideDownload] = useState(false);
   const [image, setImage] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [removeImage, setRemoveImage] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
+  const [activeKebabIndex, setActiveKebabIndex] = useState<number | null>(null);
+  // Newly picked files, keyed by their preview so deleting a preview drops its file too
+  const [newImages, setNewImages] = useState<{ preview: string; file: File }[]>([]);
+
+  // Close kebab menu on outside click
+  useEffect(() => {
+    const handleCloseKebab = () => setActiveKebabIndex(null);
+    if (activeKebabIndex !== null) {
+      document.addEventListener('click', handleCloseKebab);
+      return () => document.removeEventListener('click', handleCloseKebab);
+    }
+  }, [activeKebabIndex]);
 
   const openAddModal = () => {
     setEditingId(null);
@@ -85,11 +100,12 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
     setPrice('');
     setHideEnquiry(false);
     setCustomiseMessage(false);
-    setCustomMessageText('');
+    setCustomMessageText('आम्हाला आपल्या सेव्हेसेस मध्ये इंटरेस्ट आहे. कृपया लवकरात लवकर संपर्क साधावा.');
     setHideDownload(false);
     setImage('');
-    setImageFile(null);
-    setRemoveImage(false);
+    setImages([]);
+    setNewImages([]);
+    setActiveKebabIndex(null);
     setIsModalOpen(true);
   };
 
@@ -101,11 +117,13 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
     setPrice(prod.price !== undefined && prod.price !== null ? String(prod.price) : '');
     setHideEnquiry(Boolean(prod.isHideEnquiry ?? prod.hideEnquiry));
     setCustomiseMessage(!!prod.customiseMessage);
-    setCustomMessageText(prod.customEnquiryMessage || '');
+    setCustomMessageText(prod.customEnquiryMessage || 'आम्हाला आपल्या सेव्हेसेस मध्ये इंटरेस्ट आहे. कृपया लवकरात लवकर संपर्क साधावा.');
     setHideDownload(Boolean(prod.isHideDownloadProductCart ?? prod.hideDownload));
-    setImage(prod.image || '');
-    setImageFile(prod.imageFile || null);
-    setRemoveImage(false);
+    const prodImages = prod.images && prod.images.length > 0 ? prod.images : prod.image ? [prod.image] : [];
+    setImages(prodImages);
+    setImage(prodImages[0] || prod.image || '');
+    setNewImages([]);
+    setActiveKebabIndex(null);
     setIsModalOpen(true);
   };
 
@@ -127,29 +145,43 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      setRemoveImage(false);
+  const handleAddProductImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length === 0) return;
+
+    for (const file of files) {
+      let preview: string;
       try {
-        const compressed = await compressImage(file, 800, 800, 0.85);
-        setImage(compressed);
-        onToast('Product image compressed & ready for upload!');
+        preview = await compressImage(file, 800, 800, 0.85);
       } catch {
-        const url = URL.createObjectURL(file);
-        setImage(url);
+        preview = URL.createObjectURL(file);
       }
+      setImages(prev => {
+        const next = [...prev, preview];
+        if (!image) setImage(next[0]);
+        return next;
+      });
+      setNewImages(prev => [...prev, { preview, file }]);
     }
+    toast.success(files.length > 1 ? `${files.length} images added` : 'Image added to product');
   };
 
-  const handleRemoveImage = () => {
-    setImage('');
-    setImageFile(null);
-    setRemoveImage(true);
+  const handleDeleteImage = (index: number) => {
+    const removed = images[index];
+    setNewImages(prev => prev.filter(n => n.preview !== removed));
+    setImages(prev => {
+      const next = prev.filter((_, i) => i !== index);
+      if (image === prev[index]) {
+        setImage(next[0] || '');
+      }
+      return next;
+    });
+    setActiveKebabIndex(null);
+    toast.success('Image removed');
   };
 
-  const handleSaveModal = () => {
+  const handleSaveModal = async () => {
     const trimmedName = name.trim();
     if (!trimmedName) {
       toast.error('Product name is required');
@@ -158,6 +190,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
     }
 
     const parsedPrice = price.trim() === '' ? undefined : Number(price.trim());
+    const primaryImg = images.length > 0 ? images[0] : image;
 
     // Validate using backend createProductSchema
     const validationResult = createProductSchema.safeParse({
@@ -165,7 +198,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
       description: description.trim() || undefined,
       currency: currency.trim() || 'INR',
       price: parsedPrice,
-      image: image || undefined,
+      image: primaryImg || undefined,
       isHideEnquiry: hideEnquiry,
       isHideDownloadProductCart: hideDownload,
     });
@@ -176,71 +209,59 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
       return;
     }
 
-    if (editingId !== null) {
-      // Update existing product in state
-      const updated = profile.products.map(p => {
-        if (p.id === editingId) {
-          return {
-            ...p,
-            name: trimmedName,
-            title: trimmedName,
-            description: description.trim(),
-            currency: currency.trim() || 'INR',
-            price: price.trim(),
-            hideEnquiry,
-            isHideEnquiry: hideEnquiry,
-            customiseMessage,
-            customEnquiryMessage: customiseMessage ? customMessageText.trim() : undefined,
-            hideDownload,
-            isHideDownloadProductCart: hideDownload,
-            image,
-            imageFile: imageFile || undefined,
-            removeImage,
-          };
-        }
-        return p;
-      });
-      onChange('products', updated);
-      onToast('Product updated successfully!');
-    } else {
-      // Add new product to state
-      const newId = `temp-${Date.now()}`;
-      const newProduct: ProductItem = {
-        id: newId,
-        name: trimmedName,
-        title: trimmedName,
-        description: description.trim(),
-        currency: currency.trim() || 'INR',
-        price: price.trim(),
-        hideEnquiry,
-        isHideEnquiry: hideEnquiry,
-        customiseMessage,
-        customEnquiryMessage: customiseMessage ? customMessageText.trim() : undefined,
-        hideDownload,
-        isHideDownloadProductCart: hideDownload,
-        image,
-        imageFile: imageFile || undefined,
-        removeImage: false,
-      };
+    const existing = editingId !== null ? profile.products.find(p => p.id === editingId) : undefined;
+    const product: ProductItem = {
+      ...(existing || {}),
+      id: existing?.id ?? `temp-${Date.now()}`,
+      name: trimmedName,
+      title: trimmedName,
+      description: description.trim(),
+      currency: currency.trim() || 'INR',
+      price: price.trim(),
+      hideEnquiry,
+      isHideEnquiry: hideEnquiry,
+      customiseMessage,
+      customEnquiryMessage: customiseMessage ? customMessageText.trim() : undefined,
+      hideDownload,
+      isHideDownloadProductCart: hideDownload,
+      image: primaryImg,
+      images: images,
+      imageFile: undefined,
+      imageFiles: newImages.map(n => n.file),
+      removeImage: !!existing && images.length === 0,
+    };
 
-      onChange('products', [...profile.products, newProduct]);
-      onToast(`Added: "${trimmedName}"`);
+    // Save this one product right away: POST when new, PATCH when it already has a backend id
+    setIsSavingProduct(true);
+    try {
+      await syncCustomerProducts([product], [], adminId);
+      const saved: ProductItem = { ...product, imageFile: undefined, imageFiles: undefined, removeImage: false };
+      const nextProducts = existing
+        ? profile.products.map(p => (p.id === existing.id ? saved : p))
+        : [...profile.products, saved];
+      onChange('products', nextProducts);
+      toast.success(existing ? 'Product updated' : `Added: "${trimmedName}"`);
+      onToast(existing ? 'Product updated successfully!' : `Added: "${trimmedName}"`);
+      setIsModalOpen(false);
+    } catch (error: any) {
+      const backendMessage =
+        error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Failed to save product';
+      const statusCode = error?.response?.status ? ` [HTTP ${error.response.status}]` : '';
+      toast.error(`API Error${statusCode}: ${backendMessage}`);
+      onToast(`❌ API Error${statusCode}: ${backendMessage}`);
+    } finally {
+      setIsSavingProduct(false);
     }
-
-    setIsModalOpen(false);
   };
 
   const handleDelete = async (id: string | number) => {
-    const updated = profile.products.filter(p => p.id !== id);
-    onChange('products', updated);
-    setDeletedProductIds(prev => [...prev, id]);
-    onToast('Product removed from catalog.');
     try {
-      if (typeof id === 'string' && !id.startsWith('temp-') && isNaN(Number(id))) {
-        await deleteCustomerProduct(id, adminId);
-      }
-    } catch {
-      // Deletions will also be processed during Save & Next
+      await deleteCustomerProduct(id, adminId);
+      onChange('products', profile.products.filter(p => p.id !== id));
+      onToast('Product removed from catalog.');
+    } catch (error: any) {
+      const backendMessage = error?.response?.data?.message || error?.message || 'Failed to delete product';
+      toast.error(`API Error: ${backendMessage}`);
     }
   };
 
@@ -269,17 +290,20 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
       return;
     }
 
+    // Products are saved one by one from the modal; only retry any that never reached the server
+    const unsaved = (profile.products || []).filter(p => isTempProductId(p._id) && isTempProductId(p.id));
+    if (unsaved.length === 0) {
+      onNext();
+      return;
+    }
+
     setIsSubmitting(true);
-    const toastId = toast.loading('Syncing products to customers/products API...');
-    onToast('Submitting products to server...');
+    const toastId = toast.loading('Saving remaining products...');
 
     try {
-      const res = await syncCustomerProducts(profile.products || [], deletedProductIds, adminId);
-      const serverMsg = res?.message || 'Step 3: Products & Services saved successfully!';
-      const displayMsg = `${serverMsg} (customers/products)`;
-
-      toast.success(displayMsg, { id: toastId, duration: 4000 });
-      onToast(`✅ ${displayMsg}`);
+      await syncCustomerProducts(unsaved, [], adminId);
+      onChange('products', [...profile.products]);
+      toast.success('Step 3: Products & Services saved successfully!', { id: toastId, duration: 4000 });
       onNext();
     } catch (error: any) {
       console.error('[Step3ProductsServices] API Error on customers/products:', error);
@@ -301,11 +325,11 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
   };
 
   return (
-    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-3">
+    <section className="bg-white border border-[#E0E0E0] rounded-lg p-2.5 sm:p-3.5 shadow-xs scroll-mt-28 font-['Roboto',Helvetica,Arial,sans-serif]" id="sec-3">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#c5c6cd]/40 mb-3">
+      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#E0E0E0] mb-3">
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-[#EFF6FF] text-[#2196F3] flex items-center justify-center font-bold text-xs shrink-0">
             3
           </div>
           <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
@@ -316,7 +340,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
         <GenericButton
           type="button"
           onClick={openAddModal}
-          className="!px-2.5 sm:!px-4 !py-1 sm:!py-2 !text-xs font-bold flex items-center gap-1 sm:gap-1.5 shrink-0 shadow-md shadow-[#2563EB]/20"
+          className="!bg-[#2196F3] hover:!bg-[#1E88E5] !px-3 sm:!px-4 !py-1.5 !text-[13px] font-medium text-white shadow-none flex items-center gap-1 sm:gap-1.5 shrink-0"
         >
           <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Add Product/Service</span>
@@ -412,14 +436,20 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
         }))}
       </div>
 
-      {/* MODAL: Add Product/Service details (matching backend createProductSchema / updateProductSchema) */}
+      {/* MODAL: Edit/Add Product/Service details (Matches User Screenshots Exactly) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-md w-full border border-stroke overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
+        <div
+          className={`${isEnquiryModalOpen ? 'hidden' : 'fixed'} inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200`}
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl max-w-2xl w-full border border-gray-200 overflow-hidden flex flex-col max-h-[92vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-stroke">
-              <h3 className="text-base font-bold text-[#091426]">
-                {editingId ? 'Edit Product/Service' : 'Add Product/Service'}
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200">
+              <h3 className="text-base sm:text-lg font-bold text-[#091426]">
+                {editingId ? 'Edit Product/Service details' : 'Add Product/Service details'}
               </h3>
               <button
                 type="button"
@@ -430,13 +460,14 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-4 overflow-y-auto">
-              <div className="space-y-3">
-                {/* Product Name */}
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">
-                    Product Name <span className="text-rose-500">*</span>
+            {/* Modal Body (overflow-x-hidden avoids unwanted horizontal scrollbar) */}
+            <div className="p-4 sm:p-5 overflow-y-auto overflow-x-hidden">
+              {/* Outer light blue container matching screenshot */}
+              <div className="border border-[#bfdbfe] bg-[#f0f7ff]/70 rounded-xl p-3.5 sm:p-4.5 space-y-4">
+                {/* Enter Product/Service name (Optional) */}
+                <div className="border border-gray-300 rounded-lg bg-white px-3 py-1.5 focus-within:border-[#2563EB] focus-within:ring-1 focus-within:ring-[#2563EB] transition-all">
+                  <label className="block text-[11px] font-medium text-gray-500">
+                    Enter Product/Service name (Optional)
                   </label>
                   <input
                     type="text"
@@ -444,172 +475,239 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     onBlur={handleTitleBlur}
-                    placeholder="Enter Product/Service name (e.g. Premium Consulting)"
-                    className="w-full h-10 px-3.5 rounded-lg border border-stroke bg-white text-xs text-[#091426] placeholder:text-gray-400 focus:border-[#2563EB] focus:outline-none"
+                    placeholder="Digital Business Card & Mini Website"
+                    className="w-full bg-transparent text-xs sm:text-sm text-[#091426] font-medium focus:outline-none pt-0.5"
                   />
                 </div>
 
                 {/* Product Description */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-gray-700">
+                    <label className="text-xs sm:text-[13px] font-bold text-gray-800">
                       Product Description
                     </label>
                     <button
                       type="button"
                       onClick={handleAiGenerateDesc}
                       className="px-2.5 py-1 rounded-md bg-blue-50 text-[#2563EB] border border-blue-200 text-[11px] font-bold hover:bg-blue-100 flex items-center gap-1.5 transition-colors shadow-2xs"
-                      title={description ? 'Regenerate description if you want a different variation' : 'Generate professional description using AI'}
+                      title={description ? 'Regenerate description' : 'Generate with AI'}
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span>{description ? 'Regenerate' : 'AI Write'}</span>
                     </button>
                   </div>
-                  <div className="border border-stroke rounded-lg overflow-hidden bg-white">
-                    {/* Toolbar */}
-                    <div className="flex items-center border-b border-stroke bg-gray-50/70 px-2 py-1 gap-1 text-gray-600 text-xs">
-                      <span className="px-2 py-0.5 text-xs text-gray-700 font-medium">Paragraph ▾</span>
-                      <div className="h-4 w-px bg-gray-300 mx-1" />
-                      <button type="button" className="p-1 hover:bg-gray-200 rounded font-bold" title="Bold">B</button>
-                      <button type="button" className="p-1 hover:bg-gray-200 rounded italic" title="Italic">I</button>
-                      <button type="button" className="p-1 hover:bg-gray-200 rounded" title="Link"><Link2 className="w-3.5 h-3.5" /></button>
-                      <button type="button" className="p-1 hover:bg-gray-200 rounded" title="List"><List className="w-3.5 h-3.5" /></button>
-                      <div className="ml-auto">
-                        <MoreVertical className="w-3.5 h-3.5 text-gray-400" />
-                      </div>
-                    </div>
-                    <textarea
-                      rows={3}
-                      maxLength={2000}
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Write brief description..."
-                      className="w-full p-3 text-xs text-[#091426] focus:outline-none resize-y"
-                    />
-                  </div>
+                  <RichTextEditor
+                    label=""
+                    value={description}
+                    onChange={(val) => setDescription(val)}
+                    placeholder="Enter detailed product description..."
+                    minHeight="140px"
+                    typography={profile.typography}
+                    onTypographyChange={(newTypo) => {
+                      onChange('typography', newTypo);
+                    }}
+                  />
                 </div>
 
-                {/* Price Row with Currency Box */}
-                <div className="flex gap-2">
-                  <div className="w-24">
-                    <label className="text-[10px] text-gray-500 font-semibold mb-1 block">Currency</label>
-                    <input
-                      type="text"
-                      maxLength={10}
-                      value={currency}
-                      onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-                      placeholder="INR"
-                      className="w-full h-11 px-2.5 text-center font-bold rounded-lg border border-stroke bg-gray-50 text-xs text-[#091426] focus:border-[#2563EB] focus:outline-none"
-                    />
+                {/* Currency & Price Row */}
+                <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white focus-within:border-[#2563EB] focus-within:ring-1 focus-within:ring-[#2563EB]">
+                  <div className="w-24 border-r border-gray-200 px-3 py-1.5 flex flex-col justify-center bg-gray-50/50">
+                    <span className="text-[10px] font-semibold text-gray-500 leading-tight">Currency</span>
+                    <span className="text-xs sm:text-sm font-bold text-gray-800 text-center">₹</span>
                   </div>
-                  <div className="flex-1">
-                    <label className="text-[10px] text-gray-500 font-semibold mb-1 block">Price</label>
+                  <div className="flex-1 px-3 py-1.5 flex flex-col justify-center">
                     <input
                       type="number"
                       min={0}
-                      max={100000000}
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
-                      placeholder="Enter Price (Optional, 0 - 10 Cr)"
-                      className="w-full h-11 px-3.5 rounded-lg border border-stroke bg-white text-xs text-[#091426] placeholder:text-gray-400 focus:border-[#2563EB] focus:outline-none"
+                      placeholder="Enter Product/Service Price (Optional)"
+                      className="w-full bg-transparent text-xs sm:text-sm text-[#091426] font-medium focus:outline-none"
                     />
                   </div>
                 </div>
 
-                {/* Hide Enquiry Button Checkbox (isHideEnquiry) */}
-                <div className="space-y-1.5 pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-700 select-none">
-                    <input
-                      type="checkbox"
-                      checked={hideEnquiry}
-                      onChange={(e) => setHideEnquiry(e.target.checked)}
-                      className="w-4 h-4 rounded text-[#2563EB] focus:ring-[#2563EB]"
-                    />
-                    <span>Hide Enquiry Button</span>
-                  </label>
+                {/* Checkboxes & Customise Message link */}
+                <div className="space-y-2.5 pt-1">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700 select-none">
+                      <input
+                        type="checkbox"
+                        checked={hideEnquiry}
+                        onChange={(e) => setHideEnquiry(e.target.checked)}
+                        className="w-4 h-4 rounded text-[#2563EB] focus:ring-[#2563EB] border-gray-300"
+                      />
+                      <span>Hide Enquiry Button</span>
+                    </label>
 
-                  {/* Customise WhatsApp Enquiry Message Link */}
-                  <div>
                     <button
                       type="button"
-                      onClick={() => setCustomiseMessage(!customiseMessage)}
-                      className="text-xs font-semibold text-sky-600 hover:text-sky-700 hover:underline"
+                      onClick={() => setIsEnquiryModalOpen(true)}
+                      className="text-xs font-bold text-[#1e88e5] hover:text-[#1565c0] hover:underline transition-colors"
                     >
-                      {customiseMessage ? '✓ Customising Enquiry Message' : 'Customise Your Enquiry Message'}
+                      Customise Your Enquiry Message
                     </button>
-                    {customiseMessage && (
-                      <input
-                        type="text"
-                        value={customMessageText}
-                        onChange={(e) => setCustomMessageText(e.target.value)}
-                        placeholder="Hi, I am interested in this product..."
-                        className="w-full h-9 px-3 mt-1.5 rounded-lg border border-stroke bg-white text-xs text-[#091426] focus:border-[#2563EB] focus:outline-none"
-                      />
-                    )}
                   </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700 select-none">
+                    <input
+                      type="checkbox"
+                      checked={hideDownload}
+                      onChange={(e) => setHideDownload(e.target.checked)}
+                      className="w-4 h-4 rounded text-[#2563EB] focus:ring-[#2563EB] border-gray-300"
+                    />
+                    <span>Hide Download Product Card Button</span>
+                  </label>
                 </div>
 
-                {/* Hide Download Card Checkbox (isHideDownloadProductCart) */}
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-700 select-none">
-                  <input
-                    type="checkbox"
-                    checked={hideDownload}
-                    onChange={(e) => setHideDownload(e.target.checked)}
-                    className="w-4 h-4 rounded text-[#2563EB] focus:ring-[#2563EB]"
-                  />
-                  <span>Hide Download Product Card Button</span>
-                </label>
-
-                {/* Add / Manage Image Upload Box */}
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1.5 block">
-                    Product Image
-                  </label>
-                  {image ? (
-                    <div className="relative inline-block w-24 h-24 rounded-lg border border-stroke overflow-hidden shadow-xs group">
-                      <img src={image} alt="Preview" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={handleRemoveImage}
-                        className="absolute top-1 right-1 bg-black/70 hover:bg-rose-600 text-white rounded-full p-1 transition-colors shadow-sm"
-                        title="Remove Image"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="w-24 h-24 rounded-lg border-2 border-dashed border-sky-300 bg-white hover:bg-sky-50 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors p-2 text-center group">
-                      <Plus className="w-5 h-5 text-sky-500" />
-                      <span className="text-[11px] font-bold text-sky-600 leading-tight">
-                        Add image
+                {/* Multiple Images List (Matches Screenshot 2) */}
+                <div className="pt-2">
+                  <div className="flex items-center gap-3 overflow-x-auto pb-2">
+                    {/* Add Image Button */}
+                    <label className="w-20 h-20 sm:w-22 sm:h-22 rounded-xl border-2 border-dashed border-[#90caf9] bg-white hover:bg-sky-50 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors p-2 text-center shrink-0 group">
+                      <Plus className="w-5 h-5 text-[#1e88e5]" />
+                      <span className="text-[11px] font-bold text-[#1e88e5] leading-tight">
+                        + Add image
                       </span>
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={handleImageUpload}
+                        multiple
+                        onChange={handleAddProductImage}
                         className="hidden"
                       />
                     </label>
-                  )}
+
+                    {/* Uploaded Images with Kebab Menu */}
+                    {images.map((imgUrl, idx) => (
+                      <div
+                        key={idx}
+                        className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-xl border border-dashed border-gray-400 bg-white p-1 shrink-0 flex items-center justify-center group"
+                      >
+                        <img
+                          src={imgUrl}
+                          alt={`Product ${idx + 1}`}
+                          className="w-full h-full object-contain rounded-lg"
+                        />
+
+                        {/* 3-dots kebab menu button */}
+                        <div className="absolute top-1 right-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveKebabIndex(activeKebabIndex === idx ? null : idx);
+                            }}
+                            className="w-6 h-6 rounded-full bg-white/95 hover:bg-white shadow-xs border border-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-900 transition-colors"
+                            title="Options"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </button>
+
+                          {activeKebabIndex === idx && (
+                            <div className="absolute right-0 top-full mt-1 z-50 w-32 rounded-lg bg-white py-1 shadow-lg border border-gray-200 text-left">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteImage(idx);
+                                }}
+                                className="w-full px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors font-medium"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Delete image</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-stroke bg-gray-50/50">
+            <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-gray-200 bg-white">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-xs font-bold text-sky-600 hover:text-sky-800 uppercase tracking-wider"
+                className="px-4 py-2 text-xs font-bold text-[#1e88e5] hover:text-[#1565c0] uppercase tracking-wider transition-colors"
               >
                 CANCEL
               </button>
               <button
                 type="button"
                 onClick={handleSaveModal}
-                className="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-all"
+                disabled={isSavingProduct}
+                className="px-6 py-2 rounded-lg bg-[#1e88e5] hover:bg-[#1976d2] text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
               >
-                SAVE
+                {isSavingProduct && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {isSavingProduct ? 'SAVING...' : 'SAVE'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DIALOG: Customise Enquiry Message */}
+      {isEnquiryModalOpen && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setIsEnquiryModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-gray-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200">
+              <h4 className="text-sm sm:text-base font-bold text-[#091426]">
+                Customise Enquiry Message
+              </h4>
+              <button
+                type="button"
+                onClick={() => setIsEnquiryModalOpen(false)}
+                className="text-gray-400 hover:text-gray-700 rounded-lg p-1 transition-colors"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5">
+              <div className="border border-gray-300 rounded-xl p-3 focus-within:border-[#1e88e5] focus-within:ring-2 focus-within:ring-[#1e88e5]/20 bg-white transition-all shadow-2xs">
+                <label className="block text-[11px] font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Enter Custom Enquiry Message
+                </label>
+                <textarea
+                  rows={4}
+                  value={customMessageText}
+                  onChange={(e) => setCustomMessageText(e.target.value)}
+                  placeholder="Enter custom enquiry message..."
+                  className="w-full bg-transparent text-xs sm:text-sm text-[#091426] font-medium focus:outline-none resize-none leading-relaxed"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 px-5 py-3.5 border-t border-gray-100 bg-gray-50/60">
+              <button
+                type="button"
+                onClick={() => setIsEnquiryModalOpen(false)}
+                className="px-4 py-2 rounded-lg text-xs font-bold text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors uppercase tracking-wider"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomiseMessage(true);
+                  setIsEnquiryModalOpen(false);
+                  toast.success('Custom enquiry message saved');
+                }}
+                className="px-6 py-2 rounded-lg bg-[#1e88e5] hover:bg-[#1976d2] text-white text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95 transition-all"
+              >
+                OK
               </button>
             </div>
           </div>
@@ -617,13 +715,13 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
       )}
 
       {/* Step Navigation Buttons */}
-      <div className="mt-4 pt-3 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
+      <div className="mt-4 pt-3 border-t border-[#E0E0E0] flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={onPrev}
-          className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-stroke bg-white text-[#091426] text-xs font-semibold hover:bg-[#f8f9ff] flex items-center gap-1.5 sm:gap-2 transition-all shrink-0"
+          className="px-4 py-2 rounded border border-[#C4C4C4] bg-white text-[#000000DE] text-[14px] font-medium hover:bg-gray-50 flex items-center gap-1.5 transition-colors shrink-0"
         >
-          <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <ArrowLeft className="w-4 h-4" />
           <span className="hidden sm:inline">Previous: About & Specialities</span>
           <span className="sm:hidden">Previous</span>
         </button>
@@ -632,7 +730,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
           type="button"
           onClick={handleSaveAndNext}
           disabled={isSubmitting}
-          className="!px-4 sm:!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 whitespace-nowrap shadow-md shadow-[#2563EB]/25 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="!bg-[#2196F3] hover:!bg-[#1E88E5] !px-6 !py-2 !text-[14px] font-medium text-white shadow-none flex items-center gap-2 whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <>

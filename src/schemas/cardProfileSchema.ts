@@ -12,18 +12,45 @@ export const categoryIdsSchema = z
 // ─── Backend API Schema: customers/info (Admin Profile) ───────────────────────
 export const createAdminInfoSchema = z.object({
   businessName: z.string().optional(),
+  tagline: z.string().optional(),
+  businessTagline: z.string().optional(),
   vanityUrl: z.string().optional(),
   prefix: z.string().optional(),
   contactName: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
   designation: z.string().optional(),
+  extraOwners: z.array(z.object({
+    prefix: z.string().optional(),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    designation: z.string().optional(),
+  })).optional(),
   primaryPhone: z.string().optional(),
   whatsappNumber: z.string().optional(),
   whatsappPhone: z.string().optional(),
+  altPhone: z.string().optional(),
+  landline: z.string().optional(),
+  extraPhones: z.array(z.object({
+    code: z.string().optional(),
+    phone: z.string().optional(),
+    type: z.string().optional(),
+  })).optional(),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
+  extraEmails: z.array(z.object({
+    email: z.string().optional(),
+  })).optional(),
   address: z.string().optional(),
+  extraAddresses: z.array(z.object({
+    address: z.string().optional(),
+    mapLink: z.string().optional(),
+  })).optional(),
   mapLink: z.string().optional(),
+  website: z.string().optional(),
+  websiteProtocol: z.string().optional(),
   logoUrl: z.string().optional(),
   bannerUrl: z.string().optional(),
+  banners: z.array(z.string()).optional(),
   servicesOffered: z.union([z.string(), z.array(z.string())]).optional(),
   theme: z.string().optional(),
   pincode: z.string().optional(),
@@ -53,17 +80,44 @@ export type UpdateAdminInfoValues = z.infer<typeof updateAdminInfoSchema>;
 export const step1BasicDetailsSchema = z.object({
   prefix: z.string().default('Mr.').optional(),
   businessName: z.string().optional().or(z.literal('')),
+  tagline: z.string().optional().or(z.literal('')),
+  businessTagline: z.string().optional().or(z.literal('')),
   vanityUrl: z.string().optional().or(z.literal('')),
   contactName: z.string().optional().or(z.literal('')),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
   designation: z.string().optional().or(z.literal('')),
+  extraOwners: z.array(z.object({
+    prefix: z.string().optional(),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    designation: z.string().optional(),
+  })).optional(),
   primaryPhone: z.string().optional().or(z.literal('')),
   whatsappPhone: z.string().optional().or(z.literal('')),
   whatsappNumber: z.string().optional().or(z.literal('')),
+  altPhone: z.string().optional(),
+  landline: z.string().optional(),
+  extraPhones: z.array(z.object({
+    code: z.string().optional(),
+    phone: z.string().optional(),
+    type: z.string().optional(),
+  })).optional(),
   email: z.string().email('Invalid email format').optional().or(z.literal('')),
+  extraEmails: z.array(z.object({
+    email: z.string().optional(),
+  })).optional(),
   address: z.string().optional().or(z.literal('')),
+  extraAddresses: z.array(z.object({
+    address: z.string().optional(),
+    mapLink: z.string().optional(),
+  })).optional(),
   mapLink: z.string().optional().or(z.literal('')),
+  website: z.string().optional(),
+  websiteProtocol: z.string().optional(),
   logoUrl: z.string().optional().or(z.literal('')),
   bannerUrl: z.string().optional().or(z.literal('')),
+  banners: z.array(z.string()).optional(),
   category: z.string().optional(),
   categories: z.array(z.string()).default([]),
   categoryIds: categoryIdsSchema,
@@ -115,6 +169,10 @@ export const upsertAboutUsSchema = z.object({
   aboutUsText: z.string().max(5000, 'About us text must be at most 5000 characters').optional().nullable(),
   aboutNarrative: z.string().max(5000).optional().nullable(),
 
+  // Category IDs & manual category names
+  categoryIds: z.union([z.array(z.string()), z.string()]).optional().default([]),
+  categories: z.union([z.array(z.string()), z.string()]).optional().default([]),
+
   // Nature of business — synced from basic details services + custom entries
   businessNatures: z.union([z.array(z.string()), z.string()]).optional().default([]),
   businessNature: z.union([z.array(z.string()), z.string()]).optional().default([]),
@@ -151,15 +209,15 @@ export const booleanSchema = z.preprocess((val) => {
 }, z.boolean().default(false));
 
 // multipart/form-data sends numbers as strings — empty string means "not provided"
-export const priceSchema = z
-  .preprocess(
-    (val) => (val === '' || val === null || val === undefined ? undefined : Number(val)),
-    z
-      .number({ invalid_type_error: 'Price must be a number' })
-      .min(0, 'Price cannot be negative')
-      .max(100000000, 'Price is too large'),
-  )
-  .optional();
+// .optional() must sit on the inner schema so the preprocessed `undefined` is accepted
+export const priceSchema = z.preprocess(
+  (val) => (val === '' || val === null || val === undefined ? undefined : Number(val)),
+  z
+    .number({ invalid_type_error: 'Price must be a number' })
+    .min(0, 'Price cannot be negative')
+    .max(100000000, 'Price is too large')
+    .optional(),
+);
 
 // ─── Create Product (POST customers/products) ─────────────────────────────────
 export const createProductSchema = z.object({
@@ -254,6 +312,9 @@ export const step5PaymentQRSchema = z.object({
   upiId: z.string().optional().nullable(),
   upiNumber: z.string().optional().nullable(),
   paymentPhoneNo: z.string().optional().nullable(),
+  paytmPhone: z.string().optional().nullable(),
+  phonePePhone: z.string().optional().nullable(),
+  gPayPhone: z.string().optional().nullable(),
   bankName: z.string().optional().nullable(),
   accountHolderName: z.string().optional().nullable(),
   bankHolderName: z.string().optional().nullable(),
@@ -263,6 +324,9 @@ export const step5PaymentQRSchema = z.object({
   bankIfscCode: ifscValidator,
   accountType: z.string().optional().default('Savings Account'),
   qrCodeUrl: z.string().optional().nullable(),
+  paytmQrUrl: z.string().optional().nullable(),
+  phonePeQrUrl: z.string().optional().nullable(),
+  gPayQrUrl: z.string().optional().nullable(),
 });
 
 export type Step5PaymentQRValues = z.infer<typeof step5PaymentQRSchema>;
@@ -326,6 +390,7 @@ export const step8SettingsHeadingsSchema = z.object({
     hideFeedbackForm: z.boolean().default(false),
     hideEnquiryForm: z.boolean().default(false),
   }),
+  typography: z.any().optional(),
 });
 
 export type Step8SettingsHeadingsValues = z.infer<typeof step8SettingsHeadingsSchema>;

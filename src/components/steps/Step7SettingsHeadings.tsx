@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { 
   Sliders, Eye, EyeOff, Save, 
-  ArrowLeft, CheckCircle2, RotateCcw, Loader2
+  ArrowLeft, CheckCircle2, RotateCcw, Loader2, Type
 } from 'lucide-react';
 import { ProfileData } from '../../types/profile';
 import GenericInputField from '@/components/Forms/Input/GenericInputField';
 import GenericButton from '@/components/Forms/Buttons/GenericButton';
+import TypographyCustomizerModal from '@/components/TypographyCustomizerModal';
 import { step7SettingsHeadingsSchema } from '@/schemas/cardProfileSchema';
 import { 
   getCustomerSettings, 
@@ -32,6 +33,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
   adminId,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTypographyModalOpen, setIsTypographyModalOpen] = useState(false);
 
   // Auto-fetch existing card settings & headings on mount (GET customers/settings or superAdmin/admin/:adminId/settings)
   useEffect(() => {
@@ -203,14 +205,14 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
   ];
 
   return (
-    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-7">
+    <section className="bg-white border border-[#E0E0E0] rounded-lg p-2.5 sm:p-3.5 shadow-none scroll-mt-28 font-['Roboto',Helvetica,Arial,sans-serif]" id="sec-7">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#c5c6cd]/40 mb-3">
+      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#E0E0E0] mb-2.5">
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
+          <div className="w-6 h-6 rounded bg-[#2196F3]/10 text-[#2196F3] flex items-center justify-center font-bold text-xs shrink-0">
             8
           </div>
-          <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
+          <h2 className="text-sm font-semibold text-[#000000DE] leading-tight">
             Card Settings
           </h2>
         </div>
@@ -218,7 +220,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
         <button
           type="button"
           onClick={handleResetDefaults}
-          className="text-xs text-[#75777d] hover:text-[#2563EB] flex items-center gap-1 font-medium shrink-0"
+          className="text-xs text-[#757575] hover:text-[#2196F3] flex items-center gap-1 font-medium shrink-0 transition-colors"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Reset Defaults</span>
@@ -227,8 +229,8 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
       </div>
 
       {/* Pricing & Renewal Amount Configuration */}
-      <div className="mb-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="mb-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <GenericInputField
             label="Card Price (₹)"
             type="number"
@@ -247,19 +249,55 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
         </div>
       </div>
 
+      {/* Typography & Font Studio Section */}
+      <div className="mb-2.5 pt-2.5 border-t border-[#E0E0E0]">
+        <div className="p-3 rounded-lg border border-[#E0E0E0] bg-[#FAFAFA] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-[#2196F3]/10 text-[#2196F3] flex items-center justify-center shrink-0">
+              <Type className="w-5 h-5 stroke-[2.2]" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-[14px] font-bold text-[#000000DE]">
+                  Typography & Font Customizer
+                </h4>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#2196F3] border border-blue-200">
+                  {profile.typography?.primaryFont || 'Roboto'}
+                </span>
+                <span className="text-[10px] text-[#757575] bg-white px-1.5 py-0.5 rounded border border-[#E0E0E0]">
+                  Weight: {profile.typography?.globalFontWeight || '400'}
+                </span>
+              </div>
+              <p className="text-[12px] text-[#757575] mt-0.5 truncate">
+                20 Fonts • 28 HTML Elements • 9 Weights • Text Transform • Line Heights • Colors
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsTypographyModalOpen(true)}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded bg-[#2196F3] hover:bg-[#1E88E5] text-white text-[13px] font-medium shadow-none transition-colors shrink-0"
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>Customize Typography</span>
+          </button>
+        </div>
+      </div>
+
       {/* 11 Visibility Toggles */}
-      <div className="mb-3 pt-3 border-t border-[#c5c6cd]/40">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 p-3 rounded-xl border border-stroke bg-[#f8f9ff]">
+      <div className="mb-2.5 pt-2.5 border-t border-[#E0E0E0]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-2.5 rounded-lg border border-[#E0E0E0] bg-[#FAFAFA]">
           {visibilityItems.map((item) => (
             <label
               key={item.key}
-              className="flex items-center gap-2.5 cursor-pointer text-xs font-medium text-[#091426] hover:text-[#2563EB] transition-colors"
+              className="flex items-center gap-2 cursor-pointer text-[13px] font-medium text-[#000000DE] hover:text-[#2196F3] transition-colors"
             >
               <input
                 type="checkbox"
                 checked={profile.visibility[item.key]}
                 onChange={() => handleToggleVisibility(item.key)}
-                className="w-4 h-4 text-[#2563EB] rounded border-[#c5c6cd] focus:ring-[#2563EB]"
+                className="w-4 h-4 text-[#2196F3] rounded border-[#C4C4C4] focus:ring-[#2196F3]"
               />
               <span>{item.label}</span>
             </label>
@@ -284,20 +322,20 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
       </div> */}
 
       {/* Customise Footer Labels */}
-      <div className="pt-3 border-t border-[#c5c6cd]/40">
-        <label className="block text-xs font-bold text-[#091426] mb-2">Bottom Nav Labels</label>
+      <div className="pt-2.5 border-t border-[#E0E0E0]">
+        <label className="block text-[12px] font-medium text-[#000000DE] mb-1.5">Bottom Nav Labels</label>
 
-        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-1.5">
           {navFields.map((field) => (
             <div key={field.key}>
-              <label className="block text-[10px] font-bold text-[#75777d] uppercase mb-1 truncate">
+              <label className="block text-[10px] font-medium text-[#757575] uppercase mb-0.5 truncate">
                 {field.label}
               </label>
               <input
                 type="text"
                 value={profile.navLabels[field.key]}
                 onChange={(e) => handleNavLabelChange(field.key, e.target.value.toUpperCase())}
-                className="w-full h-9 px-1.5 rounded-xl border border-stroke bg-white text-[11px] text-center font-bold text-[#091426] focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]/25 focus:outline-none"
+                className="w-full h-8 px-1 rounded border border-[#C4C4C4] bg-white text-[11px] text-center font-medium text-[#000000DE] focus:border-[#2196F3] focus:ring-1 focus:ring-[#2196F3] focus:outline-none"
               />
             </div>
           ))}
@@ -305,11 +343,11 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
       </div>
 
       {/* Step Navigation Buttons */}
-      <div className="mt-4 pt-3 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
+      <div className="mt-3.5 pt-2.5 border-t border-[#E0E0E0] flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={onPrev}
-          className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-stroke bg-white text-[#091426] text-xs font-semibold hover:bg-[#f8f9ff] flex items-center gap-1.5 sm:gap-2 transition-all shrink-0"
+          className="px-3 sm:px-4 py-2 rounded border border-[#C4C4C4] bg-white text-[#000000DE] text-[13px] sm:text-[14px] font-medium hover:bg-gray-50 flex items-center gap-1.5 sm:gap-2 transition-all shrink-0"
         >
           <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Previous: YouTube Videos</span>
@@ -320,7 +358,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
           type="button"
           onClick={handleSaveAndFinish}
           disabled={isSubmitting}
-          className="!px-4 sm:!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 whitespace-nowrap shadow-md shadow-[#2563EB]/25 disabled:opacity-60"
+          className="!bg-[#2196F3] hover:!bg-[#1E88E5] !px-4 sm:!px-6 !py-2 !text-[13px] sm:!text-[14px] !font-medium rounded flex items-center gap-2 whitespace-nowrap text-white shadow-none disabled:opacity-60"
         >
           {isSubmitting ? (
             <>
@@ -336,6 +374,14 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
           )}
         </GenericButton>
       </div>
+
+      {/* Typography Customizer Studio Modal */}
+      <TypographyCustomizerModal
+        isOpen={isTypographyModalOpen}
+        onClose={() => setIsTypographyModalOpen(false)}
+        settings={profile.typography}
+        onApplySettings={(newSettings) => onChange('typography', newSettings)}
+      />
     </section>
   );
 };

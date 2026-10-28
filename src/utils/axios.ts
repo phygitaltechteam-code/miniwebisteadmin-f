@@ -75,12 +75,54 @@ export const isSuperAdminUser = (): boolean => {
     }
     const tokenStr = parsed?.accessToken || (typeof raw === 'string' && !raw.startsWith('{') ? raw : null);
     if (!tokenStr) {
-      const userRole = parsed?.user?.role || parsed?.role || '';
+      const userRole = parsed?.user?.role || parsed?.role || parsed?.data?.user?.role || parsed?.data?.role || '';
       return String(userRole).toUpperCase() === 'SUPERADMIN';
     }
     const decoded: any = jwtDecode(tokenStr);
-    const role = decoded?.role || parsed?.user?.role || parsed?.role || '';
+    const role = decoded?.role || decoded?.user?.role || parsed?.user?.role || parsed?.role || '';
     return String(role).toUpperCase() === 'SUPERADMIN';
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Check if the currently stored authentication token belongs to a Franchise user.
+ */
+export const isFranchiseUser = (): boolean => {
+  try {
+    const raw =
+      localStorage.getItem('token') ||
+      localStorage.getItem(QUERY_KEYS.TOKEN) ||
+      localStorage.getItem('token_key');
+    if (!raw) return false;
+    let parsed: any = null;
+    if (typeof raw === 'string' && (raw.startsWith('{') || raw.startsWith('['))) {
+      parsed = JSON.parse(raw);
+    }
+    const tokenStr =
+      parsed?.accessToken ||
+      parsed?.data?.accessToken ||
+      parsed?.token ||
+      (typeof raw === 'string' && !raw.startsWith('{') ? raw : null);
+
+    const directRole =
+      parsed?.user?.role ||
+      parsed?.role ||
+      parsed?.data?.user?.role ||
+      parsed?.data?.role ||
+      '';
+
+    if (String(directRole).toUpperCase() === 'FRANCHISE') return true;
+
+    if (tokenStr) {
+      try {
+        const decoded: any = jwtDecode(tokenStr);
+        const role = decoded?.role || decoded?.user?.role || '';
+        if (String(role).toUpperCase() === 'FRANCHISE') return true;
+      } catch {}
+    }
+    return false;
   } catch {
     return false;
   }
@@ -91,12 +133,12 @@ export const api: AxiosInstance = axios.create({
 });
 
 api.interceptors.request.use(async (req) => {
-  // Strict guard: on SuperAdmin sessions, NEVER dispatch any request to customers/*
-  if (isSuperAdminUser()) {
+  // Strict guard: on SuperAdmin or Franchise sessions, NEVER dispatch any request to customers/*
+  if (isSuperAdminUser() || isFranchiseUser()) {
     const targetUrl = req.url || '';
     if (targetUrl.startsWith('customers/') || targetUrl.includes('/customers/')) {
-      console.warn(`[axios] Blocked customers/ route on SuperAdmin session: ${targetUrl}`);
-      return Promise.reject(new Error(`[SuperAdmin Protection] Customers endpoint blocked on SuperAdmin side: ${targetUrl}`));
+      console.warn(`[axios] Blocked customers/ route on Admin/Franchise session: ${targetUrl}`);
+      return Promise.reject(new Error(`[Admin Protection] Customers endpoint blocked on management session: ${targetUrl}`));
     }
   }
 

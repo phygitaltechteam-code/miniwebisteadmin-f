@@ -86,7 +86,7 @@ export const PORTAL_THEMES: Record<PortalThemeId, PortalTheme> = {
     headerCtaBtn: 'bg-[#F97316] hover:bg-[#EA580C] text-white shadow-orange-500/25',
 
     heroBgGradient: 'from-[#07162C] via-[#0B2144] to-[#0A1A33]',
-    heroRingBorder: 'border-[#F97316]/60',
+    heroRingBorder: 'border-orange-400 text-orange-400',
     heroBadgeDot: 'bg-orange-400',
     heroBadgeText: 'text-orange-300',
     heroContactText: 'text-orange-400',
@@ -152,7 +152,7 @@ export const PORTAL_THEMES: Record<PortalThemeId, PortalTheme> = {
     headerCtaBtn: 'bg-[#10B981] hover:bg-[#059669] text-white shadow-emerald-500/25',
 
     heroBgGradient: 'from-[#061C18] via-[#0B2E26] to-[#08231D]',
-    heroRingBorder: 'border-[#10B981]/50',
+    heroRingBorder: 'border-emerald-400 text-emerald-400',
     heroBadgeDot: 'bg-emerald-400',
     heroBadgeText: 'text-emerald-300',
     heroContactText: 'text-emerald-400',
@@ -218,7 +218,7 @@ export const PORTAL_THEMES: Record<PortalThemeId, PortalTheme> = {
     headerCtaBtn: 'bg-[#0284C7] hover:bg-[#0369A1] text-white shadow-sky-500/25',
 
     heroBgGradient: 'from-[#07132B] via-[#0D2040] to-[#0A1A33]',
-    heroRingBorder: 'border-[#0284C7]/60',
+    heroRingBorder: 'border-sky-400 text-sky-400',
     heroBadgeDot: 'bg-sky-400',
     heroBadgeText: 'text-sky-300',
     heroContactText: 'text-sky-400',
@@ -284,7 +284,7 @@ export const PORTAL_THEMES: Record<PortalThemeId, PortalTheme> = {
     headerCtaBtn: 'bg-[#D97706] hover:bg-[#B45309] text-white shadow-amber-500/25',
 
     heroBgGradient: 'from-[#141416] via-[#222328] to-[#18191D]',
-    heroRingBorder: 'border-[#F59E0B]/50',
+    heroRingBorder: 'border-amber-400 text-amber-400',
     heroBadgeDot: 'bg-amber-400',
     heroBadgeText: 'text-amber-300',
     heroContactText: 'text-amber-400',
@@ -350,7 +350,7 @@ export const PORTAL_THEMES: Record<PortalThemeId, PortalTheme> = {
     headerCtaBtn: 'bg-[#7C3AED] hover:bg-[#6D28D9] text-white shadow-violet-500/25',
 
     heroBgGradient: 'from-[#1A0A38] via-[#2E1259] to-[#1E0B3E]',
-    heroRingBorder: 'border-[#8B5CF6]/50',
+    heroRingBorder: 'border-violet-400 text-violet-400',
     heroBadgeDot: 'bg-violet-400',
     heroBadgeText: 'text-violet-200',
     heroContactText: 'text-violet-300',

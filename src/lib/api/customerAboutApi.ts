@@ -8,6 +8,8 @@ export interface CustomerAboutPayload {
   showCategoryInCard?: boolean;
   aboutUsText?: string;
   aboutNarrative?: string;
+  categoryIds?: string[];
+  categories?: string[];
   businessNatures?: string[];
   businessNature?: string[];
   natureOfBusiness?: string[];
@@ -72,6 +74,31 @@ export const formatAdminAboutPayload = (profile: Partial<ProfileData>): Customer
     })
     .filter(Boolean);
 
+  // ─── CATEGORY IDS ────────────────────────────────────────────────────────────
+  // Exactly what the user selects (predefined category UUIDs) and enters (custom category names).
+  // Example: ["67ae0258-418c-4892-9478-14f395137a07", "Electrical Services", "30be1610-b6a1-49e3-b198-8c2af1cb7774"]
+  const catIdsList: string[] = [];
+  const seenCats = new Set<string>();
+
+  const sourceCategoryList =
+    Array.isArray(profile.categoryIds) && profile.categoryIds.length > 0
+      ? profile.categoryIds
+      : Array.isArray(profile.adminCategoryIds) && profile.adminCategoryIds.length > 0
+      ? profile.adminCategoryIds
+      : Array.isArray(profile.categories) && profile.categories.length > 0
+      ? profile.categories
+      : profile.category
+      ? [profile.category]
+      : [];
+
+  sourceCategoryList.forEach((item: any) => {
+    const str = (typeof item === 'object' ? String(item.id || item._id || item.name || '') : String(item || '')).trim();
+    if (str && !seenCats.has(str.toLowerCase())) {
+      seenCats.add(str.toLowerCase());
+      catIdsList.push(str);
+    }
+  });
+
   const yearStr = profile.establishmentYear ? String(profile.establishmentYear).trim() : '';
   const gstStr = (profile.gstNumber || '').trim().toUpperCase();
   const narrative = (profile.aboutNarrative || (profile as any).aboutUsText || '').trim();
@@ -100,6 +127,8 @@ export const formatAdminAboutPayload = (profile: Partial<ProfileData>): Customer
     showCategoryInCard: profile.showCategoryInCard ?? (profile as any).isCategoryDigitalCard ?? true,
     aboutUsText: narrative,
     aboutNarrative: narrative,
+    categoryIds: catIdsList,
+    categories: catIdsList,
     businessNatures: natures,
     businessNature: natures,
     natureOfBusiness: natures,
@@ -137,7 +166,12 @@ export const base64ToFile = (dataurl: string, filename: string): File | null => 
 
 /**
  * Convert frontend ProfileData into multipart/form-data for customers/about
- * Ensures all fields are formatted, and documents array items include fileName
+ * Exactly matches backend format from Postman:
+ * - categoryIds: ["2b456114-8aac-4c5d-84e6-2416f150eedb", "Bridal Makeup", "Hair Spa"]
+ * - businessNatures: ["Service provider", "Vendor Connect"]
+ * - specialities: ["Bridal Makeup", "Party Makeup", "Hair Styling"]
+ * - documents: File
+ * - fileName: Document name
  */
 export const formatAboutFormData = (profile: Partial<ProfileData>): FormData => {
   const formData = new FormData();
@@ -154,23 +188,17 @@ export const formatAboutFormData = (profile: Partial<ProfileData>): FormData => 
   formData.append('aboutUsText', payload.aboutUsText || '');
   formData.append('aboutNarrative', payload.aboutNarrative || '');
 
-  // Business natures (each entry max 100 characters)
-  (payload.businessNatures || []).forEach((nature) => {
-    const cleanNature = String(nature || '').trim().slice(0, 100);
-    if (cleanNature) {
-      formData.append('businessNatures', cleanNature);
-      formData.append('businessNature', cleanNature);
-      formData.append('natureOfBusiness', cleanNature);
-    }
-  });
+  // categoryIds as JSON string array: ["2b456114-8aac-4c5d-84e6-2416f150eedb", "Bridal Makeup", "Hair Spa"]
+  const catIds = payload.categoryIds || [];
+  formData.append('categoryIds', JSON.stringify(catIds));
 
-  // Specialities (each entry max 100 characters)
-  (payload.specialities || []).forEach((spec) => {
-    const cleanSpec = String(spec || '').trim().slice(0, 100);
-    if (cleanSpec) {
-      formData.append('specialities', cleanSpec);
-    }
-  });
+  // businessNatures as JSON string array: ["Service provider", "Vendor Connect"]
+  const natures = payload.businessNatures || [];
+  formData.append('businessNatures', JSON.stringify(natures));
+
+  // specialities as JSON string array: ["Bridal Makeup", "Party Makeup", "Hair Styling"]
+  const specs = payload.specialities || [];
+  formData.append('specialities', JSON.stringify(specs));
 
   if (payload.removeDocumentIds && payload.removeDocumentIds.length > 0) {
     formData.append('removeDocumentIds', JSON.stringify(payload.removeDocumentIds));
@@ -182,7 +210,9 @@ export const formatAboutFormData = (profile: Partial<ProfileData>): FormData => 
   if (payload.brochureDate) formData.append('brochureDate', payload.brochureDate);
   if (payload.brochureUrl) formData.append('brochureUrl', payload.brochureUrl);
 
-  // Documents array - append file and fileName as required by backend
+  // Documents array - strictly append one fileName and description per binary document file
+  // Backend Multer: if fileName is sent without a matching binary file in documents, backend throws:
+  // "Received 0 documents but 1 file names — send one name per document"
   const docs = payload.documents || [];
   docs.forEach((doc: any) => {
     const rawFile =
@@ -192,13 +222,11 @@ export const formatAboutFormData = (profile: Partial<ProfileData>): FormData => 
             ? base64ToFile(doc.url, doc.fileName || doc.name || 'document.pdf')
             : null);
 
-    if (rawFile) {
+    if (rawFile instanceof File) {
       formData.append('documents', rawFile);
-    } else if (doc.url) {
-      formData.append('documents', doc.url);
+      formData.append('fileName', doc.fileName || doc.name || rawFile.name || 'document');
+      formData.append('description', doc.description || '');
     }
-    formData.append('fileName', doc.fileName || ''); // never skip; '' = use original filename
-    formData.append('description', doc.description || ''); // kept index-aligned with documents/fileName
   });
 
   return formData;

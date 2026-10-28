@@ -1,7 +1,7 @@
-import { api } from '@/utils/axios';
+import { api, isFranchiseUser } from '@/utils/axios';
 
 export interface adminPayload {
-  adminCategoryId: string;
+  adminCategoryId?: string;
   price?: number;
   renewalAmount?: number;
   fullname: string;
@@ -53,46 +53,63 @@ export interface admin {
 
 export type AdminItem = admin;
 
-// GET superadmin/admin
+// GET admins (calls frencise/admin or franchise/admin for franchise role, else superadmin/admin)
 export const getAdmins = async (): Promise<admin[]> => {
   try {
+    const isFranchise = isFranchiseUser();
+    const endpoints = isFranchise
+      ? ['frencise/admin', 'franchise/admins', 'superadmin/admin']
+      : ['superadmin/admin', 'superAdmin/admin', 'frencise/admin', 'franchise/admin'];
+
     let response: any;
-    try {
-      response = await api.get('superadmin/admin');
-    } catch (err: any) {
-      if (err?.response?.status === 404) {
-        response = await api.get('superAdmin/admin');
-      } else {
+    let success = false;
+    for (const endpoint of endpoints) {
+      try {
+        response = await api.get(endpoint);
+        success = true;
+        break;
+      } catch (err: any) {
+        const status = err?.response?.status;
+        if (status === 404 || status === 403 || status === 405) {
+          continue;
+        }
         throw err;
       }
     }
+
+    if (!success) {
+      return [];
+    }
+
     const resAny = response as any;
     const list =
       resAny?.data?.admins ||
       resAny?.admins ||
       resAny?.data?.data?.admins ||
+      resAny?.data?.data ||
       (Array.isArray(resAny?.data) ? resAny.data : null) ||
       (Array.isArray(response) ? response : []);
 
     return Array.isArray(list) ? list : [];
   } catch (error) {
-    console.error('API superadmin/admin error:', error);
+    console.error('API admin fetch error:', error);
     return [];
   }
 };
 
 export const getAdmin = getAdmins;
 
-// POST superadmin/admin
+// POST save admin (calls frencise/admin or franchise/admin for franchise role, else superadmin/admin)
 export const saveAdminProfile = async (data: adminPayload): Promise<admin> => {
   const priceVal = data.price !== undefined ? Number(data.price) : (data as any).amount !== undefined ? Number((data as any).amount) : undefined;
   const renewalVal = data.renewalAmount !== undefined ? Number(data.renewalAmount) : undefined;
   const startIso = data.startDate instanceof Date ? data.startDate.toISOString() : data.startDate;
   const endIso = data.endDate instanceof Date ? data.endDate.toISOString() : data.endDate;
 
-  const payload = {
+  const passwordVal = (data.password || data.user?.password || '').trim();
+
+  const payload: any = {
     ...data,
-    adminCategoryId: data.adminCategoryId,
     amount: priceVal,
     price: priceVal,
     renewalAmount: renewalVal,
@@ -100,29 +117,74 @@ export const saveAdminProfile = async (data: adminPayload): Promise<admin> => {
     endDate: endIso,
     expiryDate: endIso,
     address: data.address,
+    password: passwordVal,
     user: data.user || {
       fullname: data.fullname,
       email: data.email,
       phoneNumber: data.phoneNumber,
       secondaryPhoneNumber: data.secondaryPhoneNumber,
-      password: data.password,
+      password: passwordVal,
       role: 'ADMIN',
     },
     fullname: data.fullname,
     email: data.email,
     phoneNumber: data.phoneNumber,
     secondaryPhoneNumber: data.secondaryPhoneNumber,
-    password: data.password,
     role: 'ADMIN',
   };
 
-  const response = await api.post('superadmin/admin', payload);
-  return (response as any)?.data || response;
+  if (passwordVal) {
+    payload.password = passwordVal;
+    if (payload.user) {
+      payload.user.password = passwordVal;
+    }
+  }
+
+  if (data.adminCategoryId) {
+    payload.adminCategoryId = data.adminCategoryId;
+  }
+
+  const isFranchise = isFranchiseUser();
+  const endpoints = isFranchise
+    ? ['frencise/admin', 'franchise/admin']
+    : ['superadmin/admin', 'superAdmin/admin'];
+
+  let lastError: any;
+  for (const endpoint of endpoints) {
+    try {
+      const response = await api.post(endpoint, payload);
+      return (response as any)?.data || response;
+    } catch (err: any) {
+      lastError = err;
+      const status = err?.response?.status;
+      const resData = err?.response?.data;
+      const message = resData?.message;
+
+      // If backend responded with a business message (e.g. "Admin limit reached", validation failure)
+      // immediately throw so the UI receives and displays the actual message!
+      if (message || (resData?.errors && resData.errors.length > 0)) {
+        throw err;
+      }
+
+      // If status is 403, 400, 409, 422 - this is a business / permission rejection from server, do not fallback
+      if (status === 403 || status === 400 || status === 409 || status === 422) {
+        throw err;
+      }
+
+      // Only retry alternative route spelling if 404 (route not found) or 405 (method not allowed)
+      if (status === 404 || status === 405) {
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastError;
 };
 
 export const saveAdmin = saveAdminProfile;
 
-// PATCH superadmin/admin/:id (backend uses PATCH for updates)
+// PATCH update admin
 export const editAdmin = async (id: string, data: Partial<adminPayload>): Promise<admin> => {
   const priceVal =
     data.price !== undefined && data.price !== null && data.price !== ('' as any)
@@ -141,7 +203,6 @@ export const editAdmin = async (id: string, data: Partial<adminPayload>): Promis
 
   const payload: any = {
     ...data,
-    adminCategoryId: data.adminCategoryId,
     amount: priceVal,
     price: priceVal,
     renewalAmount: renewalVal,
@@ -164,34 +225,79 @@ export const editAdmin = async (id: string, data: Partial<adminPayload>): Promis
     secondaryPhoneNumber: data.secondaryPhoneNumber,
   };
 
+  if (data.adminCategoryId) {
+    payload.adminCategoryId = data.adminCategoryId;
+  }
+
   if (data.password && data.password.trim() !== '') {
     payload.password = data.password;
   }
 
-  // Use PATCH first as requested by backend requirements
-  let response: any;
-  try {
-    response = await api.patch(`superadmin/admin/${id}`, payload);
-  } catch (err: any) {
-    if (err?.response?.status === 404 || err?.response?.status === 405) {
-      try {
-        response = await api.patch(`superAdmin/admin/${id}`, payload);
-      } catch {
-        response = await api.put(`superadmin/admin/${id}`, payload);
+  const isFranchise = isFranchiseUser();
+  const prefixes = isFranchise
+    ? ['frencise/admin', 'franchise/admin']
+    : ['superadmin/admin', 'superAdmin/admin'];
+
+  let lastError: any;
+  for (const prefix of prefixes) {
+    try {
+      const response = await api.patch(`${prefix}/${id}`, payload);
+      return (response as any)?.data || response;
+    } catch (err: any) {
+      lastError = err;
+      const status = err?.response?.status;
+      const message = err?.response?.data?.message;
+      if (message) {
+        throw err;
       }
-    } else {
+      if (status === 404 || status === 405) {
+        try {
+          const putRes = await api.put(`${prefix}/${id}`, payload);
+          return (putRes as any)?.data || putRes;
+        } catch (putErr: any) {
+          if (putErr?.response?.data?.message) {
+            throw putErr;
+          }
+          if (putErr?.response?.status === 404 || putErr?.response?.status === 405) {
+            continue;
+          }
+          throw putErr;
+        }
+      }
       throw err;
     }
   }
 
-  return (response as any)?.data || response;
+  throw lastError;
 };
 
 export const updateAdmin = editAdmin;
 export const updateAdminProfile = editAdmin;
 
-// DELETE superadmin/admin/:id
+// DELETE admin
 export const deleteAdmin = async (id: string): Promise<{ success: boolean; id: string }> => {
-  await api.delete(`superadmin/admin/${id}`);
-  return { success: true, id };
+  const isFranchise = isFranchiseUser();
+  const prefixes = isFranchise
+    ? ['frencise/admin', 'franchise/admin']
+    : ['superadmin/admin', 'superAdmin/admin'];
+
+  let lastError: any;
+  for (const prefix of prefixes) {
+    try {
+      await api.delete(`${prefix}/${id}`);
+      return { success: true, id };
+    } catch (err: any) {
+      lastError = err;
+      const status = err?.response?.status;
+      const message = err?.response?.data?.message;
+      if (message || status === 403 || status === 400) {
+        throw err;
+      }
+      if (status === 404 || status === 405) {
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError;
 };

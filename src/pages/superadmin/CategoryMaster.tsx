@@ -46,15 +46,16 @@ const CategoryMaster: React.FC = () => {
   };
 
   const columns: Column<CategoryRow>[] = [
+    { accessor: 'createdAt', header: 'Date & Time', sortable: true },
     { accessor: 'name', header: 'Category Name' },
-    { accessor: 'createdAt', header: 'Created Date' },
+
   ];
 
   const rawCategoryList: any[] = Array.isArray(categoryData)
     ? categoryData
     : (categoryData as any)?.data?.categories ||
-      (categoryData as any)?.categories ||
-      (Array.isArray((categoryData as any)?.data) ? (categoryData as any).data : []);
+    (categoryData as any)?.categories ||
+    (Array.isArray((categoryData as any)?.data) ? (categoryData as any).data : []);
 
   const formattedCategoryData: CategoryRow[] = rawCategoryList.map((cat: any) => ({
     id: cat.id || cat._id || '',
@@ -157,7 +158,7 @@ const CategoryMaster: React.FC = () => {
           headerAction={
             <GenericButton
               onClick={() => setShowForm(true)}
-              className="!px-4 !py-2 !text-xs font-bold shadow-md shadow-[#2563EB]/25"
+              className="!bg-[#2196F3] hover:!bg-[#1E88E5] !px-4 !py-1.5 !text-[14px] font-medium text-white shadow-none"
             >
               + Add New
             </GenericButton>

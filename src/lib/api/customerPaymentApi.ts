@@ -46,7 +46,7 @@ const v = (val: any): string | null => {
  */
 export const formatCustomerPaymentPayload = (profile: Partial<ProfileData>): CustomerPaymentPayload => {
   const upiId = v(profile.upiId || profile.paymentQRs?.[0]?.upiId);
-  const rawPhone = profile.paymentPhoneNo || profile.upiNumber || profile.paymentQRs?.[0]?.upiNumber || profile.primaryPhone;
+  const rawPhone = profile.paymentPhoneNo || profile.upiNumber || profile.paytmPhone || profile.phonePePhone || profile.gPayPhone || profile.paymentQRs?.[0]?.upiNumber || profile.primaryPhone;
   const cleanPhone = rawPhone ? String(rawPhone).replace(/[^\d+]/g, '') : '';
   const paymentPhoneNo = cleanPhone.length > 0 ? cleanPhone : null;
 
@@ -75,6 +75,15 @@ export const formatCustomerPaymentPayload = (profile: Partial<ProfileData>): Cus
     bankIfscCode,
     bankHolderName,
     accountType,
+    paytmPhone: v(profile.paytmPhone),
+    phonePePhone: v(profile.phonePePhone),
+    gPayPhone: v(profile.gPayPhone),
+    paytmQrUrl: v(profile.paytmQrUrl),
+    phonePeQrUrl: v(profile.phonePeQrUrl),
+    gPayQrUrl: v(profile.gPayQrUrl),
+    paytmQrProviderName: v(profile.paytmQrProviderName),
+    phonePeQrProviderName: v(profile.phonePeQrProviderName),
+    gPayQrProviderName: v(profile.gPayQrProviderName),
   };
 };
 
@@ -97,6 +106,18 @@ export const parseCustomerPaymentResponse = (res: any): Partial<ProfileData> => 
     upiId,
     upiNumber: phone,
     paymentPhoneNo: phone,
+    paytmPhone: raw.paytmPhone || phone,
+    phonePePhone: raw.phonePePhone || '',
+    gPayPhone: raw.gPayPhone || '',
+    paytmQrUrl: raw.paytmQrUrl || '',
+    phonePeQrUrl: raw.phonePeQrUrl || '',
+    gPayQrUrl: raw.gPayQrUrl || '',
+    paytmQrProviderName: raw.paytmQrProviderName || 'Paytm',
+    phonePeQrProviderName: raw.phonePeQrProviderName || 'PhonePe',
+    gPayQrProviderName: raw.gPayQrProviderName || 'Google Pay',
+    paytmQrUploaded: Boolean(raw.paytmQrUrl || raw.paytmQrUploaded),
+    phonePeQrUploaded: Boolean(raw.phonePeQrUrl || raw.phonePeQrUploaded),
+    gPayQrUploaded: Boolean(raw.gPayQrUrl || raw.gPayQrUploaded),
     bankName,
     accountHolderName: holder,
     bankHolderName: holder,

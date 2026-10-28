@@ -48,39 +48,55 @@ const Signin: React.FC<SigninProps> = ({ onSuccess: onLoginSuccess }) => {
     },
   });
 
-  const validatePhoneNumber = (phone: string): boolean => {
-    const cleaned = phone.replace(/\D/g, '');
-    if (phone && !/^\d{10}$/.test(cleaned)) {
-      setPhoneError('Please enter exactly 10 digits'); return false;
+  const isEmailInput = (val: string) => val.includes('@') || /[a-zA-Z]/.test(val);
+
+  const validateIdentifier = (val: string): boolean => {
+    const trimmed = val.trim();
+    if (!trimmed) {
+      setPhoneError('Mobile number or email is required');
+      return false;
     }
-    setPhoneError(''); return true;
+    if (isEmailInput(trimmed)) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+        setPhoneError('Please enter a valid email address');
+        return false;
+      }
+      setPhoneError('');
+      return true;
+    }
+    const cleaned = trimmed.replace(/\D/g, '');
+    if (!/^\d{10}$/.test(cleaned)) {
+      setPhoneError('Please enter exactly 10 digits');
+      return false;
+    }
+    setPhoneError('');
+    return true;
   };
 
   const validatePassword = (pass: string): boolean => {
     if (!pass.trim()) { setPasswordError('Password is required'); return false; }
-    if (pass.length < 8) { setPasswordError('At least 8 characters required'); return false; }
+    if (pass.length < 6) { setPasswordError('At least 6 characters required'); return false; }
     setPasswordError(''); return true;
   };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/[^\d\s]/g, '');
-    if (val.replace(/\s/g, '').length <= 10) {
-      setUsername(val);
-      if (val) validatePhoneNumber(val); else setPhoneError('');
-    }
+  const handleIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setUsername(val);
+    if (val && formSubmitted) validateIdentifier(val);
+    else if (!val) setPhoneError('');
   };
 
   const handleSignIn = () => {
     setFormSubmitted(true);
-    const cleaned = username.replace(/\D/g, '');
-    if (!cleaned) { setPhoneError('Mobile number is required'); return; }
-    if (!validatePhoneNumber(cleaned) || !validatePassword(password)) return;
-    mutate({ username: cleaned, password });
+    if (!validateIdentifier(username) || !validatePassword(password)) return;
+    const loginIdentifier = isEmailInput(username) ? username.trim() : username.replace(/\D/g, '');
+    mutate({ username: loginIdentifier, password });
   };
 
   const canSubmit = () => {
-    const cleaned = username.replace(/\D/g, '');
-    return !isPending && cleaned.length === 10 && password.length >= 8 && !phoneError && !passwordError;
+    const isEmail = isEmailInput(username);
+    const validId = isEmail ? username.trim().length >= 5 : username.replace(/\D/g, '').length === 10;
+    return !isPending && validId && password.length >= 6 && !phoneError && !passwordError;
   };
 
   return (
@@ -105,17 +121,15 @@ const Signin: React.FC<SigninProps> = ({ onSuccess: onLoginSuccess }) => {
 
             {/* Form Fields */}
             <div className="flex flex-col gap-5">
-              {/* Mobile */}
+              {/* Mobile or Email */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-semibold text-gray-700">Mobile Number</label>
+                <label className="text-sm font-semibold text-gray-700">Mobile Number or Email</label>
                 <input
-                  type="tel"
-                  inputMode="numeric"
-                  placeholder="98765 43210"
+                  type="text"
+                  placeholder="10-digit mobile or email address"
                   value={username}
-                  onChange={handlePhoneChange}
+                  onChange={handleIdentifierChange}
                   onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
-                  maxLength={12}
                   className={`h-11 w-full rounded-xl border px-4 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:ring-2 focus:ring-[#2563EB]/25 ${
                     phoneError ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-gray-50 focus:border-[#2563EB]'
                   }`}

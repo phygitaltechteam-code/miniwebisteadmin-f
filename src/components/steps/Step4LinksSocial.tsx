@@ -1,169 +1,138 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import {
   ArrowRight, ArrowLeft, ExternalLink, Globe, MapPin, Store,
   MessageCircle, Send, Twitter, Facebook, Instagram, Linkedin,
   Youtube, Loader2, X, Link2, Save, ShoppingBag,
-  Music, ShoppingCart,
-  Smartphone, Hash, Slack, Calendar, ChevronDown, ChevronUp
+  Music, ShoppingCart, Smartphone, Hash, Slack, Calendar,
+  Mail, Phone, Star, BookOpen, PhoneCall, Pin, Video,
+  Award, Plane, Compass, FileText, Film, Image as ImageIcon,
+  Utensils, UtensilsCrossed, Sparkles, Package, Baby,
+  Tag, Play, Palette, MessageSquare, AtSign, Search
 } from 'lucide-react';
 import { ProfileData } from '../../types/profile';
 import GenericButton from '@/components/Forms/Buttons/GenericButton';
-import { step4LinksSocialSchema } from '@/schemas/cardProfileSchema';
+import { AddLinkModal } from '@/components/AddLinkModal';
 import {
   getCustomerLinks,
   saveOrUpdateCustomerLinks,
   parseCustomerLinksResponse
 } from '@/lib/api/customerSocialApi';
 
-// ─── Link Entry Popup ─────────────────────────────────────────────────────────
+// ─── Link Item Definition ─────────────────────────────────────────────────────
 
-interface LinkPopupConfig {
-  title: string;
-  label: string;
-  placeholder: string;
-  helperText?: string;
-  type?: 'url' | 'text' | 'tel' | 'email';
-}
-
-interface LinkPopupProps {
-  config: LinkPopupConfig;
-  currentValue: string;
-  onSave: (value: string) => void;
-  onClose: () => void;
-}
-
-const LinkPopup: React.FC<LinkPopupProps> = ({ config, currentValue, onSave, onClose }) => {
-  const [value, setValue] = useState(currentValue);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 80); }, []);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'Enter') { onSave(value.trim()); onClose(); }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [value]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-in fade-in duration-150"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-5 animate-in slide-in-from-bottom-4 duration-200">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#EFF6FF] flex items-center justify-center">
-              <Link2 className="w-3.5 h-3.5 text-[#2563EB]" />
-            </div>
-            <span className="text-sm font-bold text-[#091426]">{config.title}</span>
-          </div>
-          <button type="button" onClick={onClose}
-            className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
-            <X className="w-4 h-4 text-gray-500" />
-          </button>
-        </div>
-
-        <label className="block text-xs font-semibold text-[#45474c] mb-1.5">{config.label}</label>
-        <input
-          ref={inputRef}
-          type={config.type || 'url'}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder={config.placeholder}
-          className="w-full px-3 py-2.5 rounded-xl border border-[#c5c6cd] text-sm text-[#091426] placeholder:text-gray-400 focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 transition-all"
-        />
-
-        <div className="flex gap-2 mt-4">
-          <button type="button" onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-[#c5c6cd] text-xs font-semibold text-[#45474c] hover:bg-gray-50 transition-all">
-            Cancel
-          </button>
-          <button type="button"
-            onClick={() => { onSave(value.trim()); onClose(); }}
-            className="flex-1 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#1D4ED8] active:scale-[0.98] transition-all shadow-md shadow-[#2563EB]/25">
-            <Save className="w-3.5 h-3.5" />
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ─── Link Row ─────────────────────────────────────────────────────────────────
-
-interface LinkRowProps {
+export interface LinkItemDef {
+  key: string;
+  name: string;
+  defaultDescription: string;
+  category: string;
   icon: React.ReactNode;
-  label: string;
-  value?: string | null;
-  onEdit: () => void;
 }
 
-const LinkRow: React.FC<LinkRowProps> = ({ icon, label, value, onEdit }) => {
-  const isLinked = !!value;
-  return (
-    <div
-      className="flex items-center justify-between text-xs p-2 rounded-xl bg-white border border-stroke hover:border-[#2563EB]/40 transition-colors"
-      title={value || undefined}
-    >
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        <span className="shrink-0">{icon}</span>
-        <span className="font-semibold text-[#091426] truncate">{label}</span>
-      </div>
-      <button
-        type="button"
-        onClick={onEdit}
-        className={`text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-1 rounded-lg transition-colors shrink-0 ml-1.5 ${
-          isLinked
-            ? 'bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE]'
-            : 'text-gray-600 bg-gray-100 hover:bg-[#EFF6FF] hover:text-[#2563EB]'
-        }`}
-      >
-        {isLinked ? 'LINKED ✓' : '+ ADD'}
-      </button>
-    </div>
-  );
-};
+const ALL_LINK_ITEMS: LinkItemDef[] = [
+  // 1. Recommended Links
+  { key: 'customLink', name: 'Custom Link', defaultDescription: 'Visit our featured custom page', category: 'Recommended Links', icon: <ExternalLink className="w-4 h-4 text-[#2563EB]" /> },
+  { key: 'whatsappLinks', name: 'Whatsapp', defaultDescription: 'Chat with us directly on WhatsApp', category: 'Recommended Links', icon: <MessageCircle className="w-4 h-4 text-emerald-500" /> },
+  { key: 'emailLinks', name: 'Email', defaultDescription: 'Send us an email enquiry', category: 'Recommended Links', icon: <Mail className="w-4 h-4 text-red-500" /> },
+  { key: 'callLinks', name: 'Phone', defaultDescription: 'Call our primary contact line', category: 'Recommended Links', icon: <Phone className="w-4 h-4 text-blue-500" /> },
+  { key: 'instagramLink', name: 'Instagram', defaultDescription: 'Follow our official Instagram feed', category: 'Recommended Links', icon: <Instagram className="w-4 h-4 text-pink-600" /> },
+  { key: 'linkedinLink', name: 'LinkedIn', defaultDescription: 'Connect with our corporate profile', category: 'Recommended Links', icon: <Linkedin className="w-4 h-4 text-sky-600" /> },
+  { key: 'youTubeLink', name: 'Youtube', defaultDescription: 'Watch our video tutorials & stories', category: 'Recommended Links', icon: <Youtube className="w-4 h-4 text-red-600" /> },
+  { key: 'facebookLink', name: 'Facebook', defaultDescription: 'Like and follow our Facebook community', category: 'Recommended Links', icon: <Facebook className="w-4 h-4 text-blue-600" /> },
+  { key: 'googleMyBussiness', name: 'Google Reviews', defaultDescription: 'Rate & review our business on Google', category: 'Recommended Links', icon: <Star className="w-4 h-4 text-amber-500" /> },
 
-// ─── Popup Configs ─────────────────────────────────────────────────────────────
+  // 2. Contact Info
+  { key: 'whatsappLinks', name: 'Whatsapp', defaultDescription: 'Chat with us on WhatsApp', category: 'Contact Info', icon: <MessageCircle className="w-4 h-4 text-emerald-500" /> },
+  { key: 'emailLinks', name: 'Email', defaultDescription: 'Email us directly', category: 'Contact Info', icon: <Mail className="w-4 h-4 text-red-500" /> },
+  { key: 'callLinks', name: 'Phone', defaultDescription: 'Call our direct phone line', category: 'Contact Info', icon: <Phone className="w-4 h-4 text-blue-500" /> },
+  { key: 'messageLink', name: 'Message', defaultDescription: 'Send us a direct SMS or message', category: 'Contact Info', icon: <MessageSquare className="w-4 h-4 text-blue-500" /> },
+  { key: 'waBusinessLink', name: 'WA Business', defaultDescription: 'Connect on WhatsApp Business', category: 'Contact Info', icon: <MessageCircle className="w-4 h-4 text-emerald-600" /> },
+  { key: 'skypeLink', name: 'Skype', defaultDescription: 'Connect with us on Skype', category: 'Contact Info', icon: <MessageSquare className="w-4 h-4 text-sky-500" /> },
+  { key: 'weChatLink', name: 'WeChat', defaultDescription: 'Message us on WeChat', category: 'Contact Info', icon: <MessageCircle className="w-4 h-4 text-green-600" /> },
 
-const POPUP_CONFIGS = {
-  webSiteLink:       { title: 'Website', label: 'Website URL', placeholder: 'https://www.yourbusiness.com', helperText: 'Include https://' },
-  googleMyBussiness: { title: 'Google My Business', label: 'GMB Profile Link', placeholder: 'https://g.page/yourbusiness', helperText: 'Your Google My Business profile URL' },
-  instagramLink:     { title: 'Instagram', label: 'Instagram Profile URL', placeholder: 'https://instagram.com/yourhandle' },
-  facebookLink:      { title: 'Facebook Page', label: 'Facebook Page URL', placeholder: 'https://facebook.com/yourpage' },
-  youTubeLink:       { title: 'YouTube Channel', label: 'YouTube URL', placeholder: 'https://youtube.com/@yourchannel' },
-  linkedinLink:      { title: 'LinkedIn', label: 'LinkedIn Profile / Company URL', placeholder: 'https://linkedin.com/in/yourprofile' },
-  twitter:           { title: 'X (Twitter)', label: 'Twitter Profile URL or @handle', placeholder: 'https://twitter.com/yourhandle' },
-  whatsappGroup:     { title: 'WhatsApp Group', label: 'WhatsApp Group Invite Link', placeholder: 'https://chat.whatsapp.com/...', helperText: 'Group invite link from WhatsApp' },
-  facebookGroup:     { title: 'Facebook Group', label: 'Facebook Group URL', placeholder: 'https://facebook.com/groups/yourgroup' },
-  telegram:          { title: 'Telegram', label: 'Telegram Channel / Group Link', placeholder: 'https://t.me/yourchannel' },
-  slackLink:         { title: 'Slack', label: 'Slack Workspace Link', placeholder: 'https://yourteam.slack.com' },
-  discordLink:       { title: 'Discord', label: 'Discord Server Invite', placeholder: 'https://discord.gg/yourserver' },
-  catalogue:         { title: 'Catalogue / Store', label: 'Catalogue or Online Store URL', placeholder: 'https://yourstore.com' },
-  shopify:           { title: 'Shopify Store', label: 'Shopify Store URL', placeholder: 'https://yourstore.myshopify.com' },
-  amazonLink:        { title: 'Amazon Store', label: 'Amazon Seller / Product URL', placeholder: 'https://amazon.in/...' },
-  zomatoLink:        { title: 'Zomato', label: 'Zomato Restaurant Link', placeholder: 'https://zomato.com/...' },
-  swiggyLink:        { title: 'Swiggy', label: 'Swiggy Restaurant Link', placeholder: 'https://swiggy.com/...' },
-  uberLink:          { title: 'Uber Eats', label: 'Uber Eats Link', placeholder: 'https://ubereats.com/...' },
-  bookingLink:       { title: 'Booking / Appointment', label: 'Booking Link', placeholder: 'https://calendly.com/yourname' },
-  meshowLink:        { title: 'Meshow', label: 'Meshow Profile Link', placeholder: 'https://meshow.in/...' },
-  appStoreLink:      { title: 'App Store', label: 'App Store / Play Store URL', placeholder: 'https://apps.apple.com/...' },
-  goLink:            { title: 'Go Link', label: 'Go / Short URL', placeholder: 'https://go.yourdomain.com/...' },
-  pdfLink:           { title: 'PDF / Brochure', label: 'PDF or Document Link', placeholder: 'https://drive.google.com/...' },
-  videoLink:         { title: 'Video Link', label: 'Video URL', placeholder: 'https://youtu.be/...' },
-  imageLink:         { title: 'Image / Portfolio', label: 'Image or Portfolio URL', placeholder: 'https://...' },
-  spotifyLink:       { title: 'Spotify', label: 'Spotify Profile / Playlist Link', placeholder: 'https://open.spotify.com/...' },
-  customLink:        { title: 'Custom Link', label: 'Custom Destination URL', placeholder: 'https://yoursite.com/page' },
-} as const satisfies Record<string, LinkPopupConfig>;
+  // 3. Business Info
+  { key: 'webSiteLink', name: 'Website', defaultDescription: 'Visit our official business website', category: 'Business Info', icon: <Globe className="w-4 h-4 text-teal-600" /> },
+  { key: 'location', name: 'Location', defaultDescription: 'Get directions on Google Maps', category: 'Business Info', icon: <MapPin className="w-4 h-4 text-red-500" /> },
+  { key: 'bookingLink', name: 'Calendly', defaultDescription: 'Schedule a consultation meeting', category: 'Business Info', icon: <Calendar className="w-4 h-4 text-blue-500" /> },
+  { key: 'catalogue', name: 'Catalogue', defaultDescription: 'Explore our product catalogue', category: 'Business Info', icon: <BookOpen className="w-4 h-4 text-indigo-500" /> },
+  { key: 'indiamartLink', name: 'IndiaMART', defaultDescription: 'Visit our verified IndiaMART storefront', category: 'Business Info', icon: <Store className="w-4 h-4 text-orange-500" /> },
+  { key: 'justdialLink', name: 'Justdial', defaultDescription: 'Find our listings on Justdial', category: 'Business Info', icon: <PhoneCall className="w-4 h-4 text-blue-600" /> },
+  { key: 'googleMyBussiness', name: 'Google my Business', defaultDescription: 'Find us on Google Business profile', category: 'Business Info', icon: <Star className="w-4 h-4 text-amber-500" /> },
 
-type PopupKey = keyof typeof POPUP_CONFIGS;
+  // 4. Social Media
+  { key: 'instagramLink', name: 'Instagram', defaultDescription: 'Follow our stories and posts', category: 'Social Media', icon: <Instagram className="w-4 h-4 text-pink-600" /> },
+  { key: 'linkedinLink', name: 'LinkedIn', defaultDescription: 'Connect with our professional network', category: 'Social Media', icon: <Linkedin className="w-4 h-4 text-sky-600" /> },
+  { key: 'youTubeLink', name: 'Youtube', defaultDescription: 'Subscribe to our YouTube channel', category: 'Social Media', icon: <Youtube className="w-4 h-4 text-red-600" /> },
+  { key: 'facebookLink', name: 'Facebook', defaultDescription: 'Like our Facebook page', category: 'Social Media', icon: <Facebook className="w-4 h-4 text-blue-600" /> },
+  { key: 'twitter', name: 'X (Twitter)', defaultDescription: 'Follow our real-time updates on X', category: 'Social Media', icon: <Twitter className="w-4 h-4 text-slate-800" /> },
+  { key: 'pinterestLink', name: 'Pinterest', defaultDescription: 'Pin and explore our design ideas', category: 'Social Media', icon: <Pin className="w-4 h-4 text-rose-600" /> },
+  { key: 'tiktokLink', name: 'Tiktok', defaultDescription: 'Watch our TikTok videos', category: 'Social Media', icon: <Video className="w-4 h-4 text-slate-900" /> },
+  { key: 'snapchatLink', name: 'Snapchat', defaultDescription: 'Add us on Snapchat', category: 'Social Media', icon: <Sparkles className="w-4 h-4 text-amber-400" /> },
+  { key: 'telegram', name: 'Telegram', defaultDescription: 'Join our public Telegram channel', category: 'Social Media', icon: <Send className="w-4 h-4 text-sky-500" /> },
+  { key: 'waChannelLink', name: 'WA Channel', defaultDescription: 'Follow our official WhatsApp Channel', category: 'Social Media', icon: <MessageCircle className="w-4 h-4 text-emerald-600" /> },
+  { key: 'threadsLink', name: 'Threads', defaultDescription: 'Join discussions on Threads', category: 'Social Media', icon: <AtSign className="w-4 h-4 text-slate-800" /> },
 
-// ─── Step 4 Component ─────────────────────────────────────────────────────────
+  // 5. Reviews
+  { key: 'googleMyBussiness', name: 'Google Reviews', defaultDescription: 'Leave a 5-star review on Google', category: 'Reviews', icon: <Star className="w-4 h-4 text-amber-500" /> },
+  { key: 'trustpilotLink', name: 'Trustpilot', defaultDescription: 'Read our verified Trustpilot reviews', category: 'Reviews', icon: <Award className="w-4 h-4 text-emerald-600" /> },
+  { key: 'bookingLink', name: 'Booking', defaultDescription: 'Book your spot directly', category: 'Reviews', icon: <Plane className="w-4 h-4 text-indigo-500" /> },
+  { key: 'tripadvisorLink', name: 'Tripadvisor', defaultDescription: 'View our traveler ratings on Tripadvisor', category: 'Reviews', icon: <Compass className="w-4 h-4 text-emerald-500" /> },
+  { key: 'goibiboLink', name: 'Goibibo', defaultDescription: 'Check our bookings on Goibibo', category: 'Reviews', icon: <Plane className="w-4 h-4 text-orange-500" /> },
+  { key: 'makeMyTripLink', name: 'Make My Trip', defaultDescription: 'Explore our MakeMyTrip presence', category: 'Reviews', icon: <Plane className="w-4 h-4 text-red-500" /> },
+
+  // 6. Content
+  { key: 'pdfLink', name: 'PDF', defaultDescription: 'Download our documents & brochure', category: 'Content', icon: <FileText className="w-4 h-4 text-red-600" /> },
+  { key: 'videoLink', name: 'Video', defaultDescription: 'Watch our featured video', category: 'Content', icon: <Film className="w-4 h-4 text-purple-600" /> },
+  { key: 'imageLink', name: 'Image', defaultDescription: 'View our high-res image portfolio', category: 'Content', icon: <ImageIcon className="w-4 h-4 text-sky-600" /> },
+
+  // 7. Food
+  { key: 'zomatoLink', name: 'Zomato', defaultDescription: 'Order your favorite food on Zomato', category: 'Food', icon: <Utensils className="w-4 h-4 text-red-500" /> },
+  { key: 'swiggyLink', name: 'Swiggy', defaultDescription: 'Order delicious meals on Swiggy', category: 'Food', icon: <UtensilsCrossed className="w-4 h-4 text-orange-500" /> },
+  { key: 'uberLink', name: 'Uber Eats', defaultDescription: 'Get meals delivered by Uber Eats', category: 'Food', icon: <ShoppingBag className="w-4 h-4 text-emerald-700" /> },
+
+  // 8. Communication Group
+  { key: 'slackLink', name: 'Slack', defaultDescription: 'Join our team Slack workspace', category: 'Communication Group', icon: <Slack className="w-4 h-4 text-purple-600" /> },
+  { key: 'whatsappGroup', name: 'Whatsapp Group', defaultDescription: 'Join our VIP WhatsApp group', category: 'Communication Group', icon: <MessageCircle className="w-4 h-4 text-emerald-500" /> },
+  { key: 'facebookGroup', name: 'Facebook Group', defaultDescription: 'Join our active Facebook group', category: 'Communication Group', icon: <Facebook className="w-4 h-4 text-blue-500" /> },
+
+  // 9. Music
+  { key: 'spotifyLink', name: 'Spotify', defaultDescription: 'Listen to our curated Spotify playlist', category: 'Music', icon: <Music className="w-4 h-4 text-emerald-500" /> },
+
+  // 10. Shopping
+  { key: 'amazonLink', name: 'Amazon', defaultDescription: 'Shop our official store on Amazon', category: 'Shopping', icon: <ShoppingCart className="w-4 h-4 text-amber-600" /> },
+  { key: 'flipkartLink', name: 'Flipkart', defaultDescription: 'Explore our catalog on Flipkart', category: 'Shopping', icon: <ShoppingBag className="w-4 h-4 text-blue-500" /> },
+  { key: 'myntraLink', name: 'Mynta', defaultDescription: 'Discover our fashion collection on Myntra', category: 'Shopping', icon: <ShoppingBag className="w-4 h-4 text-pink-500" /> },
+  { key: 'nykaaLink', name: 'Nykaa', defaultDescription: 'Shop beauty & wellness on Nykaa', category: 'Shopping', icon: <Sparkles className="w-4 h-4 text-rose-500" /> },
+  { key: 'meshowLink', name: 'Meesho', defaultDescription: 'Order affordable products on Meesho', category: 'Shopping', icon: <Package className="w-4 h-4 text-pink-600" /> },
+  { key: 'firstCryLink', name: 'FirstCry', defaultDescription: 'Shop kids & baby products on FirstCry', category: 'Shopping', icon: <Baby className="w-4 h-4 text-yellow-500" /> },
+  { key: 'shopify', name: 'Shopify', defaultDescription: 'Explore our online store', category: 'Shopping', icon: <ShoppingBag className="w-4 h-4 text-green-600" /> },
+  { key: 'ajioLink', name: 'Ajio', defaultDescription: 'Shop trendy styles on Ajio', category: 'Shopping', icon: <Tag className="w-4 h-4 text-slate-800" /> },
+
+  // 11. More
+  { key: 'customLink', name: 'Custom Link', defaultDescription: 'Open custom destination URL', category: 'More', icon: <ExternalLink className="w-4 h-4 text-[#2563EB]" /> },
+  { key: 'playStoreLink', name: 'PlayStore', defaultDescription: 'Download our Android app on Play Store', category: 'More', icon: <Play className="w-4 h-4 text-emerald-600" /> },
+  { key: 'appStoreLink', name: 'App Store', defaultDescription: 'Download our iOS app on App Store', category: 'More', icon: <Smartphone className="w-4 h-4 text-blue-600" /> },
+  { key: 'mediumLink', name: 'Medium', defaultDescription: 'Read our blog and articles on Medium', category: 'More', icon: <BookOpen className="w-4 h-4 text-slate-900" /> },
+  { key: 'discordLink', name: 'Discord', defaultDescription: 'Hang out on our Discord server', category: 'More', icon: <Hash className="w-4 h-4 text-indigo-500" /> },
+  { key: 'behanceLink', name: 'Beh', defaultDescription: 'Explore our creative work on Behance', category: 'More', icon: <Palette className="w-4 h-4 text-blue-600" /> },
+];
+
+const CATEGORIES = [
+  'All Links',
+  'Recommended Links',
+  'Contact Info',
+  'Business Info',
+  'Social Media',
+  'Reviews',
+  'Content',
+  'Food',
+  'Communication Group',
+  'Music',
+  'Shopping',
+  'More',
+];
+
+// ─── Step 4 Main Component ────────────────────────────────────────────────────
 
 interface Step4Props {
   profile: ProfileData;
@@ -175,19 +144,24 @@ interface Step4Props {
 }
 
 export const Step4LinksSocial: React.FC<Step4Props> = ({
-  profile, onChange, onNext, onPrev, onToast, adminId,
+  profile,
+  onChange,
+  onNext,
+  onPrev,
+  onToast,
+  adminId,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activePopup, setActivePopup] = useState<PopupKey | null>(null);
-  const [showMore, setShowMore] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All Links');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [activeItem, setActiveItem] = useState<LinkItemDef | null>(null);
 
-  // Hydrate from API on mount (GET customers/links or superAdmin/admin/:adminId/links)
+  // Hydrate from API on mount
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
       try {
         const res = await getCustomerLinks(adminId);
-        // The response wrapper: { statusCode, status, message, data: { ... } }
         const raw = res?.data || res;
         if (!isMounted || !raw || typeof raw !== 'object') return;
 
@@ -203,20 +177,57 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
     return () => { isMounted = false; };
   }, [adminId]);
 
-  // ── Popup helpers ────────────────────────────────────────────────────────
-
-  const openPopup = (key: PopupKey) => setActivePopup(key);
-  const closePopup = () => setActivePopup(null);
-
-  const getCurrentValue = (key: PopupKey): string =>
-    ((profile as any)[key] as string | undefined | null) ?? '';
-
-  const handlePopupSave = (key: PopupKey, value: string) => {
-    onChange(key as keyof ProfileData, value || undefined as any);
-    onToast(value ? `✅ ${POPUP_CONFIGS[key].title} saved!` : `${POPUP_CONFIGS[key].title} cleared.`);
+  const getCurrentValue = (key: string): string => {
+    return ((profile as any)[key] as string) || (profile.linksDetails?.[key]?.url) || '';
   };
 
-  // ── Save & Next ──────────────────────────────────────────────────────────
+  const getCurrentDescription = (key: string, fallback: string): string => {
+    return profile.linksDetails?.[key]?.description || fallback;
+  };
+
+  const getCurrentIcon = (key: string): string | undefined => {
+    return profile.linksDetails?.[key]?.icon;
+  };
+
+  const handleModalSave = async (data: { name: string; description: string; url: string; icon?: string }) => {
+    if (!activeItem) return false;
+
+    const updatedDetails = {
+      ...(profile.linksDetails || {}),
+      [activeItem.key]: {
+        id: activeItem.key,
+        name: data.name,
+        description: data.description,
+        url: data.url,
+        icon: data.icon,
+      },
+    };
+    const nextProfile = { ...profile, [activeItem.key]: data.url, linksDetails: updatedDetails } as ProfileData;
+
+    // Save this link to the links API right away from the popup
+    try {
+      const res = await saveOrUpdateCustomerLinks(nextProfile, adminId);
+      onChange(activeItem.key as keyof ProfileData, data.url as any);
+      onChange('linksDetails' as any, updatedDetails);
+      toast.success(res?.message || `${data.name} link saved!`);
+      onToast(`✓ ${data.name} link saved!`);
+      setActiveItem(null);
+      return true;
+    } catch (error: any) {
+      const fieldErrors = error?.response?.data?.errors;
+      const backendMessage =
+        (Array.isArray(fieldErrors) && fieldErrors.length > 0
+          ? fieldErrors.map((e: any) => `${e.field ? e.field + ': ' : ''}${e.message}`).join(', ')
+          : '') ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to save link.';
+      const statusCode = error?.response?.status ? ` [HTTP ${error.response.status}]` : '';
+      toast.error(`API Error${statusCode}: ${backendMessage}`);
+      onToast(`❌ API Error${statusCode}: ${backendMessage}`);
+      return false;
+    }
+  };
 
   const handleSaveAndNext = async () => {
     setIsSubmitting(true);
@@ -234,106 +245,182 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
       const errText = `API Error${statusCode}: ${backendMessage}`;
       toast.error(errText, { id: toastId, duration: 5000 });
       onToast(`❌ ${errText}`);
-      onNext(); // non-fatal
+      onNext();
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ── Icon helpers ─────────────────────────────────────────────────────────
-
-  const ico = (el: React.ReactNode) => <span className="w-4 h-4 shrink-0 flex items-center justify-center">{el}</span>;
+  // Filter links by category & search query
+  const filteredLinks = ALL_LINK_ITEMS.filter((item) => {
+    const matchesCategory =
+      selectedCategory === 'All Links' || item.category === selectedCategory;
+    const matchesSearch =
+      !searchQuery.trim() ||
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <>
-      {/* Link Entry Popup */}
-      {activePopup && (
-        <LinkPopup
-          config={POPUP_CONFIGS[activePopup]}
-          currentValue={getCurrentValue(activePopup)}
-          onSave={(val) => handlePopupSave(activePopup, val)}
-          onClose={closePopup}
+      {/* Add Link Details Modal (Matching Attached Image) */}
+      {activeItem && (
+        <AddLinkModal
+          isOpen={Boolean(activeItem)}
+          onClose={() => setActiveItem(null)}
+          linkKey={activeItem.key}
+          defaultName={activeItem.name}
+          defaultDescription={getCurrentDescription(activeItem.key, activeItem.defaultDescription)}
+          currentValue={getCurrentValue(activeItem.key)}
+          currentDescription={getCurrentDescription(activeItem.key, activeItem.defaultDescription)}
+          currentIcon={getCurrentIcon(activeItem.key)}
+          currentName={profile.linksDetails?.[activeItem.key]?.name}
+          onSave={handleModalSave}
         />
       )}
 
-      <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-4">
+      <section
+        className="bg-white border border-[#E0E0E0] rounded-lg p-2.5 sm:p-3.5 shadow-xs scroll-mt-28 font-['Roboto',Helvetica,Arial,sans-serif]"
+        id="sec-4"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between pb-2.5 border-b border-[#c5c6cd]/40 mb-3">
-          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">4</div>
-            <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">Links & Social Store</h2>
+        <div className="flex flex-wrap items-center justify-between pb-2.5 border-b border-[#E0E0E0] mb-3 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-[#EFF6FF] text-[#2196F3] flex items-center justify-center font-bold text-xs shrink-0">
+              4
+            </div>
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
+                Link Store
+              </h2>
+              <p className="text-[11px] text-gray-500">
+                Choose and configure destination links across various categories
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Search */}
+          <div className="relative w-full sm:w-60">
+            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search links (e.g. Shopify)..."
+              className="w-full h-9 pl-8 pr-3 text-[14px] bg-white rounded border border-[#C4C4C4] text-[#000000DE] font-['Roboto',Helvetica,Arial,sans-serif] focus:outline-none focus:border-[#2196F3]"
+            />
           </div>
         </div>
 
-        <div className="space-y-3">
+        {/* Category Horizontal Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-4 scrollbar-none">
+          {CATEGORIES.map((cat) => {
+            const isActive = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
+                  isActive
+                    ? 'bg-[#2563EB] text-white shadow-xs'
+                    : 'bg-[#f4f7fa] text-gray-600 hover:bg-[#eaf1fb] hover:text-[#2563EB]'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            <LinkRow icon={ico(<Instagram className="w-4 h-4 text-pink-600" />)} label="Instagram" value={profile.instagramLink} onEdit={() => openPopup('instagramLink')} />
-            <LinkRow icon={ico(<Facebook className="w-4 h-4 text-blue-600" />)} label="Facebook" value={profile.facebookLink} onEdit={() => openPopup('facebookLink')} />
-            <LinkRow icon={ico(<Youtube className="w-4 h-4 text-red-600" />)} label="YouTube" value={profile.youTubeLink} onEdit={() => openPopup('youTubeLink')} />
-            <LinkRow icon={ico(<Linkedin className="w-4 h-4 text-sky-600" />)} label="LinkedIn" value={profile.linkedinLink} onEdit={() => openPopup('linkedinLink')} />
-            <LinkRow icon={ico(<Twitter className="w-4 h-4 text-slate-700" />)} label="X (Twitter)" value={profile.twitter} onEdit={() => openPopup('twitter')} />
-            <LinkRow icon={ico(<MessageCircle className="w-4 h-4 text-emerald-500" />)} label="WhatsApp Group" value={profile.whatsappGroup} onEdit={() => openPopup('whatsappGroup')} />
-            <LinkRow icon={ico(<Send className="w-4 h-4 text-sky-500" />)} label="Telegram" value={profile.telegram} onEdit={() => openPopup('telegram')} />
-            <LinkRow icon={ico(<Facebook className="w-4 h-4 text-blue-500" />)} label="Facebook Group" value={profile.facebookGroup} onEdit={() => openPopup('facebookGroup')} />
-            <LinkRow icon={ico(<Store className="w-4 h-4 text-[#2563EB]" />)} label="Catalogue / Store" value={profile.catalogue} onEdit={() => openPopup('catalogue')} />
-            <LinkRow icon={ico(<ShoppingBag className="w-4 h-4 text-green-600" />)} label="Shopify" value={profile.shopify} onEdit={() => openPopup('shopify')} />
-            <LinkRow icon={ico(<ShoppingCart className="w-4 h-4 text-orange-500" />)} label="Amazon" value={profile.amazonLink} onEdit={() => openPopup('amazonLink')} />
-            <LinkRow icon={ico(<Calendar className="w-4 h-4 text-violet-600" />)} label="Booking / Appointment" value={profile.bookingLink} onEdit={() => openPopup('bookingLink')} />
-            <LinkRow icon={ico(<ShoppingCart className="w-4 h-4 text-red-500" />)} label="Zomato" value={profile.zomatoLink} onEdit={() => openPopup('zomatoLink')} />
-            <LinkRow icon={ico(<ShoppingCart className="w-4 h-4 text-orange-600" />)} label="Swiggy" value={profile.swiggyLink} onEdit={() => openPopup('swiggyLink')} />
-            <LinkRow icon={ico(<ShoppingCart className="w-4 h-4 text-gray-700" />)} label="Uber Eats" value={profile.uberLink} onEdit={() => openPopup('uberLink')} />
+        {/* Links Grid */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {filteredLinks.map((item, idx) => {
+              const val = getCurrentValue(item.key);
+              const customIcon = getCurrentIcon(item.key);
+              const isLinked = Boolean(val && val.trim());
+
+              return (
+                <div
+                  key={`${item.category}-${item.name}-${idx}`}
+                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 bg-white hover:border-[#2563EB]/40 hover:shadow-xs transition-all group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="w-8 h-8 rounded-lg bg-[#f8f9fc] border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
+                      {customIcon ? (
+                        <img
+                          src={customIcon}
+                          alt={item.name}
+                          className="w-5 h-5 object-contain"
+                        />
+                      ) : (
+                        item.icon
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-bold text-[#091426] truncate">
+                        {(item.key === 'customLink' && profile.linksDetails?.[item.key]?.name) || item.name}
+                      </h4>
+                      <p className="text-[10px] text-gray-500 truncate" title={val || item.defaultDescription}>
+                        {val || item.category}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveItem(item)}
+                    className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all shrink-0 ml-2 shadow-2xs ${
+                      isLinked
+                        ? 'bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE] hover:bg-[#DBEAFE]'
+                        : 'bg-gray-100 text-gray-700 hover:bg-[#2563EB] hover:text-white'
+                    }`}
+                  >
+                    {isLinked ? 'LINKED ✓' : '+ ADD'}
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
-          {/* ── More Links (collapsible) [Commented out as requested] ── */}
-          {/*
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowMore((p) => !p)}
-              className="flex items-center gap-1.5 text-xs font-bold text-[#2563EB] mb-2 hover:underline"
-            >
-              {showMore ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              {showMore ? 'Hide more links' : 'Show more links'}
-            </button>
-
-            {showMore && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 animate-in slide-in-from-top-2 duration-150">
-                <LinkRow icon={ico(<Slack className="w-4 h-4 text-purple-600" />)} label="Slack" value={profile.slackLink} onEdit={() => openPopup('slackLink')} />
-                <LinkRow icon={ico(<Hash className="w-4 h-4 text-indigo-600" />)} label="Discord" value={profile.discordLink} onEdit={() => openPopup('discordLink')} />
-                <LinkRow icon={ico(<Music className="w-4 h-4 text-green-500" />)} label="Spotify" value={profile.spotifyLink} onEdit={() => openPopup('spotifyLink')} />
-                <LinkRow icon={ico(<Smartphone className="w-4 h-4 text-blue-500" />)} label="App Store / Play Store" value={profile.appStoreLink} onEdit={() => openPopup('appStoreLink')} />
-                <LinkRow icon={ico(<Store className="w-4 h-4 text-pink-500" />)} label="Meshow" value={profile.meshowLink} onEdit={() => openPopup('meshowLink')} />
-                <LinkRow icon={ico(<ExternalLink className="w-4 h-4 text-gray-500" />)} label="Go Link / Short URL" value={profile.goLink} onEdit={() => openPopup('goLink')} />
-                <LinkRow icon={ico(<ExternalLink className="w-4 h-4 text-[#2563EB]" />)} label="Custom Link" value={profile.customLink} onEdit={() => openPopup('customLink')} />
-              </div>
-            )}
-          </div>
-          */}
+          {filteredLinks.length === 0 && (
+            <div className="p-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+              <p className="text-xs text-gray-500 font-medium">
+                No links found matching &ldquo;{searchQuery}&rdquo; in {selectedCategory}.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Navigation */}
-        <div className="mt-4 pt-3 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
+        <div className="mt-4 pt-3 border-t border-[#E0E0E0] flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={onPrev}
-            className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-stroke bg-white text-[#091426] text-xs font-semibold hover:bg-[#f8f9ff] flex items-center gap-1.5 sm:gap-2 transition-all shrink-0"
+            className="px-4 py-2 rounded border border-[#C4C4C4] bg-white text-[#000000DE] text-[14px] font-medium hover:bg-gray-50 flex items-center gap-1.5 transition-colors shrink-0"
           >
-            <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Previous: Products & Services</span>
-            <span className="sm:hidden">Previous</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span>Previous: Products</span>
           </button>
 
           <GenericButton
             type="button"
             onClick={handleSaveAndNext}
             disabled={isSubmitting}
-            className="!px-4 sm:!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 whitespace-nowrap shadow-md shadow-[#2563EB]/25 disabled:opacity-60"
+            className="!bg-[#2196F3] hover:!bg-[#1E88E5] !px-6 !py-2 !text-[14px] font-medium text-white shadow-none flex items-center gap-2 whitespace-nowrap disabled:opacity-60"
           >
             {isSubmitting ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /><span>Saving Links...</span></>
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Saving Links...</span>
+              </>
             ) : (
-              <><span>Save & Next</span><ArrowRight className="w-4 h-4" /></>
+              <>
+                <span>Save & Next</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
             )}
           </GenericButton>
         </div>
@@ -341,3 +428,5 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
     </>
   );
 };
+
+export default Step4LinksSocial;

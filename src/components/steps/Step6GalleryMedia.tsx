@@ -175,32 +175,32 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
   };
 
   return (
-    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-6">
+    <section className="bg-white border border-[#E0E0E0] rounded-lg p-2.5 sm:p-3.5 shadow-none scroll-mt-28 font-['Roboto',Helvetica,Arial,sans-serif]" id="sec-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#c5c6cd]/40 mb-3">
+      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#E0E0E0] mb-2.5">
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
+          <div className="w-6 h-6 rounded bg-[#2196F3]/10 text-[#2196F3] flex items-center justify-center font-bold text-xs shrink-0">
             6
           </div>
-          <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
-              Photo Gallery
-            </h2>
+          <h2 className="text-sm font-semibold text-[#000000DE] leading-tight">
+            Photo Gallery
+          </h2>
         </div>
 
         <GenericButton
           type="button"
           onClick={() => setShowAddForm(true)}
-          className="!px-2.5 sm:!px-4 !py-1 sm:!py-2 !text-xs font-bold flex items-center gap-1 sm:gap-1.5 shrink-0 shadow-md shadow-[#2563EB]/20"
+          className="!bg-[#2196F3] hover:!bg-[#1E88E5] text-white !px-3 !py-1.5 !text-[13px] font-medium rounded flex items-center gap-1 sm:gap-1.5 shrink-0 shadow-none"
         >
-          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <Plus className="w-3.5 h-3.5" />
           <span>Add Photo</span>
         </GenericButton>
       </div>
 
       {/* Add Photo Inline Form */}
       {showAddForm && (
-        <div className="mb-3 p-3 sm:p-4 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE] space-y-3 animate-in fade-in zoom-in-95 duration-150">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="mb-3 p-2.5 sm:p-3 rounded-lg bg-[#FAFAFA] border border-[#E0E0E0] space-y-2.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             <GenericInputField
               label="Photo Title"
               value={photoTitle}
@@ -219,12 +219,12 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
 
           {/* Image Upload & Live Preview Area */}
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Photo Upload <span className="text-red-500">*</span>
+            <label className="block text-[12px] font-medium text-[#000000DE] mb-1">
+              Photo Upload <span className="text-[#D32F2F]">*</span>
             </label>
 
             {selectedFileUrl ? (
-              <div className="relative rounded-xl overflow-hidden border border-stroke aspect-video max-w-md bg-black">
+              <div className="relative rounded-lg overflow-hidden border border-[#E0E0E0] aspect-video max-w-md bg-black">
                 <img
                   src={selectedFileUrl}
                   alt="Selected Preview"
@@ -240,11 +240,12 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
                 </button>
               </div>
             ) : (
-              <label className="cursor-pointer border-2 border-dashed border-[#2563EB]/60 hover:border-[#2563EB] rounded-xl p-4 flex flex-col items-center justify-center text-center bg-white transition-colors max-w-md">
-                <Upload className="w-7 h-7 text-[#2563EB] mb-1.5" />
-                <span className="text-xs font-bold text-[#091426]">
+              <label className="cursor-pointer border border-dashed border-[#C4C4C4] hover:border-[#2196F3] rounded-lg p-3 flex flex-col items-center justify-center text-center bg-white transition-colors max-w-md">
+                <Upload className="w-6 h-6 text-[#2196F3] mb-1" />
+                <span className="text-[13px] font-medium text-[#000000DE]">
                   {isCompressing ? 'Compressing image...' : 'Click to Upload Image'}
                 </span>
+                <span className="text-[11px] text-[#757575] mt-0.5">JPG, PNG, WEBP (auto-compressed)</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -255,7 +256,7 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-[#BFDBFE]">
+          <div className="flex justify-end gap-2 pt-2 border-t border-[#E0E0E0]">
             <button
               type="button"
               onClick={() => {
@@ -264,14 +265,14 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
                 setPhotoTitle('');
                 setPhotoDesc('');
               }}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#45474c] hover:bg-white transition-colors"
+              className="px-3 py-1.5 rounded text-[13px] font-medium text-[#757575] hover:bg-gray-100 transition-colors"
             >
               Cancel
             </button>
             <GenericButton
               type="button"
               onClick={handleAddPhoto}
-              className="!px-5 !py-2 !text-xs font-bold"
+              className="!bg-[#2196F3] hover:!bg-[#1E88E5] text-white !px-4 !py-1.5 !text-[13px] font-medium rounded shadow-none"
             >
               Save Photo
             </GenericButton>
@@ -281,16 +282,16 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
 
       {/* Photo Grid List (Identical layout to YouTube Videos list) */}
       {profile.galleryImages.length === 0 ? (
-        <div className="p-5 border-2 border-dashed border-stroke rounded-xl text-center flex flex-col items-center justify-center gap-2 bg-[#f8f9ff]">
-          <ImageIcon className="w-8 h-8 text-gray-300" />
-          <p className="text-xs font-bold text-gray-700">No photos added yet</p>
+        <div className="p-4 border border-dashed border-[#E0E0E0] rounded-lg text-center flex flex-col items-center justify-center gap-1.5 bg-[#FAFAFA]">
+          <ImageIcon className="w-7 h-7 text-[#9E9E9E]" />
+          <p className="text-[13px] font-medium text-[#757575]">No photos added yet</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           {profile.galleryImages.map((photo) => (
             <div
               key={photo.id}
-              className="border border-stroke rounded-xl overflow-hidden bg-white hover:border-[#2563EB]/40 transition-all shadow-2xs flex flex-col"
+              className="border border-[#E0E0E0] rounded-lg overflow-hidden bg-white hover:border-[#2196F3]/50 transition-all shadow-none flex flex-col"
             >
               {/* Image Thumbnail Display */}
               <div className="aspect-video w-full bg-slate-900 overflow-hidden relative group">
@@ -304,11 +305,11 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
               {/* Details Bar */}
               <div className="p-2.5 flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-[#091426] truncate">
+                  <h4 className="text-[13px] font-medium text-[#000000DE] truncate">
                     {photo.title || 'Untitled Photo'}
                   </h4>
                   {photo.description && (
-                    <p className="text-[11px] text-[#75777d] truncate mt-0.5">
+                    <p className="text-[12px] text-[#757575] truncate mt-0.5">
                       {photo.description}
                     </p>
                   )}
@@ -317,7 +318,7 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
                 <button
                   type="button"
                   onClick={() => handleDeletePhoto(photo.id)}
-                  className="p-2 text-gray-500 hover:text-rose-600 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
+                  className="p-1.5 text-[#757575] hover:text-[#D32F2F] rounded hover:bg-red-50 transition-colors shrink-0"
                   title="Delete Photo"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -329,11 +330,11 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
       )}
 
       {/* Step Navigation Buttons */}
-      <div className="mt-4 pt-3 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
+      <div className="mt-3.5 pt-2.5 border-t border-[#E0E0E0] flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={onPrev}
-          className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-stroke bg-white text-[#091426] text-xs font-semibold hover:bg-[#f8f9ff] flex items-center gap-1.5 sm:gap-2 transition-all shrink-0"
+          className="px-3 sm:px-4 py-2 rounded border border-[#C4C4C4] bg-white text-[#000000DE] text-[13px] sm:text-[14px] font-medium hover:bg-gray-50 flex items-center gap-1.5 sm:gap-2 transition-all shrink-0"
         >
           <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Previous: Payment & QR</span>
@@ -344,7 +345,7 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
           type="button"
           onClick={handleSaveAndNext}
           disabled={isSubmitting}
-          className="!px-4 sm:!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 whitespace-nowrap shadow-md shadow-[#2563EB]/25 disabled:opacity-60"
+          className="!bg-[#2196F3] hover:!bg-[#1E88E5] !px-4 sm:!px-6 !py-2 !text-[13px] sm:!text-[14px] !font-medium rounded flex items-center gap-2 whitespace-nowrap text-white shadow-none disabled:opacity-60"
         >
           {isSubmitting ? (
             <>

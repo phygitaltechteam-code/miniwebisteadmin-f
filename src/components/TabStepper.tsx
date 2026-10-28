@@ -43,17 +43,17 @@ export const TabStepper: React.FC<TabStepperProps> = ({
   const currentStepObj = steps.find((s) => s.number === currentStep) || steps[0];
 
   return (
-    <div className="bg-white border border-[#c5c6cd]/50 rounded-xl p-1.5 sm:p-2 shadow-xs relative w-full transition-all overflow-hidden mb-1">
+    <div className="bg-white border border-[#E0E0E0] rounded-lg p-1.5 sm:p-2 shadow-none relative w-full transition-all overflow-hidden mb-1 font-['Roboto',Helvetica,Arial,sans-serif]">
       {/* Mobile-only Step Sequence Info Header */}
-      <div className="sm:hidden flex items-center justify-between px-1.5 pb-1.5 mb-1 border-b border-slate-100 text-[11px]">
-        <div className="flex items-center gap-1.5 font-bold text-[#091426]">
-          <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[10px]">
+      <div className="sm:hidden flex items-center justify-between px-1.5 pb-1.5 mb-1 border-b border-[#E0E0E0] text-[11px]">
+        <div className="flex items-center gap-1.5 font-medium text-[#000000DE]">
+          <span className="w-5 h-5 rounded-full bg-[#2196F3] text-white flex items-center justify-center text-[10px] font-bold">
             {currentStep}
           </span>
-          <span className="text-[#2563EB] font-bold">
+          <span className="text-[#2196F3] font-medium">
             {currentStepObj.name.replace(/^\d+\.\s*/, '')}
           </span>
-          <span className="text-gray-400 font-normal">({currentStep}/8)</span>
+          <span className="text-[#757575] font-normal">({currentStep}/8)</span>
         </div>
       </div>
 
@@ -62,7 +62,7 @@ export const TabStepper: React.FC<TabStepperProps> = ({
         <button
           type="button"
           onClick={() => handleScroll('left')}
-          className="p-1 rounded-lg text-gray-400 hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors shrink-0 flex xl:hidden items-center justify-center"
+          className="p-1 rounded text-gray-400 hover:text-[#2196F3] hover:bg-[#2196F3]/10 transition-colors shrink-0 flex xl:hidden items-center justify-center"
           title="Scroll left"
           aria-label="Scroll left"
         >
@@ -85,17 +85,17 @@ export const TabStepper: React.FC<TabStepperProps> = ({
                 key={step.number}
                 ref={isActive ? activeTabRef : null}
                 onClick={() => onSelectStep(step.number)}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap shrink-0 xl:flex-1 justify-center transition-all flex items-center gap-1 sm:gap-1.5 ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded text-[11px] sm:text-[13px] font-medium whitespace-nowrap shrink-0 xl:flex-1 justify-center transition-all flex items-center gap-1 sm:gap-1.5 ${
                   isActive
-                    ? 'bg-[#2563EB] text-white shadow-xs font-bold'
+                    ? 'bg-[#2196F3] text-white font-medium shadow-none'
                     : isCompleted
-                    ? 'bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE]'
-                    : 'text-gray-600 bg-gray-50/90 hover:bg-[#EFF6FF] hover:text-[#2563EB]'
+                    ? 'bg-[#2196F3]/10 text-[#2196F3] hover:bg-[#2196F3]/20'
+                    : 'text-[#000000DE] bg-[#FAFAFA] hover:bg-[#2196F3]/10 hover:text-[#2196F3]'
                 }`}
               >
                 <span>{step.name}</span>
                 {isCompleted && !isActive && (
-                  <CheckCircle className="w-3 h-3 text-[#2563EB] shrink-0" />
+                  <CheckCircle className="w-3.5 h-3.5 text-[#2196F3] shrink-0" />
                 )}
               </button>
             );
@@ -106,7 +106,7 @@ export const TabStepper: React.FC<TabStepperProps> = ({
         <button
           type="button"
           onClick={() => handleScroll('right')}
-          className="p-1 rounded-lg text-gray-400 hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors shrink-0 flex xl:hidden items-center justify-center"
+          className="p-1 rounded text-gray-400 hover:text-[#2196F3] hover:bg-[#2196F3]/10 transition-colors shrink-0 flex xl:hidden items-center justify-center"
           title="Scroll right"
           aria-label="Scroll right"
         >

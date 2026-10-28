@@ -35,6 +35,7 @@ import {
 import toast from 'react-hot-toast';
 import { ProfileData } from '../types/profile';
 import { getPortalTheme, PortalThemeId, PORTAL_THEMES } from '../types/theme';
+import { TypographySettings, getComputedTypographyStyle } from '../types/typography';
 
 export interface AdminPartner {
   id?: string;
@@ -119,6 +120,7 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
   const isMobile = currentMode === 'mobile';
   const isTablet = currentMode === 'tablet';
   const isDesktop = currentMode === 'desktop';
+  const [activeBannerIdx, setActiveBannerIdx] = useState(0);
 
   // Load Admin Data if adminId provided and no builderProfile
   useEffect(() => {
@@ -188,8 +190,8 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
     initialAdminFallback?.title ||
     (hasCustomIdentity
       ? (categoryName && !categoryName.toLowerCase().includes('electric')
-          ? `${categoryName} Specialist`
-          : 'Founder & Owner')
+        ? `${categoryName} Specialist`
+        : 'Founder & Owner')
       : 'Owner & Senior Electrician');
 
   const primaryPhone =
@@ -259,11 +261,17 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
     initialAdminFallback?.img ||
     '';
 
-  const bannerUrl =
-    builderProfile?.bannerUrl ||
-    profileObj.bannerUrl ||
-    initialAdminFallback?.bannerUrl ||
-    'https://upload.phygitaltech.in/uploads/1792663446147-7244927.png';
+  const bannerList: string[] =
+    Array.isArray(builderProfile?.banners) && builderProfile.banners.length > 0
+      ? builderProfile.banners
+      : [
+          builderProfile?.bannerUrl ||
+          profileObj.bannerUrl ||
+          initialAdminFallback?.bannerUrl ||
+          'https://upload.phygitaltech.in/uploads/1792663446147-7244927.png',
+        ];
+
+  const bannerUrl = bannerList[activeBannerIdx] || bannerList[0];
 
   const establishmentYear =
     builderProfile?.establishmentYear ||
@@ -276,6 +284,15 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
     builderProfile?.gstNumber ||
     aboutObj.gstNumber ||
     '27ABCDE1234F1Z5';
+
+  // Active Typography Settings
+  const typographySettings: TypographySettings | undefined =
+    builderProfile?.typography || profileObj?.typography;
+
+  const rootStyle = getComputedTypographyStyle(typographySettings);
+  const getStyle = (elementId: string): React.CSSProperties => {
+    return getComputedTypographyStyle(typographySettings, elementId);
+  };
 
   const aboutUsText =
     builderProfile?.aboutNarrative ||
@@ -320,18 +337,18 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
     builderProfile?.specialities && builderProfile.specialities.length > 0
       ? builderProfile.specialities.map((s: any) => (typeof s === 'string' ? s : s.name || s.title || s.specialities || ''))
       : profileObj.specialities && profileObj.specialities.length > 0
-      ? profileObj.specialities
-      : [];
+        ? profileObj.specialities
+        : [];
 
   const specialitiesItems =
     rawSpecialities.length > 0
       ? rawSpecialities.slice(0, 6).map((title, idx) => ({
-          title,
-          icon: getSpecialityIcon(title, idx),
-        }))
+        title,
+        icon: getSpecialityIcon(title, idx),
+      }))
       : hasCustomIdentity && !categoryName.toLowerCase().includes('electric')
-      ? universalSpecialitiesList
-      : defaultSpecialitiesList;
+        ? universalSpecialitiesList
+        : defaultSpecialitiesList;
 
   const specialitiesList: string[] = specialitiesItems.map((item) => item.title);
 
@@ -339,204 +356,204 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
   const officialDocs: any[] =
     builderProfile?.documents && builderProfile.documents.length > 0
       ? builderProfile.documents.map((d: any) => ({
-          id: d.id,
-          fileName: d.title || d.fileName || 'Official Document',
-          fileUrl: d.url || d.fileUrl || '#',
-        }))
+        id: d.id,
+        fileName: d.title || d.fileName || 'Official Document',
+        fileUrl: d.url || d.fileUrl || '#',
+      }))
       : aboutObj.officialDocuments && aboutObj.officialDocuments.length > 0
-      ? aboutObj.officialDocuments
-      : hasCustomIdentity
-      ? [
-          {
-            id: 'def-doc-1',
-            fileName: `${categoryName || 'Trade'} Registration & License`,
-            fileUrl: 'https://upload.phygitaltech.in/uploads/1792575917224-12318949.jpeg',
-          },
-          {
-            id: 'def-doc-2',
-            fileName: `${businessName} Official Catalog & Brochure`,
-            fileUrl: 'https://upload.phygitaltech.in/uploads/1792660291401-934139205.jpeg',
-          },
-        ]
-      : [
-          {
-            id: '3471ed82-17fa-4c4d-93bc-290de4d2e216',
-            fileName: 'Electrical License & Certificate',
-            fileUrl: 'https://upload.phygitaltech.in/uploads/1792575917224-12318949.jpeg',
-          },
-          {
-            id: '805fc6ce-e3a8-4278-ae0c-10df8ceb6c6e',
-            fileName: 'Official Trade Registration',
-            fileUrl: 'https://upload.phygitaltech.in/uploads/1792654502848-822155076.jpeg',
-          },
-          {
-            id: 'd524430f-9610-4999-81cd-e3f2d7d81c8f',
-            fileName: 'Our Official Services Brochure',
-            fileUrl: 'https://upload.phygitaltech.in/uploads/1792660291401-934139205.jpeg',
-          },
-          {
-            id: '7103ac2b-6937-40dd-8256-ed3de91caff0',
-            fileName: 'Safety & Compliance Document',
-            fileUrl: 'https://upload.phygitaltech.in/uploads/1792661378910-554545351.jpeg',
-          },
-        ];
+        ? aboutObj.officialDocuments
+        : hasCustomIdentity
+          ? [
+            {
+              id: 'def-doc-1',
+              fileName: `${categoryName || 'Trade'} Registration & License`,
+              fileUrl: 'https://upload.phygitaltech.in/uploads/1792575917224-12318949.jpeg',
+            },
+            {
+              id: 'def-doc-2',
+              fileName: `${businessName} Official Catalog & Brochure`,
+              fileUrl: 'https://upload.phygitaltech.in/uploads/1792660291401-934139205.jpeg',
+            },
+          ]
+          : [
+            {
+              id: '3471ed82-17fa-4c4d-93bc-290de4d2e216',
+              fileName: 'Electrical License & Certificate',
+              fileUrl: 'https://upload.phygitaltech.in/uploads/1792575917224-12318949.jpeg',
+            },
+            {
+              id: '805fc6ce-e3a8-4278-ae0c-10df8ceb6c6e',
+              fileName: 'Official Trade Registration',
+              fileUrl: 'https://upload.phygitaltech.in/uploads/1792654502848-822155076.jpeg',
+            },
+            {
+              id: 'd524430f-9610-4999-81cd-e3f2d7d81c8f',
+              fileName: 'Our Official Services Brochure',
+              fileUrl: 'https://upload.phygitaltech.in/uploads/1792660291401-934139205.jpeg',
+            },
+            {
+              id: '7103ac2b-6937-40dd-8256-ed3de91caff0',
+              fileName: 'Safety & Compliance Document',
+              fileUrl: 'https://upload.phygitaltech.in/uploads/1792661378910-554545351.jpeg',
+            },
+          ];
 
   // Products from profile or fallbacks
   const productsList =
     builderProfile?.products && builderProfile.products.length > 0
       ? builderProfile.products.map((p: any) => ({
-          id: p.id || p._id,
-          name: p.title || p.name,
-          price: p.price,
-          currency: p.currency || 'INR',
-          description: p.description,
-          image: p.image || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=600&h=400&fit=crop',
-        }))
+        id: p.id || p._id,
+        name: p.title || p.name,
+        price: p.price,
+        currency: p.currency || 'INR',
+        description: p.description,
+        image: p.image || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=600&h=400&fit=crop',
+      }))
       : data?.products && data.products.length > 0
-      ? data.products
-      : hasCustomIdentity
-      ? [
-          {
-            id: 'def-prod-1',
-            name: `${categoryName || 'Standard'} Service Package`,
-            price: 499,
-            currency: 'INR',
-            description: `Comprehensive and professional ${categoryName.toLowerCase()} solutions tailored by ${businessName}. Verified standards, prompt execution, and complete customer satisfaction.`,
-            image: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=600&h=400&fit=crop',
-          },
-          {
-            id: 'def-prod-2',
-            name: `Custom ${categoryName || 'Consultation'} & Support`,
-            price: 299,
-            currency: 'INR',
-            description: `Dedicated assistance and quality deliverables provided by the specialized team at ${businessName}.`,
-            image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&h=400&fit=crop',
-          },
-        ]
-      : [
-          {
-            id: '5c4b7eaf-f7fb-430e-898d-cbe83731a1af',
-            name: 'Lighting & Fan Installation',
-            price: 300,
-            currency: 'INR',
-            description:
-              'Experience top-tier Lighting & Fan Installation with Shree Sai Electrical Services. We combine technical expertise with customer-centric service to deliver measurable results and dependable quality.',
-            image: 'https://upload.phygitaltech.in/uploads/1792663446147-7244927.png',
-          },
-          {
-            id: '60c0d85c-e23f-481a-904f-dba9b47cf477',
-            name: 'Home Electrical Wiring',
-            price: 200,
-            currency: 'INR',
-            description:
-              'Comprehensive and tailored Home Electrical Wiring provided by Shree Sai Electrical Services. Designed for high performance, verified standards, and complete customer satisfaction. Includes dedicated customer support and verified deliverables.',
-            image: 'https://upload.phygitaltech.in/uploads/1792663443744-340508963.png',
-          },
-        ];
+        ? data.products
+        : hasCustomIdentity
+          ? [
+            {
+              id: 'def-prod-1',
+              name: `${categoryName || 'Standard'} Service Package`,
+              price: 499,
+              currency: 'INR',
+              description: `Comprehensive and professional ${categoryName.toLowerCase()} solutions tailored by ${businessName}. Verified standards, prompt execution, and complete customer satisfaction.`,
+              image: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=600&h=400&fit=crop',
+            },
+            {
+              id: 'def-prod-2',
+              name: `Custom ${categoryName || 'Consultation'} & Support`,
+              price: 299,
+              currency: 'INR',
+              description: `Dedicated assistance and quality deliverables provided by the specialized team at ${businessName}.`,
+              image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&h=400&fit=crop',
+            },
+          ]
+          : [
+            {
+              id: '5c4b7eaf-f7fb-430e-898d-cbe83731a1af',
+              name: 'Lighting & Fan Installation',
+              price: 300,
+              currency: 'INR',
+              description:
+                'Experience top-tier Lighting & Fan Installation with Shree Sai Electrical Services. We combine technical expertise with customer-centric service to deliver measurable results and dependable quality.',
+              image: 'https://upload.phygitaltech.in/uploads/1792663446147-7244927.png',
+            },
+            {
+              id: '60c0d85c-e23f-481a-904f-dba9b47cf477',
+              name: 'Home Electrical Wiring',
+              price: 200,
+              currency: 'INR',
+              description:
+                'Comprehensive and tailored Home Electrical Wiring provided by Shree Sai Electrical Services. Designed for high performance, verified standards, and complete customer satisfaction. Includes dedicated customer support and verified deliverables.',
+              image: 'https://upload.phygitaltech.in/uploads/1792663443744-340508963.png',
+            },
+          ];
 
   // Gallery items
   const galleryList =
     builderProfile?.gallery && builderProfile.gallery.length > 0
       ? builderProfile.gallery.map((g: any) => ({
-          id: g.id || g._id,
-          image: g.url || g.image,
-          title: g.title || 'Project Work Sample',
-          description: g.description || 'Verified execution by partner',
-        }))
+        id: g.id || g._id,
+        image: g.url || g.image,
+        title: g.title || 'Project Work Sample',
+        description: g.description || 'Verified execution by partner',
+      }))
       : builderProfile?.galleryImages && builderProfile.galleryImages.length > 0
-      ? builderProfile.galleryImages.map((g: any) => ({
+        ? builderProfile.galleryImages.map((g: any) => ({
           id: g.id || g._id,
           image: g.url || g.image,
           title: g.title || 'Project Work Sample',
           description: g.description || 'Verified execution by partner',
         }))
-      : data?.gallery && data.gallery.length > 0
-      ? data.gallery
-      : hasCustomIdentity
-      ? [
-          {
-            id: 'def-gal-1',
-            image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=700&h=500&fit=crop',
-            title: `${categoryName || 'Project'} Work Sample`,
-            description: `Professional setup and delivery by ${businessName}`,
-          },
-          {
-            id: 'def-gal-2',
-            image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=700&h=500&fit=crop',
-            title: 'Quality Standards & Delivery',
-            description: `Verified execution meeting highest client expectations at ${businessName}`,
-          },
-        ]
-      : [
-          {
-            id: '58d9fbaf-f7c7-454b-b363-0efb1a1376ba',
-            image: 'https://upload.phygitaltech.in/uploads/1792664137013-871217308.png',
-            title: 'Neat Inverter and Battery Backup Installation',
-            description: 'Professional setup by Shree Sai Electrical Services',
-          },
-          {
-            id: 'e35449ea-2f0d-49e6-bba6-3956d4ef97bd',
-            image: 'https://upload.phygitaltech.in/uploads/1792664137004-95472994.png',
-            title: 'Inverter & UPS Installation',
-            description:
-              'Professional inverter and UPS installation with organized wiring, battery backup setup, and safety checks for reliable power supply in homes and businesses',
-          },
-        ];
+        : data?.gallery && data.gallery.length > 0
+          ? data.gallery
+          : hasCustomIdentity
+            ? [
+              {
+                id: 'def-gal-1',
+                image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=700&h=500&fit=crop',
+                title: `${categoryName || 'Project'} Work Sample`,
+                description: `Professional setup and delivery by ${businessName}`,
+              },
+              {
+                id: 'def-gal-2',
+                image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=700&h=500&fit=crop',
+                title: 'Quality Standards & Delivery',
+                description: `Verified execution meeting highest client expectations at ${businessName}`,
+              },
+            ]
+            : [
+              {
+                id: '58d9fbaf-f7c7-454b-b363-0efb1a1376ba',
+                image: 'https://upload.phygitaltech.in/uploads/1792664137013-871217308.png',
+                title: 'Neat Inverter and Battery Backup Installation',
+                description: 'Professional setup by Shree Sai Electrical Services',
+              },
+              {
+                id: 'e35449ea-2f0d-49e6-bba6-3956d4ef97bd',
+                image: 'https://upload.phygitaltech.in/uploads/1792664137004-95472994.png',
+                title: 'Inverter & UPS Installation',
+                description:
+                  'Professional inverter and UPS installation with organized wiring, battery backup setup, and safety checks for reliable power supply in homes and businesses',
+              },
+            ];
 
   // Videos
   const videoList =
     builderProfile?.youtubeVideos && builderProfile.youtubeVideos.length > 0
       ? builderProfile.youtubeVideos.map((v: any) => {
-          let embedUrl = v.embedUrl || v.url;
-          if (embedUrl && !embedUrl.includes('embed/') && embedUrl.includes('watch?v=')) {
-            const vidId = embedUrl.split('watch?v=')[1]?.split('&')[0];
-            embedUrl = `https://www.youtube.com/embed/${vidId}`;
-          }
-          return {
-            id: v.id || v._id,
-            title: v.title || 'Official Video Presentation',
-            embedUrl: embedUrl || 'https://www.youtube.com/embed/YD2x7FFsFcc',
-            thumbnailUrl:
-              v.thumbnailUrl ||
-              (v.videoId ? `https://img.youtube.com/vi/${v.videoId}/hqdefault.jpg` : 'https://img.youtube.com/vi/YD2x7FFsFcc/hqdefault.jpg'),
-            duration: '05:32',
-          };
-        })
+        let embedUrl = v.embedUrl || v.url;
+        if (embedUrl && !embedUrl.includes('embed/') && embedUrl.includes('watch?v=')) {
+          const vidId = embedUrl.split('watch?v=')[1]?.split('&')[0];
+          embedUrl = `https://www.youtube.com/embed/${vidId}`;
+        }
+        return {
+          id: v.id || v._id,
+          title: v.title || 'Official Video Presentation',
+          embedUrl: embedUrl || 'https://www.youtube.com/embed/YD2x7FFsFcc',
+          thumbnailUrl:
+            v.thumbnailUrl ||
+            (v.videoId ? `https://img.youtube.com/vi/${v.videoId}/hqdefault.jpg` : 'https://img.youtube.com/vi/YD2x7FFsFcc/hqdefault.jpg'),
+          duration: '05:32',
+        };
+      })
       : data?.videos && data.videos.length > 0
-      ? data.videos
-      : hasCustomIdentity
-      ? [
-          {
-            id: 'def-vid-1',
-            title: `${categoryName || 'Service'} Overview & Introduction`,
-            embedUrl: 'https://www.youtube.com/embed/YD2x7FFsFcc',
-            thumbnailUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=500&fit=crop',
-            duration: '04:15',
-          },
-          {
-            id: 'def-vid-2',
-            title: `${businessName} Quality Standards Presentation`,
-            embedUrl: 'https://www.youtube.com/embed/0GjRb4-iaog',
-            thumbnailUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=500&fit=crop',
-            duration: '05:30',
-          },
-        ]
-      : [
-          {
-            id: 'v-1',
-            title: 'Electrical Safety Tips for Modern Homes',
-            embedUrl: 'https://www.youtube.com/embed/YD2x7FFsFcc',
-            thumbnailUrl: 'https://img.youtube.com/vi/YD2x7FFsFcc/hqdefault.jpg',
-            duration: '05:32',
-          },
-          {
-            id: 'v-2',
-            title: 'Home Electrical Wiring & Inverter Installation',
-            embedUrl: 'https://www.youtube.com/embed/0GjRb4-iaog',
-            thumbnailUrl: 'https://img.youtube.com/vi/0GjRb4-iaog/hqdefault.jpg',
-            duration: '06:14',
-          },
-        ];
+        ? data.videos
+        : hasCustomIdentity
+          ? [
+            {
+              id: 'def-vid-1',
+              title: `${categoryName || 'Service'} Overview & Introduction`,
+              embedUrl: 'https://www.youtube.com/embed/YD2x7FFsFcc',
+              thumbnailUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=500&fit=crop',
+              duration: '04:15',
+            },
+            {
+              id: 'def-vid-2',
+              title: `${businessName} Quality Standards Presentation`,
+              embedUrl: 'https://www.youtube.com/embed/0GjRb4-iaog',
+              thumbnailUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=500&fit=crop',
+              duration: '05:30',
+            },
+          ]
+          : [
+            {
+              id: 'v-1',
+              title: 'Electrical Safety Tips for Modern Homes',
+              embedUrl: 'https://www.youtube.com/embed/YD2x7FFsFcc',
+              thumbnailUrl: 'https://img.youtube.com/vi/YD2x7FFsFcc/hqdefault.jpg',
+              duration: '05:32',
+            },
+            {
+              id: 'v-2',
+              title: 'Home Electrical Wiring & Inverter Installation',
+              embedUrl: 'https://www.youtube.com/embed/0GjRb4-iaog',
+              thumbnailUrl: 'https://img.youtube.com/vi/0GjRb4-iaog/hqdefault.jpg',
+              duration: '06:14',
+            },
+          ];
 
   // Payment credentials
   const upiId =
@@ -617,10 +634,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
 
   return (
     <div
-      className={`min-h-full bg-slate-50 text-slate-800 font-sans selection:bg-orange-500 selection:text-white w-full max-w-full overflow-x-hidden ${
-        isSimulatorView ? 'text-xs' : ''
-      }`}
+      className={`min-h-full bg-slate-50 text-slate-800 font-sans selection:bg-orange-500 selection:text-white w-full max-w-full overflow-x-hidden ${isSimulatorView ? 'text-xs' : ''
+        }`}
       id="home"
+      style={rootStyle}
     >
       {/* ─── TOP NOTICE BAR (Hidden on mobile for clean screen view) ─────────── */}
       {!isMobile && !isSimulatorView && (
@@ -650,11 +667,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                       type="button"
                       onClick={() => onThemeChange(thId)}
                       title={th.desc}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                        isActive
-                          ? 'bg-white text-slate-900 shadow-xs'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${isActive
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-400 hover:text-white'
+                        }`}
                     >
                       {th.badge}
                     </button>
@@ -707,7 +723,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               </div>
             )}
             <div className="min-w-0 flex-1 overflow-hidden">
-              <span className="text-xs sm:text-base md:text-lg font-black tracking-tight text-slate-900 block leading-tight truncate uppercase">
+              <span
+                style={getStyle('headerLogo')}
+                className="text-xs sm:text-base md:text-lg font-black tracking-tight text-slate-900 block leading-tight truncate uppercase"
+              >
                 {businessName}
               </span>
               <span className={`text-[9px] sm:text-[10px] font-bold ${themeConfig.kickerText} uppercase tracking-wider block truncate`}>
@@ -722,25 +741,26 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               isMobile || isTablet
                 ? 'hidden'
                 : isDesktop
-                ? 'flex items-center gap-5 xl:gap-6'
-                : 'hidden lg:flex items-center gap-5 xl:gap-6'
+                  ? 'flex items-center gap-5 xl:gap-6'
+                  : 'hidden lg:flex items-center gap-5 xl:gap-6'
             }
           >
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
+                style={getStyle('navLinks')}
                 onClick={() => setActiveSection(link.label.toLowerCase())}
-                className={`text-xs sm:text-sm font-semibold transition-colors ${
-                  activeSection === link.label.toLowerCase()
-                    ? `${themeConfig.headerActiveNav} font-bold`
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
+                className={`text-xs sm:text-sm font-semibold transition-colors ${activeSection === link.label.toLowerCase()
+                  ? `${themeConfig.headerActiveNav} font-bold`
+                  : 'text-slate-600 hover:text-slate-900'
+                  }`}
               >
                 {link.label}
               </a>
             ))}
           </nav>
+
 
           {/* Action CTAs: WhatsApp & Get Quote (Desktop only, Mobile & Tab use clean hamburger menu) */}
           <div
@@ -748,8 +768,8 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               isMobile || isTablet
                 ? 'hidden'
                 : isDesktop
-                ? 'flex items-center gap-2.5 shrink-0'
-                : 'hidden lg:flex items-center gap-2.5 shrink-0'
+                  ? 'flex items-center gap-2.5 shrink-0'
+                  : 'hidden lg:flex items-center gap-2.5 shrink-0'
             }
           >
             <a
@@ -783,8 +803,8 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               isMobile || isTablet
                 ? 'block p-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 shrink-0'
                 : isDesktop
-                ? 'hidden'
-                : 'lg:hidden p-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 shrink-0'
+                  ? 'hidden'
+                  : 'lg:hidden p-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 shrink-0'
             }
             aria-label="Toggle navigation"
           >
@@ -799,6 +819,7 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               <a
                 key={link.label}
                 href={link.href}
+                style={getStyle('navLinks')}
                 onClick={() => {
                   setActiveSection(link.label.toLowerCase());
                   setMobileMenuOpen(false);
@@ -811,6 +832,7 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
             <div className="pt-2 flex flex-col gap-2">
               <a
                 href={`tel:${primaryPhone}`}
+                style={getStyle('buttonText')}
                 className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center justify-center gap-2"
               >
                 <FaPhone className="text-xs text-orange-400" />
@@ -818,6 +840,7 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               </a>
               <button
                 type="button"
+                style={getStyle('buttonText')}
                 onClick={() => {
                   setQuoteModalOpen(true);
                   setMobileMenuOpen(false);
@@ -828,6 +851,7 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                 <FaArrowRight className="text-xs" />
               </button>
             </div>
+
           </div>
         )}
       </header>
@@ -836,7 +860,12 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
       <section
         className={`relative overflow-hidden bg-gradient-to-r ${themeConfig.heroBgGradient} text-white pt-6 sm:pt-10 pb-8 sm:pb-12 w-full max-w-full`}
       >
-        {/* Ambient background ring removed as requested */}
+        {/* Glow ambient background ring */}
+        <div className="absolute right-0 top-0 bottom-0 w-full lg:w-1/2 pointer-events-none overflow-hidden opacity-60 sm:opacity-80 flex items-center justify-end">
+          <div
+            className={`w-[320px] sm:w-[620px] h-[320px] sm:h-[620px] rounded-full border-[16px] sm:border-[24px] ${themeConfig.heroRingBorder} -mr-16 sm:-mr-24 -mt-10 blur-[1px]`}
+          />
+        </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
           <div
@@ -844,10 +873,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               isMobile
                 ? 'flex flex-col gap-6 items-stretch w-full'
                 : isTablet
-                ? 'grid grid-cols-1 gap-6 items-center max-w-2xl mx-auto w-full'
-                : isDesktop
-                ? 'grid grid-cols-12 gap-8 items-center w-full'
-                : 'flex flex-col lg:grid lg:grid-cols-12 gap-6 lg:gap-8 items-center w-full'
+                  ? 'grid grid-cols-1 gap-6 items-center max-w-2xl mx-auto w-full'
+                  : isDesktop
+                    ? 'grid grid-cols-12 gap-8 items-center w-full'
+                    : 'flex flex-col lg:grid lg:grid-cols-12 gap-6 lg:gap-8 items-center w-full'
             }
           >
             {/* Left Content Column (Always displays first on all mobile sizes) */}
@@ -856,35 +885,49 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                 isMobile || isTablet
                   ? 'w-full space-y-3.5 sm:space-y-4'
                   : isDesktop
-                  ? 'col-span-7 space-y-4'
-                  : 'w-full lg:col-span-7 space-y-4'
+                    ? 'col-span-7 space-y-4'
+                    : 'w-full lg:col-span-7 space-y-4'
               }
             >
               {/* Partner Badge */}
               <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm self-start max-w-full">
                 <span className={`w-2 h-2 rounded-full ${themeConfig.heroBadgeDot} animate-ping shrink-0`} />
-                <span className={`text-[10px] sm:text-[11px] font-bold ${themeConfig.heroBadgeText} uppercase tracking-wider truncate`}>
+                <span
+                  style={getStyle('badgeText')}
+                  className={`text-[10px] sm:text-[11px] font-bold ${themeConfig.heroBadgeText} uppercase tracking-wider truncate`}
+                >
                   VERIFIED {categoryName.toUpperCase()} PARTNER
                 </span>
               </div>
 
               {/* Business Name */}
               <h1
+                style={getStyle('bannerHeading')}
                 className={
                   isMobile
                     ? 'text-2xl sm:text-3xl font-black tracking-tight leading-[1.18] text-white break-words'
                     : isTablet
-                    ? 'text-3xl sm:text-4xl font-black tracking-tight leading-[1.15] text-white'
-                    : isDesktop
-                    ? 'text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight leading-[1.12] text-white'
-                    : 'text-2xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight leading-[1.15] text-white break-words'
+                      ? 'text-3xl sm:text-4xl font-black tracking-tight leading-[1.15] text-white'
+                      : isDesktop
+                        ? 'text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight leading-[1.12] text-white'
+                        : 'text-2xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight leading-[1.15] text-white break-words'
                 }
               >
                 {businessName}
               </h1>
 
+              {/* Business Tagline */}
+              {(builderProfile?.tagline || builderProfile?.businessTagline) && (
+                <p className="text-xs sm:text-sm md:text-base font-medium text-slate-200/90 italic tracking-wide -mt-1 sm:-mt-1.5">
+                  "{builderProfile.tagline || builderProfile.businessTagline}"
+                </p>
+              )}
+
               {/* Designation & Contact Person */}
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold tracking-wide">
+              <div
+                style={getStyle('bannerDescription')}
+                className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold tracking-wide"
+              >
                 <span className={themeConfig.heroContactText}>{contactName}</span>
                 <span className="text-slate-400">•</span>
                 <span className="text-slate-200">{designation}</span>
@@ -909,12 +952,13 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                   isMobile || isTablet
                     ? 'flex flex-col items-stretch gap-2.5 pt-1 w-full'
                     : isDesktop
-                    ? 'flex flex-row items-center gap-3 pt-2'
-                    : 'flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 pt-2 w-full'
+                      ? 'flex flex-row items-center gap-3 pt-2'
+                      : 'flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 pt-2 w-full'
                 }
               >
                 <button
                   type="button"
+                  style={getStyle('buttonText')}
                   onClick={() => {
                     setQuoteForm((prev) => ({ ...prev, service: 'General Enquiry' }));
                     setQuoteModalOpen(true);
@@ -934,12 +978,13 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                     isMobile || isTablet
                       ? 'grid grid-cols-2 gap-2.5 w-full'
                       : isDesktop
-                      ? 'flex items-center gap-2.5 shrink-0'
-                      : 'grid grid-cols-2 gap-2.5 w-full sm:w-auto sm:flex sm:items-center'
+                        ? 'flex items-center gap-2.5 shrink-0'
+                        : 'grid grid-cols-2 gap-2.5 w-full sm:w-auto sm:flex sm:items-center'
                   }
                 >
                   <a
                     href={`tel:${primaryPhone}`}
+                    style={getStyle('buttonText')}
                     className="w-full px-3 sm:px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 border border-white/20 active:scale-95 transition-all backdrop-blur-sm truncate text-center"
                   >
                     <FaPhone className={`text-xs ${themeConfig.heroPhoneBtn} shrink-0`} />
@@ -950,6 +995,7 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                     href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    style={getStyle('buttonText')}
                     className="w-full px-3 sm:px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 shadow-md shadow-emerald-600/30 active:scale-95 transition-all truncate text-center"
                   >
                     <FaWhatsapp className="text-sm shrink-0" />
@@ -958,16 +1004,17 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                 </div>
               </div>
 
+
               {/* Trust Badges Bar */}
               <div
                 className={
                   isMobile
                     ? 'flex flex-col gap-2 pt-3 text-xs font-semibold text-slate-300 border-t border-white/10 w-full'
                     : isTablet
-                    ? 'flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-5 pt-3 text-xs font-semibold text-slate-300 border-t border-white/10'
-                    : isDesktop
-                    ? 'flex flex-wrap items-center gap-5 pt-3 text-xs font-semibold text-slate-300 border-t border-white/10'
-                    : 'flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-5 pt-3 text-xs font-semibold text-slate-300 border-t border-white/10 w-full'
+                      ? 'flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-5 pt-3 text-xs font-semibold text-slate-300 border-t border-white/10'
+                      : isDesktop
+                        ? 'flex flex-wrap items-center gap-5 pt-3 text-xs font-semibold text-slate-300 border-t border-white/10'
+                        : 'flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-5 pt-3 text-xs font-semibold text-slate-300 border-t border-white/10 w-full'
                 }
               >
                 <div className="flex items-center gap-2">
@@ -991,8 +1038,8 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                 isMobile || isTablet
                   ? 'w-full relative flex justify-center mt-2 sm:mt-6'
                   : isDesktop
-                  ? 'col-span-5 relative flex justify-center'
-                  : 'w-full lg:col-span-5 relative flex justify-center mt-4 lg:mt-0'
+                    ? 'col-span-5 relative flex justify-center'
+                    : 'w-full lg:col-span-5 relative flex justify-center mt-4 lg:mt-0'
               }
             >
               <div className="relative w-full max-w-md">
@@ -1007,6 +1054,24 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+
+                  {/* Multiple Banners Navigation Dots */}
+                  {bannerList.length > 1 && (
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10 bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-full border border-white/20">
+                      {bannerList.map((_, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setActiveBannerIdx(i)}
+                          className={`h-1.5 rounded-full transition-all ${
+                            i === activeBannerIdx ? 'bg-white w-4' : 'bg-white/40 w-1.5'
+                          }`}
+                          title={`Banner ${i + 1}`}
+                          aria-label={`Banner ${i + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
 
                   {/* Watermark badge on image */}
                   <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex items-center justify-between bg-black/60 backdrop-blur-md p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border border-white/20">
@@ -1040,10 +1105,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               isMobile
                 ? 'flex gap-3 overflow-x-auto scrollbar-none pb-1'
                 : isTablet
-                ? 'grid grid-cols-3 gap-3.5'
-                : isDesktop
-                ? 'grid grid-cols-6 gap-3.5'
-                : 'flex gap-3 overflow-x-auto scrollbar-none pb-1 md:pb-0 md:grid md:grid-cols-6'
+                  ? 'grid grid-cols-3 gap-3.5'
+                  : isDesktop
+                    ? 'grid grid-cols-6 gap-3.5'
+                    : 'flex gap-3 overflow-x-auto scrollbar-none pb-1 md:pb-0 md:grid md:grid-cols-6'
             }
           >
             {specialitiesItems.map((item, idx) => {
@@ -1055,10 +1120,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                     isMobile
                       ? `w-[calc(50%-6px)] shrink-0 bg-white rounded-xl py-4 px-3 flex flex-col items-center justify-center text-center shadow-xs border border-slate-100 ${themeConfig.specialitiesCardHover} hover:shadow-md transition-all duration-200 cursor-default group`
                       : isTablet
-                      ? `w-full bg-white rounded-xl py-4 px-3 flex flex-col items-center justify-center text-center shadow-xs border border-slate-100 ${themeConfig.specialitiesCardHover} hover:shadow-md transition-all duration-200 cursor-default group`
-                      : isDesktop
-                      ? `w-full bg-white rounded-xl py-3.5 px-2.5 flex flex-col items-center justify-center text-center shadow-xs border border-slate-100 ${themeConfig.specialitiesCardHover} hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-default group`
-                      : `w-[calc(50%-6px)] shrink-0 md:w-auto md:flex-1 bg-white rounded-xl py-4 px-3 flex flex-col items-center justify-center text-center shadow-xs border border-slate-100 ${themeConfig.specialitiesCardHover} hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-default group`
+                        ? `w-full bg-white rounded-xl py-4 px-3 flex flex-col items-center justify-center text-center shadow-xs border border-slate-100 ${themeConfig.specialitiesCardHover} hover:shadow-md transition-all duration-200 cursor-default group`
+                        : isDesktop
+                          ? `w-full bg-white rounded-xl py-3.5 px-2.5 flex flex-col items-center justify-center text-center shadow-xs border border-slate-100 ${themeConfig.specialitiesCardHover} hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-default group`
+                          : `w-[calc(50%-6px)] shrink-0 md:w-auto md:flex-1 bg-white rounded-xl py-4 px-3 flex flex-col items-center justify-center text-center shadow-xs border border-slate-100 ${themeConfig.specialitiesCardHover} hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-default group`
                   }
                 >
                   <div
@@ -1084,8 +1149,8 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               isMobile || isTablet
                 ? 'grid grid-cols-1 gap-8 items-center'
                 : isDesktop
-                ? 'grid grid-cols-12 gap-10 lg:gap-14 items-center'
-                : 'grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center'
+                  ? 'grid grid-cols-12 gap-10 lg:gap-14 items-center'
+                  : 'grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center'
             }
           >
             {/* Left Image / Workshop */}
@@ -1094,8 +1159,8 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                 isMobile || isTablet
                   ? 'w-full relative'
                   : isDesktop
-                  ? 'col-span-6 relative'
-                  : 'lg:col-span-6 relative'
+                    ? 'col-span-6 relative'
+                    : 'lg:col-span-6 relative'
               }
             >
               <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200">
@@ -1130,23 +1195,38 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                 isMobile || isTablet
                   ? 'w-full space-y-5'
                   : isDesktop
-                  ? 'col-span-6 space-y-5'
-                  : 'lg:col-span-6 space-y-5'
+                    ? 'col-span-6 space-y-5'
+                    : 'lg:col-span-6 space-y-5'
               }
             >
               <div>
                 <span className={`text-xs font-bold ${themeConfig.kickerText} uppercase tracking-widest block mb-1.5`}>
                   ABOUT THE ORGANIZATION
                 </span>
-                <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+                <h2
+                  style={getStyle('sectionHeading')}
+                  className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight"
+                >
                   {businessName}
                 </h2>
               </div>
 
               {/* Formatted About Us Text */}
-              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed space-y-3 font-normal whitespace-pre-line">
-                {aboutUsText}
-              </div>
+              {/<[a-z][\s\S]*>/i.test(aboutUsText) ? (
+                <div
+                  style={getStyle('p')}
+                  className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: aboutUsText }}
+                />
+              ) : (
+                <div
+                  style={getStyle('p')}
+                  className="text-xs sm:text-sm text-slate-600 leading-relaxed space-y-3 font-normal whitespace-pre-line"
+                >
+                  {aboutUsText}
+                </div>
+              )}
+
 
               {/* Key Business Accreditations */}
               <div className="grid grid-cols-2 gap-3.5 pt-2">
@@ -1191,8 +1271,8 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                   isMobile || isTablet
                     ? 'pt-2 flex flex-col items-stretch gap-2.5'
                     : isDesktop
-                    ? 'pt-2 flex flex-row items-center gap-3'
-                    : 'pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3'
+                      ? 'pt-2 flex flex-row items-center gap-3'
+                      : 'pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3'
                 }
               >
                 <button
@@ -1234,7 +1314,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               <span className={`text-xs font-bold ${themeConfig.kickerText} uppercase tracking-widest block mb-1`}>
                 — VERIFIED OFFERINGS —
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              <h2
+                style={getStyle('sectionHeading')}
+                className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight"
+              >
                 Products & Specialized Services
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -1249,10 +1332,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               isMobile
                 ? 'grid grid-cols-1 gap-5'
                 : isTablet
-                ? 'grid grid-cols-2 gap-5'
-                : isDesktop
-                ? 'grid grid-cols-3 gap-6'
-                : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
+                  ? 'grid grid-cols-2 gap-5'
+                  : isDesktop
+                    ? 'grid grid-cols-3 gap-6'
+                    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
             }
           >
             {productsList.map((product: any) => (
@@ -1273,7 +1356,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                       }}
                     />
                     {product.price && (
-                      <div className="absolute top-3 right-3 bg-slate-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl font-mono font-bold text-xs shadow-md border border-white/20">
+                      <div
+                        style={getStyle('priceText')}
+                        className="absolute top-3 right-3 bg-slate-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl font-mono font-bold text-xs shadow-md border border-white/20"
+                      >
                         {product.currency === 'INR' || !product.currency ? '₹' : product.currency + ' '}
                         {product.price}
                       </div>
@@ -1282,16 +1368,31 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
 
                   {/* Product Details */}
                   <div className="p-6">
-                    <h3 className={`text-base font-black text-slate-900 mb-2 ${themeConfig.productsHoverTitle} transition-colors`}>
+                    <h3
+                      style={getStyle('cardTitle')}
+                      className={`text-base font-black text-slate-900 mb-2 ${themeConfig.productsHoverTitle} transition-colors`}
+                    >
                       {product.name}
                     </h3>
-                    <p className="text-xs text-slate-500 leading-relaxed line-clamp-3">
-                      {product.description}
-                    </p>
+                    {/<[a-z][\s\S]*>/i.test(product.description || '') ? (
+                      <div
+                        style={getStyle('cardDescription')}
+                        className="text-xs text-slate-500 leading-relaxed line-clamp-3 prose prose-xs"
+                        dangerouslySetInnerHTML={{ __html: product.description }}
+                      />
+                    ) : (
+                      <p
+                        style={getStyle('cardDescription')}
+                        className="text-xs text-slate-500 leading-relaxed line-clamp-3"
+                      >
+                        {product.description}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
+
           </div>
         </div>
       </section>
@@ -1304,7 +1405,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               <span className={`text-xs font-bold ${themeConfig.kickerText} uppercase tracking-widest block mb-1`}>
                 — PROJECT GALLERY —
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              <h2
+                style={getStyle('sectionHeading')}
+                className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight"
+              >
                 Recent On-Site Work & Installations
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -1324,10 +1428,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               isMobile
                 ? 'grid grid-cols-1 gap-5'
                 : isTablet
-                ? 'grid grid-cols-2 gap-5'
-                : isDesktop
-                ? 'grid grid-cols-3 gap-6'
-                : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
+                  ? 'grid grid-cols-2 gap-5'
+                  : isDesktop
+                    ? 'grid grid-cols-3 gap-6'
+                    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
             }
           >
             {galleryList.map((item: any, idx: number) => (
@@ -1346,7 +1450,12 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-80 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-5 text-white">
-                  <h4 className="text-sm font-black tracking-tight">{item.title}</h4>
+                  <h4
+                    style={getStyle('imageCaption')}
+                    className="text-sm font-black tracking-tight"
+                  >
+                    {item.title}
+                  </h4>
                   {item.description && (
                     <p className="text-xs text-slate-300 line-clamp-2 mt-1 font-normal">
                       {item.description}
@@ -1371,9 +1480,13 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               <span className={`text-xs font-bold ${themeConfig.kickerText} uppercase tracking-widest block mb-1`}>
                 — VIDEO PRESENTATIONS —
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              <h2
+                style={getStyle('sectionHeading')}
+                className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight"
+              >
                 Watch Official Demonstrations & Safety Guides
               </h2>
+
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
                 Video tutorials and project overviews published by {businessName}.
               </p>
@@ -1390,8 +1503,8 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               isMobile
                 ? 'grid grid-cols-1 gap-6'
                 : isTablet || isDesktop
-                ? 'grid grid-cols-2 gap-8'
-                : 'grid grid-cols-1 md:grid-cols-2 gap-8'
+                  ? 'grid grid-cols-2 gap-8'
+                  : 'grid grid-cols-1 md:grid-cols-2 gap-8'
             }
           >
             {videoList.map((video: any) => (
@@ -1422,7 +1535,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                 </div>
 
                 <div className="p-5 flex items-center justify-between gap-3">
-                  <h4 className="text-sm sm:text-base font-black text-slate-900 group-hover:text-slate-800 transition-colors line-clamp-1">
+                  <h4
+                    style={getStyle('cardTitle')}
+                    className="text-sm sm:text-base font-black text-slate-900 group-hover:text-slate-800 transition-colors line-clamp-1"
+                  >
                     {video.title}
                   </h4>
                   <span className={`text-xs font-bold ${themeConfig.videoWatchText} shrink-0 flex items-center gap-1`}>
@@ -1443,7 +1559,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
             <span className={`text-xs font-bold ${themeConfig.kickerText} uppercase tracking-widest block mb-1`}>
               — VERIFIED FINANCIAL CREDENTIALS —
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            <h2
+              style={getStyle('sectionHeading')}
+              className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight"
+            >
               Bank Account & UPI Payment Details
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -1456,8 +1575,8 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               isMobile
                 ? 'grid grid-cols-1 gap-6 max-w-4xl mx-auto'
                 : isTablet || isDesktop
-                ? 'grid grid-cols-2 gap-8 max-w-4xl mx-auto'
-                : 'grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto'
+                  ? 'grid grid-cols-2 gap-8 max-w-4xl mx-auto'
+                  : 'grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto'
             }
           >
             {/* 1. UPI Payment Card */}
@@ -1519,6 +1638,7 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                 <span className="text-xs text-slate-400">Accepted: GPay, PhonePe, Paytm, BHIM</span>
                 <button
                   type="button"
+                  style={getStyle('buttonText')}
                   onClick={() => setQrModalOpen(true)}
                   className={`px-4 py-2 rounded-xl ${themeConfig.upiCardBtn} text-white text-xs font-bold transition-all active:scale-95 shadow-md`}
                 >
@@ -1605,20 +1725,24 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               <span className={`text-xs font-bold ${themeConfig.kickerText} uppercase tracking-widest block mb-1`}>
                 — VERIFICATION & BROCHURES —
               </span>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+              <h2
+                style={getStyle('sectionHeading')}
+                className="text-2xl font-black text-slate-900 tracking-tight"
+              >
                 Official Certifications & Brochures
               </h2>
             </div>
+
 
             <div
               className={
                 isMobile
                   ? 'grid grid-cols-1 gap-3'
                   : isTablet
-                  ? 'grid grid-cols-2 gap-4'
-                  : isDesktop
-                  ? 'grid grid-cols-4 gap-4'
-                  : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4'
+                    ? 'grid grid-cols-2 gap-4'
+                    : isDesktop
+                      ? 'grid grid-cols-4 gap-4'
+                      : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4'
               }
             >
               {officialDocs.map((doc: any) => (
@@ -1662,10 +1786,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
               isMobile
                 ? 'grid grid-cols-1 gap-8 pb-8 border-b border-slate-800'
                 : isTablet
-                ? 'grid grid-cols-2 gap-8 pb-8 border-b border-slate-800'
-                : isDesktop
-                ? 'grid grid-cols-12 gap-8 pb-8 border-b border-slate-800'
-                : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 pb-8 border-b border-slate-800'
+                  ? 'grid grid-cols-2 gap-8 pb-8 border-b border-slate-800'
+                  : isDesktop
+                    ? 'grid grid-cols-12 gap-8 pb-8 border-b border-slate-800'
+                    : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 pb-8 border-b border-slate-800'
             }
           >
             {/* Col 1: Brand & Social Circles */}
@@ -1771,7 +1895,12 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
 
             {/* Col 2: Quick Links */}
             <div className={isDesktop ? 'col-span-2 space-y-3' : 'w-full space-y-3'}>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Quick Navigation</h4>
+              <h4
+                style={getStyle('footerHeading')}
+                className="text-xs font-bold text-white uppercase tracking-wider"
+              >
+                Quick Navigation
+              </h4>
               <ul className="space-y-2 text-xs">
                 {navLinks.map((item) => (
                   <li key={item.label}>
@@ -1785,7 +1914,12 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
 
             {/* Col 3: Specialities */}
             <div className={isDesktop ? 'col-span-3 space-y-3' : 'w-full space-y-3'}>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Top Capabilities</h4>
+              <h4
+                style={getStyle('footerHeading')}
+                className="text-xs font-bold text-white uppercase tracking-wider"
+              >
+                Top Capabilities
+              </h4>
               <ul className="space-y-2 text-xs text-slate-400">
                 {specialitiesList.slice(0, 5).map((spec, i) => (
                   <li key={i} className="truncate">
@@ -1797,7 +1931,12 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
 
             {/* Col 4: Contact & Coordinates */}
             <div className={isDesktop ? 'col-span-3 space-y-3' : 'w-full space-y-3'}>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Verified Contact</h4>
+              <h4
+                style={getStyle('footerHeading')}
+                className="text-xs font-bold text-white uppercase tracking-wider"
+              >
+                Verified Contact
+              </h4>
               <div className="space-y-2.5 text-xs text-slate-400">
                 <div className="flex items-start gap-2.5">
                   <FaLocationDot className={`text-xs mt-0.5 shrink-0 ${themeConfig.footerContactIcon}`} />
@@ -1826,7 +1965,10 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
           </div>
 
           {/* Bottom Copyright */}
-          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <div
+            style={getStyle('copyrightText')}
+            className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500"
+          >
             <p>© {currentYear} {businessName}. All Rights Reserved.</p>
             <p>Verified Institutional Partner of Aegis Registry</p>
           </div>
@@ -1868,10 +2010,16 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
 
                 <form onSubmit={handleQuoteSubmit} className="space-y-3.5">
                   <div>
-                    <label className="text-xs font-bold text-slate-700 mb-1 block">Full Name *</label>
+                    <label
+                      style={getStyle('formLabel')}
+                      className="text-xs font-bold text-slate-700 mb-1 block"
+                    >
+                      Full Name *
+                    </label>
                     <input
                       required
                       type="text"
+                      style={getStyle('inputText')}
                       placeholder="e.g. Rahul Sharma"
                       value={quoteForm.fullName}
                       onChange={(e) => setQuoteForm({ ...quoteForm, fullName: e.target.value })}
@@ -1881,10 +2029,16 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-bold text-slate-700 mb-1 block">Phone Number *</label>
+                      <label
+                        style={getStyle('formLabel')}
+                        className="text-xs font-bold text-slate-700 mb-1 block"
+                      >
+                        Phone Number *
+                      </label>
                       <input
                         required
                         type="tel"
+                        style={getStyle('inputText')}
                         placeholder="9876543210"
                         value={quoteForm.phone}
                         onChange={(e) => setQuoteForm({ ...quoteForm, phone: e.target.value })}
@@ -1892,9 +2046,15 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-slate-700 mb-1 block">Email (Optional)</label>
+                      <label
+                        style={getStyle('formLabel')}
+                        className="text-xs font-bold text-slate-700 mb-1 block"
+                      >
+                        Email (Optional)
+                      </label>
                       <input
                         type="email"
+                        style={getStyle('inputText')}
                         placeholder="client@example.com"
                         value={quoteForm.email}
                         onChange={(e) => setQuoteForm({ ...quoteForm, email: e.target.value })}
@@ -1903,9 +2063,15 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-slate-700 mb-1 block">Project Message / Location</label>
+                    <label
+                      style={getStyle('formLabel')}
+                      className="text-xs font-bold text-slate-700 mb-1 block"
+                    >
+                      Project Message / Location
+                    </label>
                     <textarea
                       rows={3}
+                      style={getStyle('inputText')}
                       placeholder="Briefly describe your requirements or site address..."
                       value={quoteForm.message}
                       onChange={(e) => setQuoteForm({ ...quoteForm, message: e.target.value })}
@@ -1915,12 +2081,14 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
 
                   <button
                     type="submit"
+                    style={getStyle('buttonText')}
                     disabled={isSubmittingQuote}
                     className={`w-full h-11 rounded-xl ${themeConfig.modalSubmitBtn} text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50`}
                   >
                     <span>{isSubmittingQuote ? 'Dispatched to Partner...' : 'Submit Official Enquiry'}</span>
                     <FaArrowRight className="text-xs" />
                   </button>
+
                 </form>
               </div>
             )}

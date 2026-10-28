@@ -1,9 +1,10 @@
-import { api } from '@/utils/axios';
+import { api, getStoredAccessToken } from '@/utils/axios';
 import {
   CreateAdminInfoValues,
   UpdateAdminInfoValues,
 } from '@/schemas/cardProfileSchema';
 import { ProfileData } from '@/types/profile';
+import { base64ToFile } from './customerAboutApi';
 
 export type CustomerInfoPayload = CreateAdminInfoValues & {
   id?: string;
@@ -137,17 +138,30 @@ export const formatAdminInfoPayload = (
 
   return {
     businessName: profile.businessName || '',
+    tagline: (profile as any).tagline || (profile as any).businessTagline || '',
+    businessTagline: (profile as any).businessTagline || (profile as any).tagline || '',
     vanityUrl: profile.vanityUrl || '',
     prefix: profile.prefix || 'Mr.',
     contactName: profile.contactName || '',
+    firstName: profile.firstName || '',
+    lastName: profile.lastName || '',
     designation: profile.designation || '',
+    extraOwners: profile.extraOwners || [],
     primaryPhone: profile.primaryPhone || '',
     whatsappNumber: profile.whatsappNumber || profile.whatsappPhone || '',
+    altPhone: profile.altPhone || '',
+    landline: profile.landline || '',
+    extraPhones: profile.extraPhones || [],
     email: emailClean,
+    extraEmails: profile.extraEmails || [],
     address: profile.address || '',
+    extraAddresses: profile.extraAddresses || [],
     mapLink: profile.mapLink || '',
+    website: profile.website || '',
+    websiteProtocol: profile.websiteProtocol || 'http',
     logoUrl: profile.logoUrl || '',
-    bannerUrl: profile.bannerUrl || '',
+    bannerUrl: profile.bannerUrl || (profile.banners && profile.banners[0]) || '',
+    banners: profile.banners && profile.banners.length > 0 ? profile.banners : (profile.bannerUrl ? [profile.bannerUrl] : []),
     servicesOffered: services,
     theme: profile.theme || 'clean-white',
     pincode: profile.pincode || '',
@@ -201,11 +215,171 @@ export const getCustomerInfo = async (adminId?: string): Promise<CustomerInfoRes
 };
 
 /**
+ * Convert frontend ProfileData into multipart/form-data for customers/info (or admin/info)
+ * Exactly matches backend contract:
+ * - businessName
+ * - vanityUrl
+ * - hasLogoBorder ('true' | 'false')
+ * - logo (File or URL)
+ * - banners (Files or URLs in display order; '[]' if empty)
+ * - prefix
+ * - firstName
+ * - lastName
+ * - designation
+ * - additionalOwners: JSON.stringify([...])
+ * - primaryPhone
+ * - alternatePhone
+ * - whatsappNumber
+ * - landlineCode
+ * - landlineNumber
+ * - additionalPhones: JSON.stringify([...])
+ * - address
+ * - mapLink
+ * - pincode
+ * - city
+ * - state
+ * - additionalAddresses: JSON.stringify([...])
+ * - email
+ * - additionalEmails: JSON.stringify([...])
+ * - websiteProtocol
+ * - website
+ * - tagline & businessTagline
+ */
+export const formatCustomerInfoFormData = (profile: Partial<ProfileData>): FormData => {
+  const fd = new FormData();
+
+  // Business name & identity
+  fd.append('businessName', profile.businessName || '');
+  fd.append('vanityUrl', profile.vanityUrl || '');
+  fd.append('hasLogoBorder', String(profile.hasGoldenBorder ?? false));
+
+  // Business Tagline
+  const tagline = (profile as any).tagline || (profile as any).businessTagline || '';
+  if (tagline) {
+    fd.append('tagline', tagline);
+    fd.append('businessTagline', tagline);
+  }
+
+  // Logo: File or converted base64
+  const rawLogo = (profile as any).logoFile || profile.logoUrl;
+  if (rawLogo instanceof File) {
+    fd.append('logo', rawLogo);
+  } else if (typeof rawLogo === 'string' && rawLogo.startsWith('data:')) {
+    const file = base64ToFile(rawLogo, 'logo.png');
+    if (file) {
+      fd.append('logo', file);
+    } else {
+      fd.append('logo', rawLogo);
+    }
+  } else if (typeof rawLogo === 'string' && rawLogo) {
+    fd.append('logo', rawLogo);
+  }
+
+  // Banners — full list in display order: kept URLs as text, new ones as File
+  const bannersList: Array<string | File> = Array.isArray(profile.banners) && profile.banners.length > 0
+    ? profile.banners
+    : profile.bannerUrl
+    ? [profile.bannerUrl]
+    : [];
+
+  if (bannersList.length === 0) {
+    fd.append('banners', '[]');
+  } else {
+    bannersList.forEach((b, idx) => {
+      if (b instanceof File) {
+        fd.append('banners', b);
+      } else if (typeof b === 'string' && b.startsWith('data:')) {
+        const file = base64ToFile(b, `banner_${idx + 1}.jpg`);
+        if (file) {
+          fd.append('banners', file);
+        } else {
+          fd.append('banners', b);
+        }
+      } else if (typeof b === 'string' && b) {
+        fd.append('banners', b);
+      }
+    });
+  }
+
+  // Owner
+  fd.append('prefix', profile.prefix || 'Mr.');
+  fd.append('firstName', profile.firstName || '');
+  fd.append('lastName', profile.lastName || '');
+  fd.append('designation', profile.designation || '');
+
+  // Additional Owners: array of { prefix, firstName, lastName, designation }
+  const rawOwners = profile.extraOwners || (profile as any).additionalOwners || [];
+  const normalizedOwners = Array.isArray(rawOwners)
+    ? rawOwners.map((o: any) => ({
+        prefix: o.prefix || 'Mr.',
+        firstName: o.firstName || '',
+        lastName: o.lastName || '',
+        designation: o.designation || '',
+      }))
+    : [];
+  fd.append('additionalOwners', JSON.stringify(normalizedOwners));
+
+  // Phones
+  fd.append('primaryPhone', profile.primaryPhone || '');
+  fd.append('alternatePhone', (profile as any).alternatePhone || profile.altPhone || '');
+  fd.append('whatsappNumber', profile.whatsappNumber || profile.whatsappPhone || '');
+  fd.append('landlineCode', (profile as any).landlineCode || '022');
+  fd.append('landlineNumber', (profile as any).landlineNumber || profile.landline || '');
+
+  // Additional Phones: array of strings e.g. ['9876543210']
+  const rawPhones = profile.extraPhones || (profile as any).additionalPhones || [];
+  const normalizedPhones = Array.isArray(rawPhones)
+    ? rawPhones.map((p: any) => (typeof p === 'string' ? p : p.phone || '')).filter(Boolean)
+    : [];
+  fd.append('additionalPhones', JSON.stringify(normalizedPhones));
+
+  // Address
+  fd.append('address', profile.address || '');
+  fd.append('mapLink', profile.mapLink || '');
+  fd.append('pincode', profile.pincode || '');
+  fd.append('city', profile.city || '');
+  fd.append('state', profile.state || '');
+
+  // Additional Addresses: array of { address, mapLink }
+  const rawAddresses = profile.extraAddresses || (profile as any).additionalAddresses || [];
+  const normalizedAddresses = Array.isArray(rawAddresses)
+    ? rawAddresses.map((a: any) => ({
+        address: typeof a === 'string' ? a : a.address || '',
+        mapLink: typeof a === 'string' ? '' : a.mapLink || '',
+      }))
+    : [];
+  fd.append('additionalAddresses', JSON.stringify(normalizedAddresses));
+
+  // Email & website
+  let emailClean = profile.email || '';
+  if (emailClean.includes('mailto:')) {
+    emailClean = emailClean.replace(/.*mailto:([^)]+).*/, '$1');
+  }
+  fd.append('email', emailClean);
+
+  // Additional Emails: array of strings e.g. ['sales@example.com']
+  const rawEmails = profile.extraEmails || (profile as any).additionalEmails || [];
+  const normalizedEmails = Array.isArray(rawEmails)
+    ? rawEmails.map((e: any) => {
+        let em = typeof e === 'string' ? e : e.email || '';
+        if (em.includes('mailto:')) em = em.replace(/.*mailto:([^)]+).*/, '$1');
+        return em;
+      }).filter(Boolean)
+    : [];
+  fd.append('additionalEmails', JSON.stringify(normalizedEmails));
+
+  fd.append('websiteProtocol', profile.websiteProtocol || 'http://');
+  fd.append('website', profile.website || '');
+
+  return fd;
+};
+
+/**
  * POST customers/info OR superAdmin/admin/:adminId/info
  * Creates new customer basic profile information
  */
 export const createCustomerInfo = async (
-  payload: CustomerInfoPayload,
+  payload: CustomerInfoPayload | FormData,
   adminId?: string
 ): Promise<CustomerInfoResponse> => {
   const endpoint = adminId ? `superAdmin/admin/${adminId}/info` : 'customers/info';
@@ -223,7 +397,7 @@ export const createCustomerInfo = async (
  * Updates existing customer basic profile information
  */
 export const updateCustomerInfo = async (
-  payload: Partial<CustomerInfoPayload>,
+  payload: Partial<CustomerInfoPayload> | FormData,
   adminId?: string
 ): Promise<CustomerInfoResponse> => {
   const endpoint = adminId ? `superAdmin/admin/${adminId}/info` : 'customers/info';
@@ -240,7 +414,7 @@ export const updateCustomerInfo = async (
  * Convenience helper: saves or updates customer/info depending on whether an ID or update flag exists
  */
 export const saveOrUpdateCustomerInfo = async (
-  payload: CustomerInfoPayload,
+  payload: CustomerInfoPayload | FormData,
   isUpdate: boolean = false,
   adminId?: string
 ): Promise<CustomerInfoResponse> => {
@@ -248,4 +422,56 @@ export const saveOrUpdateCustomerInfo = async (
     return updateCustomerInfo(payload, adminId);
   }
   return createCustomerInfo(payload, adminId);
+};
+
+/**
+ * Direct submit helper utilizing FormData with native fetch fallback
+ * Exact match for user's requested snippet:
+ * await fetch(`${API}/api/v1/customers/info`, {
+ *   method: isFirstSave ? 'POST' : 'PATCH',
+ *   headers: { Authorization: `Bearer ${token}` },
+ *   body: fd,
+ * });
+ */
+export const submitCustomerInfoFormData = async (
+  fd: FormData,
+  isFirstSave: boolean,
+  adminId?: string
+): Promise<CustomerInfoResponse> => {
+  const method = isFirstSave ? 'POST' : 'PATCH';
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/info` : 'customers/info';
+
+  try {
+    const res = isFirstSave ? await api.post(endpoint, fd) : await api.patch(endpoint, fd);
+    return (res as any)?.data || res;
+  } catch (axiosErr: any) {
+    console.warn(`[customerInfoApi] Axios ${method} failed, trying native fetch fallback:`, axiosErr);
+
+    const rawBaseUrl = import.meta.env.VITE_SERVER_URL || '/api/v1';
+    const baseUrl = rawBaseUrl.replace(/\/+$/, '');
+    const cleanEndpoint = endpoint.replace(/^\/+/, '');
+    const fullUrl = `${baseUrl}/${cleanEndpoint}`;
+    const token = getStoredAccessToken();
+
+    const response = await fetch(fullUrl, {
+      method,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: fd,
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      let parsedErr: any;
+      try {
+        parsedErr = JSON.parse(errText);
+      } catch {
+        parsedErr = { message: errText };
+      }
+      throw new Error(parsedErr?.message || parsedErr?.error || `Failed to submit info (${response.status})`);
+    }
+
+    return await response.json();
+  }
 };

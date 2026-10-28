@@ -25,8 +25,10 @@ export const useSaveAdmin = () => {
       const backendMessage =
         error?.response?.data?.message ||
         error?.response?.data?.errors?.[0]?.message ||
+        (typeof error?.response?.data === 'string' ? error.response.data : null) ||
+        error?.message ||
         'Failed to register admin';
-      toast.error(backendMessage);
+      toast.error(backendMessage, { duration: 6000 });
     },
     onSettled: () => {
       queryClient.invalidateQueries({

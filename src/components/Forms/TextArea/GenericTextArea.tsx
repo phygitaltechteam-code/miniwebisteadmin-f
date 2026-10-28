@@ -42,24 +42,24 @@ const GenericTextArea: React.FC<TextAreaProps> = ({
       : undefined;
 
   return (
-    <div className={`w-full ${className}`}>
+    <div className={`w-full font-['Roboto',Helvetica,Arial,sans-serif] ${className}`}>
       {label && (
-        <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-200">
+        <label className="mb-1.5 block text-[14px] font-normal text-[#000000DE]">
           {label}
-          {required && <span className="text-sm font-bold text-red-500">&nbsp;*</span>}
+          {required && <span className="text-[14px] font-bold text-red-500">&nbsp;*</span>}
         </label>
       )}
       <textarea
         rows={rows}
         placeholder={placeholder}
-        className={`w-full rounded-xl border border-stroke bg-white px-3.5 py-2.5 text-xs text-black outline-none transition focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]/25 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-strokedark dark:bg-boxdark dark:text-white dark:focus:border-[#2563EB] ${inputClassName}`}
+        className={`w-full rounded border border-[#C4C4C4] bg-white px-3 py-2 text-[14px] text-[#000000DE] font-['Roboto',Helvetica,Arial,sans-serif] outline-none transition placeholder:text-[#9E9E9E] placeholder:text-[14px] focus:border-[#2196F3] focus:ring-1 focus:ring-[#2196F3] disabled:cursor-not-allowed disabled:bg-gray-100 resize-y ${inputClassName}`}
         disabled={disabled}
         {...(isRHF ? formContext.register(name, validation) : {})}
         value={value}
         onChange={onChange}
       />
       {errorMessage && (
-        <p className="mt-1 text-xs text-red-500 font-medium">{errorMessage}</p>
+        <p className="mt-1 text-xs text-red-500 font-normal">{errorMessage}</p>
       )}
     </div>
   );

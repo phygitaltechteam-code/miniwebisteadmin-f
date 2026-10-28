@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Eye } from 'lucide-react';
 import { initialProfileData } from '@/data/initialProfile';
 import { ProfileData } from '@/types/profile';
 import { TabStepper } from '@/components/TabStepper';
-import { MobileSimulator } from '@/components/MobileSimulator';
 import { FullCardModal } from '@/components/FullCardModal';
+import { SelectThemeModal } from '@/components/SelectThemeModal';
+import { TypographyCustomizerModal } from '@/components/TypographyCustomizerModal';
+import { Type } from 'lucide-react';
 import { Step1BasicDetails } from '@/components/steps/Step1BasicDetails';
 import { Step2AboutSpecialities } from '@/components/steps/Step2AboutSpecialities';
 import { Step3ProductsServices } from '@/components/steps/Step3ProductsServices';
@@ -44,8 +45,25 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
 
   const buildProfileFromAdmin = (adm: any): ProfileData => {
     if (!adm) return { ...initialProfileData };
-    const cat = adm.categoryName || adm.adminCategory?.name || adm.category?.name || adm.category || '';
-    const catId = adm.adminCategoryId || adm.category?.id || adm.adminCategory?.id || '';
+    const adminCats = Array.isArray(adm.adminCategories) ? adm.adminCategories : [];
+    const catNames: string[] = [];
+    const catIds: string[] = [];
+
+    adminCats.forEach((ac: any) => {
+      const name = ac.adminCategory?.name || ac.name || ac.categoryName;
+      const id = ac.adminCategoryId || ac.adminCategory?.id || ac.id;
+      if (name && !catNames.includes(name)) catNames.push(name);
+      if (id && !catIds.includes(id)) catIds.push(id);
+    });
+
+    if (adm.categoryNames && Array.isArray(adm.categoryNames)) {
+      adm.categoryNames.forEach((n: string) => {
+        if (n && !catNames.includes(n)) catNames.push(n);
+      });
+    }
+
+    const cat = catNames[0] || adm.categoryName || adm.adminCategory?.name || adm.category?.name || adm.category || '';
+    const catId = catIds[0] || adm.adminCategoryId || adm.category?.id || adm.adminCategory?.id || '';
     const price = adm.amount ?? adm.price ?? 0;
     const renewal = adm.renewalAmount ?? 0;
     const fullName = adm.fullname || adm.user?.fullname || '';
@@ -62,10 +80,10 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
     return {
       ...initialProfileData,
       categoryId: catId,
-      categoryIds: catId ? [catId] : [],
+      categoryIds: catIds.length > 0 ? catIds : (catId ? [catId] : []),
       categoryName: cat,
       category: cat,
-      categories: cat ? [cat] : [],
+      categories: catNames.length > 0 ? catNames : (cat ? [cat] : []),
       amount: Number(price) || 0,
       renewalAmount: Number(renewal) || 0,
       contactName,
@@ -84,6 +102,8 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isFullCardModalOpen, setIsFullCardModalOpen] = useState<boolean>(false);
   const [modalMode, setModalMode] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
+  const [isTypographyModalOpen, setIsTypographyModalOpen] = useState<boolean>(false);
 
   const urlAdminId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('adminId') || '' : '';
   const effectiveAdminId = currentAdmin?.id || currentAdmin?._id || initialAdmin?.id || initialAdmin?._id || urlAdminId || '';
@@ -179,6 +199,11 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
               if (data.theme) updated.theme = data.theme;
               if (data.logoUrl) updated.logoUrl = data.logoUrl;
               if (data.bannerUrl) updated.bannerUrl = data.bannerUrl;
+              if (Array.isArray(data.banners) && data.banners.length > 0) {
+                updated.banners = data.banners;
+              } else if (data.bannerUrl) {
+                updated.banners = [data.bannerUrl];
+              }
               if (data.vanityUrl) updated.vanityUrl = data.vanityUrl;
               if (data.mapLink) updated.mapLink = data.mapLink;
               if (data.hasLogoBorder !== undefined) updated.hasGoldenBorder = Boolean(data.hasLogoBorder);
@@ -344,85 +369,112 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
   };
 
   return (
-    <div className="w-full text-[#0b1c30] flex flex-col font-sans overflow-x-hidden pt-1">
+    <div className="w-full text-[#0b1c30] flex flex-col font-sans overflow-x-hidden">
       {/* ─── Main Builder Process Area ───────────────────────────────── */}
-      <main className="flex-1 w-full max-w-[1520px] mx-auto px-1 sm:px-2 flex flex-col gap-2.5 sm:gap-4 pb-24 sm:pb-14 overflow-x-hidden">
+      <main className="flex-1 w-full mx-auto px-1 sm:px-3 flex flex-col gap-2 pb-44 md:pb-24 overflow-x-hidden">
         <TabStepper
           currentStep={currentStep}
           onSelectStep={handleSelectStep}
           productCount={profile.products.length}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 xl:gap-6 items-start">
-          {/* Left Form Process Step Area */}
-          <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3.5 sm:gap-5 min-w-0">
-            {(() => {
-              const urlAdminId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('adminId') || '' : '';
-              const adminId = currentAdmin?.id || currentAdmin?._id || initialAdmin?.id || initialAdmin?._id || urlAdminId || '';
+        {/* Form Process Step Area (Full Width) */}
+        <div className="w-full max-w-5xl mx-auto flex flex-col gap-3 min-w-0 pb-6">
 
-              if (!adminId) {
-                return (
-                  <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-xs">
-                    <p className="text-sm font-bold text-slate-800 mb-1">No Administrator Selected</p>
-                    <p className="text-xs text-slate-500 mb-4">Please select an administrator from the Admins Table to configure their digital business card.</p>
-                    {onBackToAdmins && (
-                      <button
-                        type="button"
-                        onClick={onBackToAdmins}
-                        className="px-4 py-2 rounded-xl bg-[#2563EB] text-white text-xs font-bold shadow-sm hover:bg-[#1D4ED8] transition-colors"
-                      >
-                        ← Go to Admins Table
-                      </button>
-                    )}
-                  </div>
-                );
-              }
+          {(() => {
+            const urlAdminId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('adminId') || '' : '';
+            const adminId = currentAdmin?.id || currentAdmin?._id || initialAdmin?.id || initialAdmin?._id || urlAdminId || '';
 
+            if (!adminId) {
               return (
-                <>
-                  {currentStep === 1 && <Step1BasicDetails profile={profile} onChange={handleFieldChange} onNext={next} onToast={showToast} adminId={adminId} />}
-                  {currentStep === 2 && <Step2AboutSpecialities profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} adminId={adminId} />}
-                  {currentStep === 3 && <Step3ProductsServices profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} adminId={adminId} />}
-                  {currentStep === 4 && <Step4LinksSocial profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} adminId={adminId} />}
-                  {currentStep === 5 && <Step5PaymentQR profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} adminId={adminId} />}
-                  {currentStep === 6 && <Step6GalleryMedia profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} adminId={adminId} />}
-                  {currentStep === 7 && <Step7YoutubeVideos profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} adminId={adminId} />}
-                  {currentStep === 8 && <Step7SettingsHeadings profile={profile} onChange={handleFieldChange} onPrev={prev} onSaveAll={handleSaveAll} onToast={showToast} adminId={adminId} />}
-                </>
+                <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-xs">
+                  <p className="text-sm font-bold text-slate-800 mb-1">No Administrator Selected</p>
+                  <p className="text-xs text-slate-500 mb-4">Please select an administrator from the Admins Table to configure their digital business card.</p>
+                  {onBackToAdmins && (
+                    <button
+                      type="button"
+                      onClick={onBackToAdmins}
+                      className="px-4 py-2 rounded-xl bg-[#2563EB] text-white text-xs font-bold shadow-sm hover:bg-[#1D4ED8] transition-colors"
+                    >
+                      ← Go to Admins Table
+                    </button>
+                  )}
+                </div>
               );
-            })()}
-          </div>
+            }
 
-          {/* Right Sticky Mobile Preview on Every Process */}
-          <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 sticky top-20 self-start">
-            <MobileSimulator
-              profile={profile}
-              onOpenFullPreview={(mode) => {
-                setModalMode(mode || 'desktop');
-                setIsFullCardModalOpen(true);
-              }}
-              onToast={showToast}
-            />
-          </aside>
+            return (
+              <>
+                {currentStep === 1 && <Step1BasicDetails profile={profile} onChange={handleFieldChange} onNext={next} onToast={showToast} adminId={adminId} />}
+                {currentStep === 2 && <Step2AboutSpecialities profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} adminId={adminId} />}
+                {currentStep === 3 && <Step3ProductsServices profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} adminId={adminId} />}
+                {currentStep === 4 && <Step4LinksSocial profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} adminId={adminId} />}
+                {currentStep === 5 && <Step5PaymentQR profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} adminId={adminId} />}
+                {currentStep === 6 && <Step6GalleryMedia profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} adminId={adminId} />}
+                {currentStep === 7 && <Step7YoutubeVideos profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} adminId={adminId} />}
+                {currentStep === 8 && <Step7SettingsHeadings profile={profile} onChange={handleFieldChange} onPrev={prev} onSaveAll={handleSaveAll} onToast={showToast} adminId={adminId} />}
+              </>
+            );
+          })()}
         </div>
       </main>
 
-      {/* Floating Action Button for mobile & tablet preview */}
-      <div className="lg:hidden fixed bottom-4 right-4 z-40">
-        <button
-          type="button"
-          onClick={() => {
-            setModalMode('mobile');
-            setIsFullCardModalOpen(true);
-          }}
-          aria-label="Live Card Preview"
-          title="Live Card Preview"
-          className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#2563EB] text-white shadow-xl flex items-center justify-center hover:bg-[#1D4ED8] active:scale-95 transition-all border-2 border-white relative group"
-        >
-          <Eye className="w-5 h-5" />
-          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
-        </button>
+      {/* Floating Dark Action Bar matching Image 2 */}
+      <div className="fixed bottom-16 md:bottom-3 left-1/2 -translate-x-1/2 z-40 w-auto max-w-[95vw] bg-[#212121] text-white px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl shadow-2xl border border-slate-700/80 flex flex-col items-center gap-1.5 transition-all">
+
+        <div className="text-xs sm:text-[13px] font-medium tracking-wide flex items-center gap-1.5 flex-wrap justify-center">
+          <span className="text-[#0288d1] font-bold">Your Card:</span>
+          <a
+            href={`https://digiwebcard.in/${profile.vanityUrl || 'assa-o-living'}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-white font-bold underline hover:text-blue-300 transition-colors"
+          >
+            https://digiwebcard.in/{profile.vanityUrl || 'assa-o-living'}
+          </a>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-2.5 pt-0.5 flex-wrap justify-center">
+          <button
+            type="button"
+            onClick={() => setIsThemeModalOpen(true)}
+            className="px-4 sm:px-5 py-1.5 rounded-full bg-white text-[#212121] text-xs font-bold shadow-md hover:bg-gray-100 active:scale-95 transition-all"
+          >
+            Change theme
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setModalMode('mobile');
+              setIsFullCardModalOpen(true);
+            }}
+            className="px-5 sm:px-6 py-1.5 rounded-full bg-[#1e88e5] text-white text-xs font-bold shadow-md hover:bg-[#1976d2] active:scale-95 transition-all"
+          >
+            Preview
+          </button>
+        </div>
       </div>
+
+      {/* Select Theme Modal matching Image 1 */}
+      <SelectThemeModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+        currentTheme={profile.theme}
+        onSelectTheme={(th) => handleFieldChange('theme', th)}
+        onOpenTypography={() => setIsTypographyModalOpen(true)}
+      />
+
+      {/* Typography & Font Customizer Modal */}
+      <TypographyCustomizerModal
+        isOpen={isTypographyModalOpen}
+        onClose={() => setIsTypographyModalOpen(false)}
+        settings={profile.typography}
+        onApplySettings={(typo) => {
+          handleFieldChange('typography', typo);
+          showToast('Typography and styling updated successfully!');
+        }}
+      />
+
 
       {/* Full Screen Whole-Screen Card Modal */}
       <FullCardModal

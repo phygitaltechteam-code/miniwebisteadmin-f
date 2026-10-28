@@ -41,11 +41,11 @@ const GenericDropdown: React.FC<GenericDropdownProps> = ({
         field: {onChange, onBlur, value, name: fieldName},
         fieldState: {error},
       }) => (
-        <div className="w-full">
+        <div className="w-full font-['Roboto',Helvetica,Arial,sans-serif]">
           {label && (
-            <label className="mb-2 block text-black dark:text-white">
+            <label className="mb-1 block text-[14px] font-normal text-[#000000DE]">
               {label}
-              <span className="text-lg font-bold text-red-600">
+              <span className="text-[14px] font-bold text-red-600">
                 &nbsp;{required && '*'}
               </span>
             </label>
@@ -66,7 +66,7 @@ const GenericDropdown: React.FC<GenericDropdownProps> = ({
               disabled={disabled}
               aria-invalid={!!error}
               aria-describedby={error ? `${fieldName}-error` : undefined}
-              className={`w-full appearance-none rounded-md border px-2 py-2.5 text-sm outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary dark:disabled:bg-black ${error ? 'border-red-500' : 'border-stroke'} `}
+              className={`w-full appearance-none rounded border border-[#C4C4C4] bg-white px-3 py-2 text-[14px] text-[#000000DE] font-['Roboto',Helvetica,Arial,sans-serif] outline-none transition focus:border-[#2196F3] focus:ring-1 focus:ring-[#2196F3] disabled:cursor-default disabled:bg-gray-100 ${error ? '!border-red-500' : ''}`}
             >
               <option value="" disabled hidden>
                 {defaultOption || `Select ${label || fieldName}`}
@@ -75,20 +75,20 @@ const GenericDropdown: React.FC<GenericDropdownProps> = ({
                 <option
                   key={option.value}
                   value={option.value}
-                  className="text-black dark:text-white"
+                  className="text-[#000000DE]"
                 >
                   {option.label}
                 </option>
               ))}
             </select>
 
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
               <DownIcon />
             </span>
           </div>
 
           {error && (
-            <p id={`${fieldName}-error`} className="mt-1 text-sm text-red-600">
+            <p id={`${fieldName}-error`} className="mt-1 text-xs text-red-600">
               {error.message}
             </p>
           )}

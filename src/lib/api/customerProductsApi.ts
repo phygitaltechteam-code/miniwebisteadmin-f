@@ -67,6 +67,9 @@ export const formatProductPayload = (item: Partial<ProductItem>): CustomerProduc
   if (item.image) {
     payload.image = item.image;
   }
+  if (item.images) {
+    payload.images = item.images.filter((url) => !url.startsWith('blob:') && !url.startsWith('data:'));
+  }
   if (item.removeImage) {
     payload.removeImage = true;
   }
@@ -75,15 +78,18 @@ export const formatProductPayload = (item: Partial<ProductItem>): CustomerProduc
   }
   if (item.customEnquiryMessage) {
     payload.customEnquiryMessage = item.customEnquiryMessage;
+    payload.enquiryMessage = item.customEnquiryMessage;
   }
 
   return payload;
 };
 
 /**
- * Convert product item to multipart/form-data for image file uploads
+ * Convert product item to multipart/form-data for image file uploads.
+ * New files and already-uploaded image URLs are both appended under the "images" field,
+ * matching the `images` array the products API returns.
  */
-export const formatProductFormData = (item: Partial<ProductItem>, file?: File): FormData => {
+export const formatProductFormData = (item: Partial<ProductItem>, files?: File | File[]): FormData => {
   const formData = new FormData();
   const payload = formatProductPayload(item);
 
@@ -98,11 +104,17 @@ export const formatProductFormData = (item: Partial<ProductItem>, file?: File): 
   formData.append('isHideEnquiry', String(payload.isHideEnquiry));
   formData.append('isHideDownloadProductCart', String(payload.isHideDownloadProductCart));
 
-  if (file) {
-    formData.append('image', file);
-  } else if (payload.image && !payload.image.startsWith('blob:') && !payload.image.startsWith('data:')) {
-    formData.append('image', payload.image);
+  if (item.customiseMessage && item.customEnquiryMessage) {
+    formData.append('enquiryMessage', item.customEnquiryMessage);
   }
+
+  // Keep images that are already on the server (skip local blob:/data: previews of new files)
+  const isServerUrl = (url?: string) => !!url && !url.startsWith('blob:') && !url.startsWith('data:');
+  const existingUrls = (item.images?.length ? item.images : item.image ? [item.image] : []).filter(isServerUrl);
+  existingUrls.forEach((url) => formData.append('images', url));
+
+  const fileList = (Array.isArray(files) ? files : files ? [files] : []).filter(Boolean);
+  fileList.forEach((f) => formData.append('images', f));
 
   if (payload.removeImage) {
     formData.append('removeImage', 'true');
@@ -119,6 +131,11 @@ export const normalizeBackendProduct = (item: any): ProductItem => {
   const name = item.name || item.title || '';
   const isHideEnquiry = Boolean(item.isHideEnquiry ?? item.hideEnquiry);
   const isHideDownload = Boolean(item.isHideDownloadProductCart ?? item.hideDownload);
+  const rawImages = Array.isArray(item.images) ? item.images : Array.isArray(item.image) ? item.image : [];
+  const images: string[] = rawImages
+    .map((img: any) => (typeof img === 'string' ? img : img?.url || img?.path || ''))
+    .filter(Boolean);
+  const primaryImage = (typeof item.image === 'string' ? item.image : '') || item.imageUrl || images[0] || '';
 
   return {
     id,
@@ -128,13 +145,14 @@ export const normalizeBackendProduct = (item: any): ProductItem => {
     description: item.description || '',
     price: item.price !== undefined && item.price !== null ? item.price : '',
     currency: item.currency || 'INR',
-    image: item.image || item.imageUrl || '',
+    image: primaryImage,
+    images: images.length > 0 ? images : primaryImage ? [primaryImage] : [],
     isHideEnquiry,
     hideEnquiry: isHideEnquiry,
     isHideDownloadProductCart: isHideDownload,
     hideDownload: isHideDownload,
-    customiseMessage: Boolean(item.customiseMessage),
-    customEnquiryMessage: item.customEnquiryMessage || '',
+    customiseMessage: Boolean(item.customiseMessage || item.enquiryMessage),
+    customEnquiryMessage: item.enquiryMessage || item.customEnquiryMessage || '',
     status: item.status || 'Active',
   };
 };
@@ -256,8 +274,9 @@ export const syncCustomerProducts = async (
     const backendId = (!isTempProductId(prod._id) ? prod._id : (!isTempProductId(prod.id) ? prod.id : undefined));
 
     try {
-      if (prod.imageFile) {
-        const formData = formatProductFormData(prod, prod.imageFile);
+      const files = prod.imageFiles?.length ? prod.imageFiles : prod.imageFile ? [prod.imageFile] : [];
+      if (files.length > 0) {
+        const formData = formatProductFormData(prod, files);
         if (hasRealBackendId && backendId) {
           const res = await updateCustomerProduct(backendId, formData, adminId);
           results.push(res);

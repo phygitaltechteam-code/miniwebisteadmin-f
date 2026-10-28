@@ -4,11 +4,13 @@ import {
   CheckCircle2, Plus, X, Bold, Italic,
   Underline, List, ListOrdered, Link2,
   Image as ImageIcon, FileText, Download,
-  Trash2, Upload, ArrowRight, ArrowLeft, Sparkles, Loader2, Check
+  Trash2, Upload, ArrowRight, ArrowLeft, Sparkles, Loader2, Check, Type
 } from 'lucide-react';
 import { ProfileData, CompanyDocument } from '../../types/profile';
 import GenericInputField from '@/components/Forms/Input/GenericInputField';
 import GenericButton from '@/components/Forms/Buttons/GenericButton';
+import { RichTextEditor } from '@/components/Forms/RichTextEditor';
+
 import { step2AboutSpecialitiesSchema } from '@/schemas/cardProfileSchema';
 import { generateAiKeywords, generateAiNarrative, generateAiServices } from '@/utils/aiGenerator';
 import { getCustomerCategories, CustomerCategory } from '@/lib/api/customerCategoriesApi';
@@ -159,6 +161,63 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
             });
             onChange('documents', normalizedDocs);
           }
+
+          // ─── HYDRATE CATEGORIES FROM ABOUT US GET RESPONSE ─────────────
+          const aboutCatsSource =
+            (Array.isArray(about.categoryIds) && about.categoryIds.length > 0 ? about.categoryIds : null) ||
+            (Array.isArray(raw.categoryIds) && raw.categoryIds.length > 0 ? raw.categoryIds : null) ||
+            (Array.isArray(about.categories) && about.categories.length > 0 ? about.categories : null) ||
+            (Array.isArray(raw.categories) && raw.categories.length > 0 ? raw.categories : null) ||
+            (Array.isArray(about.adminCategories) && about.adminCategories.length > 0 ? about.adminCategories : null) ||
+            (Array.isArray(raw.adminCategories) && raw.adminCategories.length > 0 ? raw.adminCategories : null);
+
+          if (aboutCatsSource && aboutCatsSource.length > 0) {
+            const ids: string[] = [];
+            const names: string[] = [];
+            const newAvail: CustomerCategory[] = [];
+
+            aboutCatsSource.forEach((item: any) => {
+              if (!item) return;
+              if (typeof item === 'object') {
+                const id = String(item.id || item._id || item.categoryId || item.adminCategoryId || '').trim();
+                const name = String(item.name || item.CategoryName || item.categoryName || item.adminCategory?.name || item.title || '').trim();
+                if (id && !ids.includes(id)) ids.push(id);
+                if (name && !names.includes(name)) names.push(name);
+                else if (id && !names.includes(id)) names.push(id);
+                if (id && name) newAvail.push({ id, name });
+              } else if (typeof item === 'string') {
+                const str = item.trim();
+                if (str) {
+                  if (!ids.includes(str)) ids.push(str);
+                  if (!names.includes(str)) names.push(str);
+                }
+              }
+            });
+
+            if (ids.length > 0) {
+              onChange('categoryIds', ids);
+              onChange('adminCategoryIds', ids);
+              onChange('categoryId', ids[0]);
+            }
+            const finalNames = names.length > 0 ? names : ids;
+            if (finalNames.length > 0) {
+              onChange('categories', finalNames);
+              onChange('categoryNames', finalNames);
+              onChange('categoryName', finalNames[0]);
+            }
+
+            if (newAvail.length > 0) {
+              setAvailableCategories((prev) => {
+                const merged = [...prev];
+                newAvail.forEach((cat) => {
+                  if (!merged.some((m) => m.id === cat.id || m.name.toLowerCase() === cat.name.toLowerCase())) {
+                    merged.push(cat);
+                  }
+                });
+                return merged;
+              });
+            }
+          }
         }
       } catch (err) {
         // Normal if profile hasn't saved about yet
@@ -173,7 +232,17 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
     let isMounted = true;
     getCustomerCategories(adminId)
       .then((cats) => {
-        if (isMounted && Array.isArray(cats) && cats.length > 0) setAvailableCategories(cats);
+        if (isMounted && Array.isArray(cats) && cats.length > 0) {
+          setAvailableCategories((prev) => {
+            const merged = [...prev];
+            cats.forEach((cat) => {
+              if (!merged.some((m) => m.id === cat.id || m.name.toLowerCase() === cat.name.toLowerCase())) {
+                merged.push(cat);
+              }
+            });
+            return merged;
+          });
+        }
       })
       .catch(() => {
         // silent – list stays empty, custom categories can still be added
@@ -183,7 +252,6 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
 
   // Categories & services are stored with customer info; hydrate them if Step 1 hasn't loaded them yet
   useEffect(() => {
-    if ((profile.categories || []).length > 0 || (profile.categoryIds || []).length > 0) return;
     let isMounted = true;
     getCustomerInfo(adminId)
       .then((res: any) => {
@@ -192,18 +260,30 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
 
         const ids: string[] = [];
         const names: string[] = [];
-        const addId = (v: any) => { const x = v ? String(v).trim() : ''; if (x && !ids.includes(x)) ids.push(x); };
-        const addName = (v: any) => { const x = v ? String(v).trim() : ''; if (x && !names.includes(x)) names.push(x); };
+        const newCatsList: CustomerCategory[] = [];
 
-        (Array.isArray(data.categoryIds) ? data.categoryIds : []).forEach(addId);
-        (Array.isArray(data.adminCategoryIds) ? data.adminCategoryIds : []).forEach(addId);
-        (Array.isArray(data.adminCategories) ? data.adminCategories : []).forEach((c: any) => {
-          addId(c.categoryId || c.adminCategoryId || c.category?.id || c.category?._id || (typeof c === 'string' ? c : c.id || c._id));
-          addName(c.category?.name || c.name || c.categoryName || c.adminCategory?.name);
-        });
-        (Array.isArray(data.categories) ? data.categories : []).forEach((c: any) =>
-          typeof c === 'string' ? addName(c) : (addName(c?.name || c?.CategoryName), addId(c?.id || c?._id))
-        );
+        const addCategoryItem = (item: any) => {
+          if (!item) return;
+          if (typeof item === 'object') {
+            const id = String(item.id || item._id || item.categoryId || item.adminCategoryId || '').trim();
+            const name = String(item.name || item.CategoryName || item.categoryName || item.adminCategory?.name || item.title || '').trim();
+            if (id && !ids.includes(id)) ids.push(id);
+            if (name && !names.includes(name)) names.push(name);
+            else if (id && !names.includes(id)) names.push(id);
+            if (id && name) newCatsList.push({ id, name });
+          } else if (typeof item === 'string') {
+            const str = item.trim();
+            if (str) {
+              if (!ids.includes(str)) ids.push(str);
+              if (!names.includes(str)) names.push(str);
+            }
+          }
+        };
+
+        (Array.isArray(data.categories) ? data.categories : []).forEach(addCategoryItem);
+        (Array.isArray(data.categoryIds) ? data.categoryIds : []).forEach(addCategoryItem);
+        (Array.isArray(data.adminCategories) ? data.adminCategories : []).forEach(addCategoryItem);
+        (Array.isArray(data.adminCategoryIds) ? data.adminCategoryIds : []).forEach(addCategoryItem);
 
         if (ids.length > 0) {
           onChange('categoryIds', ids);
@@ -215,6 +295,17 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
           onChange('categories', labels);
           onChange('categoryNames', labels);
           onChange('categoryName', labels[0]);
+        }
+        if (newCatsList.length > 0) {
+          setAvailableCategories((prev) => {
+            const merged = [...prev];
+            newCatsList.forEach((c) => {
+              if (!merged.some((m) => m.id === c.id || m.name.toLowerCase() === c.name.toLowerCase())) {
+                merged.push(c);
+              }
+            });
+            return merged;
+          });
         }
         if ((!profile.servicesOffered || profile.servicesOffered.length === 0) && data.servicesOffered) {
           const list = Array.isArray(data.servicesOffered)
@@ -230,15 +321,41 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
     return () => { isMounted = false; };
   }, [adminId]);
 
-  // Category chips: show readable names (ids are mapped through the category list)
+  // Category chips: show readable names from categories [{ id, name }], categoryIds, or categoryNames
+  const isUuid = (val: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+  const rawCandidateLabels = [
+    ...(profile.categories || []),
+    ...(profile.categoryNames || []),
+    ...(profile.categoryIds || []),
+  ];
+
+  const hasReadableNames = rawCandidateLabels.some(
+    (item: any) =>
+      typeof item === 'object' || (typeof item === 'string' && !isUuid(item.trim()))
+  );
+
   const selectedCategoryLabels = Array.from(
     new Set(
-      ((profile.categories || []).length > 0
-        ? profile.categories || []
-        : (profile.categoryIds || []).filter((id) => isUuidOrId(id))
-      ).map((c) => availableCategories.find((a) => a.id === c)?.name || c)
+      rawCandidateLabels
+        .map((item: any) => {
+          if (!item) return '';
+          if (typeof item === 'object') {
+            return String(item.name || item.CategoryName || item.categoryName || item.title || '').trim();
+          }
+          const str = String(item).trim();
+          if (!str) return '';
+          const matched = availableCategories.find(
+            (a) => a.id === str || a.name.toLowerCase() === str.toLowerCase()
+          );
+          if (matched?.name) return matched.name;
+          if (hasReadableNames && isUuid(str)) return '';
+          return str;
+        })
+        .filter(Boolean)
     )
-  ).filter(Boolean);
+  );
 
   const setServices = (list: string[]) => {
     onChange('servicesOffered', list);
@@ -277,9 +394,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
     if (!currentNames.includes(resolvedName)) {
       onChange('categoryNames', [...currentNames, resolvedName]);
     }
-    onChange('categoryName', resolvedName);
-
-    const allSelectedCats = Array.from(new Set([...updatedNames, resolvedName]));
+    const allSelectedCats = Array.from(new Set([...currentNames, resolvedName]));
     const currentServices = (profile.servicesOffered || []).map(cleanServiceString).filter(Boolean);
     const newServices = generateAiServices(allSelectedCats, profile.businessName, [])
       .map(cleanServiceString)
@@ -508,11 +623,12 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
       isCategoryDigitalCard: profile.showCategoryInCard ?? true,
       aboutUsText: profile.aboutNarrative || '',
       aboutNarrative: profile.aboutNarrative || '',
+      categoryIds: profile.categoryIds || [],
+      categories: profile.categories || [],
       businessNatures: rawNatures,
       businessNature: rawNatures,
-      specialities: rawSpecialities,
-      removeDocumentIds: [],
-      documents: profile.documents || [],
+      removeDocumentIds: (profile as any).removeDocumentIds || [],
+      documents: (profile.documents || []).filter(d => Boolean(d.file || (d.url && d.url.trim()))),
     });
 
     if (!result.success) {
@@ -584,11 +700,11 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
   };
 
   return (
-    <section className="bg-white border border-[#c5c6cd]/60 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs scroll-mt-28" id="sec-2">
+    <section className="bg-white border border-[#E0E0E0] rounded-lg p-2.5 sm:p-3.5 shadow-xs scroll-mt-28 font-['Roboto',Helvetica,Arial,sans-serif]" id="sec-2">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2.5 border-b border-[#c5c6cd]/40 mb-3">
+      <div className="flex items-center justify-between pb-2.5 border-b border-[#E0E0E0] mb-3">
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-[#EFF6FF] text-[#2196F3] flex items-center justify-center font-bold text-xs shrink-0">
             2
           </div>
           <h2 className="text-sm sm:text-base font-bold text-[#091426] leading-tight">
@@ -598,7 +714,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
       </div>
 
       {/* Statutory & Business Profile Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 mb-3">
         <div>
           <GenericInputField
             label="Establishment Year"
@@ -623,9 +739,9 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
       </div>
 
       {/* ─── Business Categories (Multi-Select Dropdown) ───────────── */}
-      <div className="mb-3 pt-3 border-t border-[#c5c6cd]/40">
-        <label className="text-xs font-bold text-[#091426] block mb-1.5">
-          Business Categories <span className="text-red-500">*</span>
+      <div className="mb-3 pt-2.5 border-t border-[#E0E0E0]">
+        <label className="text-[14px] font-normal text-[#000000DE] block mb-1">
+          Business Categories <span className="text-red-500 font-bold">*</span>
         </label>
 
         {/* Multi-select Dropdown */}
@@ -636,21 +752,21 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
             tabIndex={0}
             onClick={() => setCatDropdownOpen((prev) => !prev)}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setCatDropdownOpen((prev) => !prev))}
-            className={`w-full cursor-pointer flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border text-xs font-medium transition-all bg-white shadow-2xs ${
+            className={`w-full cursor-pointer flex items-center justify-between gap-2 px-3 py-2 rounded border text-[14px] font-medium transition-all bg-white ${
               catDropdownOpen
-                ? 'border-[#2563EB] ring-1 ring-[#2563EB]/20'
-                : 'border-stroke hover:border-[#2563EB]/50'
+                ? 'border-[#2196F3] ring-1 ring-[#2196F3]'
+                : 'border-[#C4C4C4] hover:border-[#2196F3]'
             }`}
           >
             <div className="flex flex-wrap gap-1.5 flex-1 min-h-[22px] items-center">
               {selectedCategoryLabels.length === 0 ? (
-                <span className="text-gray-400">Select or add categories...</span>
+                <span className="text-[#9E9E9E] text-[14px]">Select or add categories...</span>
               ) : (
                 selectedCategoryLabels.map((label) => {
                   return (
                     <span
                       key={label}
-                      className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE] text-[11px] font-semibold"
+                      className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#EFF6FF] text-[#2196F3] border border-[#BFDBFE] text-[12px] font-medium"
                     >
                       {label}
                       <button
@@ -698,7 +814,14 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
                     c.name.toLowerCase().includes(catSearch.toLowerCase())
                   )
                   .map((cat) => {
-                    const isSelected = (profile.categoryIds || []).includes(cat.id);
+                    const isSelected =
+                      (profile.categoryIds || []).includes(cat.id) ||
+                      (profile.categories || []).some((c: any) =>
+                        typeof c === 'object'
+                          ? c.id === cat.id || String(c.name || '').toLowerCase() === cat.name.toLowerCase()
+                          : String(c).toLowerCase() === cat.name.toLowerCase() || c === cat.id
+                      ) ||
+                      (profile.categoryNames || []).some((n: string) => String(n).toLowerCase() === cat.name.toLowerCase());
                     return (
                       <button
                         key={cat.id}
@@ -926,77 +1049,34 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
       {/* About Us Narrative Rich Text Editor */}
       <div className="mb-3 pt-3 border-t border-[#c5c6cd]/40">
         <div className="flex items-center justify-between mb-1.5">
-          <label className="text-xs font-bold text-[#091426]">
-            About Us
+          <label className="text-xs sm:text-[13px] font-bold text-[#091426]">
+            About us text
           </label>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleAiGenerateNarrative}
-              className="px-2.5 py-1 rounded-lg bg-blue-50 text-[#2563EB] border border-blue-200 text-xs font-bold hover:bg-blue-100 flex items-center gap-1.5 transition-colors shadow-2xs"
-              title={profile.aboutNarrative ? "Regenerate narrative with a different template" : "Generate narrative using AI"}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{profile.aboutNarrative ? 'Regenerate' : 'AI Write'}</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleAiGenerateNarrative}
+            className="px-2.5 py-1 rounded-lg bg-blue-50 text-[#2563EB] border border-blue-200 text-xs font-bold hover:bg-blue-100 flex items-center gap-1.5 transition-colors shadow-2xs"
+            title={profile.aboutNarrative ? "Regenerate narrative with a different template" : "Generate narrative using AI"}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{profile.aboutNarrative ? 'Regenerate' : 'AI Write'}</span>
+          </button>
         </div>
 
-        <div className="border border-stroke rounded-xl overflow-hidden bg-white focus-within:border-[#2563EB] focus-within:ring-1 focus-within:ring-[#2563EB]/25">
-          {/* Editor Toolbar */}
-          <div className="px-2 py-1 border-b border-stroke bg-[#f8f9ff] flex flex-wrap items-center gap-1 text-[#45474c]">
-            <button
-              type="button"
-              onClick={() => onToast('Applied Bold')}
-              className="p-1.5 rounded hover:bg-[#EFF6FF] hover:text-[#2563EB]"
-              title="Bold"
-            >
-              <Bold className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onToast('Applied Italic')}
-              className="p-1.5 rounded hover:bg-[#EFF6FF] hover:text-[#2563EB]"
-              title="Italic"
-            >
-              <Italic className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onToast('Applied Underline')}
-              className="p-1.5 rounded hover:bg-[#EFF6FF] hover:text-[#2563EB]"
-              title="Underline"
-            >
-              <Underline className="w-3.5 h-3.5" />
-            </button>
-            <div className="h-4 w-px bg-stroke mx-1" />
-            <button
-              type="button"
-              onClick={() => onToast('Inserted Bullet List')}
-              className="p-1.5 rounded hover:bg-[#EFF6FF] hover:text-[#2563EB]"
-              title="Bullet list"
-            >
-              <List className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onToast('Inserted Numbered List')}
-              className="p-1.5 rounded hover:bg-[#EFF6FF] hover:text-[#2563EB]"
-              title="Numbered list"
-            >
-              <ListOrdered className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Text Area */}
-          <textarea
-            rows={5}
-            value={profile.aboutNarrative}
-            onChange={(e) => onChange('aboutNarrative', e.target.value)}
-            className="w-full p-3 text-xs sm:text-sm text-[#091426] leading-relaxed focus:outline-none resize-y"
-            placeholder="Write enterprise summary narrative..."
-          />
-        </div>
+        <RichTextEditor
+          label=""
+          value={profile.aboutNarrative || (profile as any).aboutUsText || ''}
+          onChange={(val) => {
+            onChange('aboutNarrative', val);
+            onChange('aboutUsText' as any, val);
+          }}
+          placeholder="Write company story, vision, or background here..."
+          minHeight="140px"
+          typography={profile.typography}
+          onTypographyChange={(newTypo) => {
+            onChange('typography', newTypo);
+          }}
+        />
       </div>
 
       {/* Upload Company Documents / Brochures */}
@@ -1129,11 +1209,11 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    if (!selectedDocFile && !newDocTitle.trim()) {
-                      onToast('Please enter document title and select a file.');
+                    if (!selectedDocFile?.file) {
+                      onToast('Please select a document file to attach (PDF, DOC, or Image).');
                       return;
                     }
-                    const title = newDocTitle.trim() || selectedDocFile?.file.name || 'Official Document';
+                    const title = newDocTitle.trim() || selectedDocFile.file.name || 'Official Document';
                     const file = selectedDocFile?.file;
                     const sizeText = file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : '1.5 MB';
                     const ext = file?.name?.split('.').pop()?.toUpperCase() || 'PDF';
@@ -1289,13 +1369,13 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
       </div>
 
       {/* Step Navigation Buttons */}
-      <div className="mt-4 pt-3 border-t border-[#c5c6cd]/40 flex items-center justify-between gap-2">
+      <div className="mt-4 pt-3 border-t border-[#E0E0E0] flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={onPrev}
-          className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-stroke bg-white text-[#091426] text-xs font-semibold hover:bg-[#f8f9ff] flex items-center gap-1.5 sm:gap-2 transition-all shrink-0"
+          className="px-4 py-2 rounded border border-[#C4C4C4] bg-white text-[#000000DE] text-[14px] font-medium hover:bg-gray-50 flex items-center gap-1.5 transition-colors shrink-0"
         >
-          <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <ArrowLeft className="w-4 h-4" />
           <span className="hidden sm:inline">Previous: Basic Details</span>
           <span className="sm:hidden">Previous</span>
         </button>
@@ -1304,7 +1384,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
           type="button"
           onClick={handleSaveAndNext}
           disabled={isSubmitting}
-          className="!px-4 sm:!px-6 !py-2.5 !text-xs !font-bold flex items-center gap-2 whitespace-nowrap shadow-md shadow-[#2563EB]/25 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="!bg-[#2196F3] hover:!bg-[#1E88E5] !px-6 !py-2 !text-[14px] font-medium text-white shadow-none flex items-center gap-2 whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <>
@@ -1322,3 +1402,4 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
     </section>
   );
 };
+

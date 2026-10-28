@@ -18,3 +18,9 @@ export enum SUPERADMIN_CATEGORY_KEYS {
   GET_ALL = 'superadmin-get-categories',
   GET_BY_ID = 'superadmin-get-category-by-id',
 }
+
+export enum SUPERADMIN_FRANCHISE_KEYS {
+  GET_ALL = 'superadmin-get-franchises',
+  GET_BY_ID = 'superadmin-get-franchise-by-id',
+}
+
