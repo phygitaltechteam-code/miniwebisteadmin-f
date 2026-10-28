@@ -23,7 +23,121 @@ interface PlanItem {
   allGeneralFrames: boolean;
   allProductFrames: boolean;
   allPoliticalFrames: boolean;
+  validFrom?: string;
+  validTo?: string;
 }
+
+type ValidityUnit = 'Year' | 'Month' | 'Day';
+
+// Main plan tiers offered in the plan name dropdown; 'Other' lets the user type a custom name
+const PLAN_TIERS = ['Silver', 'Gold', 'Platinum'];
+const OTHER_PLAN = 'Other';
+
+/** yyyy-mm-dd in local time (what <input type="date"> uses) */
+const toDateInput = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const todayInput = () => toDateInput(new Date());
+
+/** `from` plus `count` units, as yyyy-mm-dd */
+const addValidity = (from: string, unit: ValidityUnit, count = 1): string => {
+  const d = new Date(`${from}T00:00:00`);
+  if (unit === 'Year') d.setFullYear(d.getFullYear() + count);
+  else if (unit === 'Month') d.setMonth(d.getMonth() + count);
+  else d.setDate(d.getDate() + count);
+  return toDateInput(d);
+};
+
+/** Whole units between two dates (at least 1) — e.g. 2026-01-01 → 2029-01-01 in Year = 3 */
+const validityCount = (from: string, to: string, unit: ValidityUnit): number => {
+  const a = new Date(`${from}T00:00:00`);
+  const b = new Date(`${to}T00:00:00`);
+  if (isNaN(a.getTime()) || isNaN(b.getTime()) || b <= a) return 1;
+  if (unit === 'Day') return Math.max(1, Math.round((b.getTime() - a.getTime()) / 86400000));
+  const months = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+  return Math.max(1, unit === 'Year' ? Math.round(months / 12) : months);
+};
+
+const formatDisplayDate = (iso?: string) => {
+  if (!iso) return '';
+  const d = new Date(`${iso}T00:00:00`);
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+interface ValidityDatesProps {
+  unit: ValidityUnit;
+  from: string;
+  to: string;
+  onUnitChange: (unit: ValidityUnit) => void;
+  onFromChange: (from: string) => void;
+  onToChange: (to: string) => void;
+}
+
+/** Validity unit + From / To dates. Picking a unit fills To = From + 1 unit; dates can still be edited. */
+const ValidityDates: React.FC<ValidityDatesProps> = ({ unit, from, to, onUnitChange, onFromChange, onToChange }) => {
+  const fieldClass =
+    'w-full rounded border border-gray-300 px-3.5 pt-3 pb-2 text-[14px] text-gray-800 bg-white focus:border-[#2196F3] focus:outline-none';
+  const labelClass = 'absolute left-3 top-1 -translate-y-1/2 bg-white px-1 text-[11px] text-gray-500';
+  return (
+    <div className="space-y-1.5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="relative">
+          <select value={unit} onChange={(e) => onUnitChange(e.target.value as ValidityUnit)} className={fieldClass}>
+            <option value="Year">Year</option>
+            <option value="Month">Month</option>
+            <option value="Day">Day</option>
+          </select>
+          <label className={labelClass}>Validity unit</label>
+        </div>
+        <div className="relative">
+          <input type="date" value={from} onChange={(e) => onFromChange(e.target.value)} required className={fieldClass} />
+          <label className={labelClass}>From date *</label>
+        </div>
+        <div className="relative">
+          <input type="date" value={to} min={from} onChange={(e) => onToChange(e.target.value)} required className={fieldClass} />
+          <label className={labelClass}>To date *</label>
+        </div>
+      </div>
+      <p className="text-[12px] text-gray-500">
+        Validity: {validityCount(from, to, unit)} {unit}
+        {validityCount(from, to, unit) > 1 ? 's' : ''} ({formatDisplayDate(from)} – {formatDisplayDate(to)})
+      </p>
+    </div>
+  );
+};
+
+/** State + handlers for one ValidityDates field group */
+const useValidityDates = () => {
+  const [unit, setUnit] = useState<ValidityUnit>('Year');
+  const [from, setFrom] = useState(todayInput);
+  const [to, setTo] = useState(() => addValidity(todayInput(), 'Year'));
+
+  return {
+    unit,
+    from,
+    to,
+    count: validityCount(from, to, unit),
+    onUnitChange: (u: ValidityUnit) => {
+      setUnit(u);
+      setTo(addValidity(from, u, 1));
+    },
+    onFromChange: (f: string) => {
+      if (!f) return;
+      // Keep the same length of validity when the start date moves
+      const count = validityCount(from, to, unit);
+      setFrom(f);
+      setTo(addValidity(f, unit, count));
+    },
+    onToChange: (t: string) => {
+      if (t) setTo(t);
+    },
+    reset: () => {
+      setUnit('Year');
+      setFrom(todayInput());
+      setTo(addValidity(todayInput(), 'Year'));
+    },
+  };
+};
 
 export const CustomerPricingManagement: React.FC = () => {
   const [plans, setPlans] = useState<PlanItem[]>([
@@ -86,19 +200,17 @@ export const CustomerPricingManagement: React.FC = () => {
 
   // Add Plan form state (Image 1)
   const [isFreeTrial, setIsFreeTrial] = useState(false);
+  const [addPlanTier, setAddPlanTier] = useState(PLAN_TIERS[0]);
   const [addPlanName, setAddPlanName] = useState('');
-  const [addValidity, setAddValidity] = useState('1');
-  const [addValidityUnit, setAddValidityUnit] = useState('Year');
+  const addValidityDates = useValidityDates();
   const [addPrice, setAddPrice] = useState('');
-  const [addDisplayOrder, setAddDisplayOrder] = useState('');
   const [addIncludeImages, setAddIncludeImages] = useState(false);
   const [addIncludeVideos, setAddIncludeVideos] = useState(false);
   const [addIncludeAi, setAddIncludeAi] = useState(false);
 
   // Custom Plan form state (Image 2)
   const [customPlanName, setCustomPlanName] = useState('Custom');
-  const [customValidity, setCustomValidity] = useState('1');
-  const [customValidityUnit, setCustomValidityUnit] = useState('Year');
+  const customValidityDates = useValidityDates();
   const [customPrice, setCustomPrice] = useState('');
   const [customIncludeImages, setCustomIncludeImages] = useState(false);
   const [customIncludeVideos, setCustomIncludeVideos] = useState(false);
@@ -106,16 +218,23 @@ export const CustomerPricingManagement: React.FC = () => {
 
   const handleAddPlanSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addPlanName.trim()) {
+    const planName = addPlanTier === OTHER_PLAN ? addPlanName.trim() : addPlanTier;
+    if (!planName) {
       toast.error('Please enter plan name');
+      return;
+    }
+    if (addValidityDates.to <= addValidityDates.from) {
+      toast.error('To date must be after From date');
       return;
     }
     const newPlan: PlanItem = {
       id: `plan_${Date.now()}`,
-      name: addPlanName,
+      name: planName,
       price: isFreeTrial ? '0' : addPrice || '0',
-      validity: addValidity || '1',
-      validityUnit: addValidityUnit,
+      validity: addValidityDates.count,
+      validityUnit: addValidityDates.unit,
+      validFrom: addValidityDates.from,
+      validTo: addValidityDates.to,
       aiCredits: addIncludeAi ? 50 : 0,
       digitalCards: '1 digital card',
       changeTheme: true,
@@ -131,7 +250,9 @@ export const CustomerPricingManagement: React.FC = () => {
     toast.success('Subscription plan added successfully!');
     setShowAddPlanModal(false);
     // Reset form
+    setAddPlanTier(PLAN_TIERS[0]);
     setAddPlanName('');
+    addValidityDates.reset();
     setAddPrice('');
     setIsFreeTrial(false);
   };
@@ -146,8 +267,10 @@ export const CustomerPricingManagement: React.FC = () => {
       id: `custom_${Date.now()}`,
       name: customPlanName,
       price: customPrice || '1999',
-      validity: customValidity || '1',
-      validityUnit: customValidityUnit,
+      validity: customValidityDates.count,
+      validityUnit: customValidityDates.unit,
+      validFrom: customValidityDates.from,
+      validTo: customValidityDates.to,
       aiCredits: customIncludeAi ? 50 : 0,
       digitalCards: '1 digital card',
       changeTheme: true,
@@ -212,6 +335,11 @@ export const CustomerPricingManagement: React.FC = () => {
               <div className="text-[12px] text-gray-600 font-medium">
                 Validity: {plan.validity} {plan.validityUnit}
               </div>
+              {plan.validFrom && plan.validTo && (
+                <div className="text-[11px] text-gray-500">
+                  {formatDisplayDate(plan.validFrom)} – {formatDisplayDate(plan.validTo)}
+                </div>
+              )}
             </div>
 
             {/* AI Credits Pill */}
@@ -310,46 +438,44 @@ export const CustomerPricingManagement: React.FC = () => {
                 <span>Is this a free trial plan?</span>
               </label>
 
-              {/* Plan name input */}
-              <div>
-                <input
-                  type="text"
-                  placeholder="Enter subscription plan name (Required) *"
-                  value={addPlanName}
-                  onChange={(e) => setAddPlanName(e.target.value)}
-                  required
-                  className="w-full rounded border border-gray-300 px-3.5 py-2.5 text-[14px] text-gray-800 placeholder:text-gray-400 focus:border-[#2196F3] focus:outline-none focus:ring-1 focus:ring-[#2196F3]"
-                />
-              </div>
-
-              {/* Validity row */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
+              {/* Plan name: main tiers, or Other for a custom name */}
+              <div className="space-y-3">
+                <div className="relative">
+                  <select
+                    value={addPlanTier}
+                    onChange={(e) => setAddPlanTier(e.target.value)}
+                    className="w-full rounded border border-gray-300 px-3.5 pt-3 pb-2 text-[14px] text-gray-800 bg-white focus:border-[#2196F3] focus:outline-none"
+                  >
+                    {PLAN_TIERS.map((tier) => (
+                      <option key={tier} value={tier}>{tier}</option>
+                    ))}
+                    <option value={OTHER_PLAN}>Other (custom name)</option>
+                  </select>
+                  <label className="absolute left-3 top-1 -translate-y-1/2 bg-white px-1 text-[11px] text-gray-500">
+                    Subscription plan *
+                  </label>
+                </div>
+                {addPlanTier === OTHER_PLAN && (
                   <input
-                    type="number"
-                    min="1"
-                    placeholder="Enter validity in Year (Required) *"
-                    value={addValidity}
-                    onChange={(e) => setAddValidity(e.target.value)}
+                    type="text"
+                    placeholder="Enter subscription plan name (Required) *"
+                    value={addPlanName}
+                    onChange={(e) => setAddPlanName(e.target.value)}
                     required
                     className="w-full rounded border border-gray-300 px-3.5 py-2.5 text-[14px] text-gray-800 placeholder:text-gray-400 focus:border-[#2196F3] focus:outline-none focus:ring-1 focus:ring-[#2196F3]"
                   />
-                </div>
-                <div className="relative">
-                  <select
-                    value={addValidityUnit}
-                    onChange={(e) => setAddValidityUnit(e.target.value)}
-                    className="w-full rounded border border-gray-300 px-3.5 pt-3 pb-2 text-[14px] text-gray-800 bg-white focus:border-[#2196F3] focus:outline-none"
-                  >
-                    <option value="Year">Year</option>
-                    <option value="Month">Month</option>
-                    <option value="Day">Day</option>
-                  </select>
-                  <label className="absolute left-3 top-1 -translate-y-1/2 bg-white px-1 text-[11px] text-gray-500">
-                    Validity unit
-                  </label>
-                </div>
+                )}
               </div>
+
+              {/* Validity: unit + From / To dates (filled automatically from the unit) */}
+              <ValidityDates
+                unit={addValidityDates.unit}
+                from={addValidityDates.from}
+                to={addValidityDates.to}
+                onUnitChange={addValidityDates.onUnitChange}
+                onFromChange={addValidityDates.onFromChange}
+                onToChange={addValidityDates.onToChange}
+              />
 
               {/* Price input */}
               {!isFreeTrial && (
@@ -365,20 +491,6 @@ export const CustomerPricingManagement: React.FC = () => {
                   />
                 </div>
               )}
-
-              {/* Display order input */}
-              <div>
-                <input
-                  type="number"
-                  placeholder="Enter display order"
-                  value={addDisplayOrder}
-                  onChange={(e) => setAddDisplayOrder(e.target.value)}
-                  className="w-full rounded border border-gray-300 px-3.5 py-2.5 text-[14px] text-gray-800 placeholder:text-gray-400 focus:border-[#2196F3] focus:outline-none focus:ring-1 focus:ring-[#2196F3]"
-                />
-                <p className="mt-1 text-[12px] text-gray-500">
-                  Display order is used to sort the subscription plans in the list shown to the user.
-                </p>
-              </div>
 
               {/* What's included checklist */}
               <div className="space-y-2 pt-2">
@@ -472,34 +584,15 @@ export const CustomerPricingManagement: React.FC = () => {
                 </label>
               </div>
 
-              {/* Validity row */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="Enter validity in Year (Required) *"
-                    value={customValidity}
-                    onChange={(e) => setCustomValidity(e.target.value)}
-                    required
-                    className="w-full rounded border border-gray-300 px-3.5 py-2.5 text-[14px] text-gray-800 placeholder:text-gray-400 focus:border-[#2196F3] focus:outline-none"
-                  />
-                </div>
-                <div className="relative">
-                  <select
-                    value={customValidityUnit}
-                    onChange={(e) => setCustomValidityUnit(e.target.value)}
-                    className="w-full rounded border border-gray-300 px-3.5 pt-3 pb-2 text-[14px] text-gray-800 bg-white focus:border-[#2196F3] focus:outline-none"
-                  >
-                    <option value="Year">Year</option>
-                    <option value="Month">Month</option>
-                    <option value="Day">Day</option>
-                  </select>
-                  <label className="absolute left-3 top-1 -translate-y-1/2 bg-white px-1 text-[11px] text-gray-500">
-                    Validity unit
-                  </label>
-                </div>
-              </div>
+              {/* Validity: unit + From / To dates (filled automatically from the unit) */}
+              <ValidityDates
+                unit={customValidityDates.unit}
+                from={customValidityDates.from}
+                to={customValidityDates.to}
+                onUnitChange={customValidityDates.onUnitChange}
+                onFromChange={customValidityDates.onFromChange}
+                onToChange={customValidityDates.onToChange}
+              />
 
               {/* Price input */}
               <div>

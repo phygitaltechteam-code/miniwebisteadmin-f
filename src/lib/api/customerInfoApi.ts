@@ -1,10 +1,11 @@
-import { api, getStoredAccessToken } from '@/utils/axios';
+﻿import { api, getStoredAccessToken } from '@/utils/axios';
 import {
   CreateAdminInfoValues,
   UpdateAdminInfoValues,
 } from '@/schemas/cardProfileSchema';
 import { ProfileData } from '@/types/profile';
 import { base64ToFile } from './customerAboutApi';
+import { isUnlistedCategoryId, resolveCategoryForSave } from './customerCategoriesApi';
 
 export type CustomerInfoPayload = CreateAdminInfoValues & {
   id?: string;
@@ -32,9 +33,17 @@ export const formatAdminInfoPayload = (
   // will reject those with 404 "Invalid categories".
   const categoryIdsList: string[] = [];
 
+  // Ids of manual categories are sent by name instead (backend rejects them as "Invalid categories")
+  const manualCategoryNames: string[] = [];
+
   const addRealCatId = (id: any) => {
     if (!id) return;
     const trimmed = String(id).trim();
+    if (isUnlistedCategoryId(trimmed)) {
+      const name = resolveCategoryForSave(trimmed);
+      if (!manualCategoryNames.includes(name)) manualCategoryNames.push(name);
+      return;
+    }
     // Only add if it looks like an actual DB ID (UUID, MongoDB ObjectId, or prefixed ID)
     if (trimmed && isUuidOrId(trimmed) && !categoryIdsList.includes(trimmed)) {
       categoryIdsList.push(trimmed);
@@ -71,6 +80,7 @@ export const formatAdminInfoPayload = (
   if (profile.categoryName) {
     addCatName(profile.categoryName);
   }
+  manualCategoryNames.forEach(addCatName);
 
   // Determine exact active services chosen by the user in Step 1
   let activeServicesList: string[] = [];
@@ -138,8 +148,9 @@ export const formatAdminInfoPayload = (
 
   return {
     businessName: profile.businessName || '',
-    tagline: (profile as any).tagline || (profile as any).businessTagline || '',
-    businessTagline: (profile as any).businessTagline || (profile as any).tagline || '',
+    tagline: (profile as any).tagline || (profile as any).businessTagline || (profile as any).businessTagLine || '',
+    businessTagline: (profile as any).businessTagline || (profile as any).tagline || (profile as any).businessTagLine || '',
+    businessTagLine: (profile as any).businessTagLine || (profile as any).businessTagline || (profile as any).tagline || '',   // capital L
     vanityUrl: profile.vanityUrl || '',
     prefix: profile.prefix || 'Mr.',
     contactName: profile.contactName || '',
@@ -253,11 +264,12 @@ export const formatCustomerInfoFormData = (profile: Partial<ProfileData>): FormD
   fd.append('vanityUrl', profile.vanityUrl || '');
   fd.append('hasLogoBorder', String(profile.hasGoldenBorder ?? false));
 
-  // Business Tagline
-  const tagline = (profile as any).tagline || (profile as any).businessTagline || '';
+  // Business Tagline — send all casing variants the backend may expect
+  const tagline = (profile as any).tagline || (profile as any).businessTagline || (profile as any).businessTagLine || '';
   if (tagline) {
     fd.append('tagline', tagline);
     fd.append('businessTagline', tagline);
+    fd.append('businessTagLine', tagline);   // capital L — matches backend field name
   }
 
   // Logo: File or converted base64

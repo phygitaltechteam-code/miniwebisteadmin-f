@@ -5,8 +5,15 @@ import { ProfileData, SocialLink, QuickLink } from '@/types/profile';
  * Exact payload shape that the backend `customers/links` API accepts/returns.
  * Field names must match EXACTLY (backend is case-sensitive).
  */
+export interface CustomLinkItem {
+  name: string;
+  url: string;
+  logo?: string | null;
+}
+
 export interface CustomerLinksPayload {
   customLink?: string | null;
+  customLinks?: CustomLinkItem[];
   whatsappLinks?: string | null;
   emailLinks?: string | null;
   callLinks?: string | null;
@@ -72,6 +79,17 @@ export const formatCustomerLinksPayload = (
   const whatsappQl = profile.quickLinks?.find((l) => l.id === 'whatsapp');
   const customQl   = profile.quickLinks?.find((l) => l.id === 'custom');
 
+  // Custom link name + url + logo go in the customLinks array
+  const customDetail = profile.linksDetails?.customLink;
+  const customUrl = v(profile.customLink) || v(customDetail?.url) || v(customQl?.value);
+  const customLinks: CustomLinkItem[] = customUrl
+    ? [{
+        name: v(customDetail?.name) || 'Custom Link',
+        url: customUrl,
+        logo: v(customDetail?.icon),
+      }]
+    : [];
+
   return {
     // Website
     webSiteLink: v(profile.webSiteLink) || v(profile.website) || v((profile as any).websiteLink),
@@ -120,8 +138,48 @@ export const formatCustomerLinksPayload = (
     imageLink:   v(profile.imageLink),
 
     // Custom button
-    customLink:  v(profile.customLink) || v(customQl?.value),
+    customLink:  customUrl,
+    customLinks,
   };
+};
+
+/** Convert a base64 data: URL (from the logo picker) into a File for multipart upload */
+const dataUrlToFile = (dataUrl: string, baseName: string): File => {
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/data:([^;]+)/)?.[1] || 'image/png';
+  const bytes = atob(base64);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  return new File([arr], `${baseName}.${mime.split('/')[1] || 'png'}`, { type: mime });
+};
+
+/**
+ * Build the multipart body for the links API.
+ * Normal links are plain text fields; each custom link repeats customLinkName / customLinkUrl / customLinkLogo
+ * in order. customLinkLogo is a File for a new logo, the existing URL to keep it, or empty for no logo.
+ */
+export const formatCustomerLinksFormData = (profile: Partial<ProfileData>): FormData => {
+  const { customLink: _customLink, customLinks = [], ...fields } = formatCustomerLinksPayload(profile);
+  const formData = new FormData();
+
+  Object.entries(fields).forEach(([key, val]) => {
+    if (val !== null && val !== undefined && val !== '') formData.append(key, String(val));
+  });
+
+  customLinks.forEach((link, idx) => {
+    formData.append('customLinkName', link.name);
+    formData.append('customLinkUrl', link.url);
+    const logo = link.logo || '';
+    if (logo.startsWith('data:')) {
+      formData.append('customLinkLogo', dataUrlToFile(logo, `custom-link-logo-${idx + 1}`));
+    } else if (logo.startsWith('blob:')) {
+      formData.append('customLinkLogo', ''); // local preview only, nothing to upload
+    } else {
+      formData.append('customLinkLogo', logo);
+    }
+  });
+
+  return formData;
 };
 
 // ─── Parse GET response back into ProfileData shape ──────────────────────────
@@ -167,6 +225,20 @@ export const parseCustomerLinksResponse = (data: any): Partial<ProfileData> => {
   if (data.imageLink)          parsed.imageLink     = data.imageLink;
   if (data.customLink)         parsed.customLink    = data.customLink;
 
+  const firstCustom = Array.isArray(data.customLinks) ? data.customLinks[0] : undefined;
+  if (firstCustom?.url) {
+    parsed.customLink = firstCustom.url;
+    parsed.linksDetails = {
+      customLink: {
+        id: 'customLink',
+        name: firstCustom.name || 'Custom Link',
+        description: '',
+        url: firstCustom.url,
+        icon: firstCustom.logo || undefined,
+      },
+    } as ProfileData['linksDetails'];
+  }
+
   return parsed;
 };
 
@@ -207,7 +279,7 @@ export const saveOrUpdateCustomerLinks = async (
   profile: Partial<ProfileData>,
   adminId?: string
 ): Promise<CustomerLinksResponse> => {
-  const payload = formatCustomerLinksPayload(profile);
+  const payload = formatCustomerLinksFormData(profile);
   const endpoint = adminId ? `superAdmin/admin/${adminId}/links` : 'customers/links';
 
   // Try POST first
@@ -244,8 +316,8 @@ export const saveOrUpdateCustomerLinks = async (
 
 export const createCustomerSocial = async (
   payload: CustomerSocialPayload
-): Promise<CustomerSocialResponse> => saveOrUpdateCustomerLinks(payload);
+): Promise<CustomerSocialResponse> => saveOrUpdateCustomerLinks(payload as Partial<ProfileData>);
 
 export const updateCustomerSocial = async (
   payload: Partial<CustomerSocialPayload>
-): Promise<CustomerSocialResponse> => saveOrUpdateCustomerLinks(payload);
+): Promise<CustomerSocialResponse> => saveOrUpdateCustomerLinks(payload as Partial<ProfileData>);

@@ -48,14 +48,15 @@ function SuperAdminPortal({
   userRole?: string;
 }) {
   const isFranchise = userRole?.trim().toUpperCase() === 'FRANCHISE';
-  const defaultInitialView: SuperAdminView = 'home';
+  // Franchise users land on All Businesses (create/manage admins) instead of the dashboard
+  const defaultInitialView: SuperAdminView = isFranchise ? 'admins' : 'home';
 
   const [activeView, setActiveView] = useState<SuperAdminView>(() => {
     try {
       const p = new URLSearchParams(window.location.search);
       const req = p.get('view') as SuperAdminView;
       if (isFranchise && (req === 'categories' || req === 'franchise')) {
-        return 'home';
+        return defaultInitialView;
       }
       return req || defaultInitialView;
     } catch {

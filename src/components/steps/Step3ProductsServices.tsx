@@ -25,6 +25,8 @@ import {
   isTempProductId
 
 } from '@/lib/api/customerProductsApi';
+import { saveSettingsOrder } from '@/lib/api/customerSettingsApi';
+import { useDragReorder, moveItem } from '@/hooks/useDragReorder';
 
 interface Step3Props {
   profile: ProfileData;
@@ -265,6 +267,22 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
     }
   };
 
+  // Drag & drop product order, saved to the settings API as productOrder
+  const { dragProps: productDragProps, dragClass: productDragClass } = useDragReorder(async (from, to) => {
+    const reordered = moveItem(profile.products, from, to);
+    const order = reordered
+      .map((p) => String(p._id || p.id))
+      .filter((id) => !isTempProductId(id));
+    onChange('products', reordered);
+    onChange('productOrder', order);
+    try {
+      await saveSettingsOrder({ productOrder: order }, adminId);
+      toast.success('Product order saved');
+    } catch (error: any) {
+      toast.error(`API Error: ${error?.response?.data?.message || error?.message || 'Failed to save product order'}`);
+    }
+  });
+
   const handleSaveAndNext = async () => {
     const mapped = (profile.products || []).map(p => ({
       id: p.id,
@@ -360,12 +378,15 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
         ) : (
           profile.products.map((product, index) => {
           return (
-            <div 
+            <div
               key={product.id}
-              className="border border-stroke rounded-xl p-2.5 sm:p-3 bg-[#f8f9ff]/60 hover:bg-white hover:border-[#2563EB]/40 transition-all shadow-2xs"
+              {...productDragProps(index)}
+              title="Drag to reorder"
+              className={`border border-stroke rounded-xl p-2.5 sm:p-3 bg-[#f8f9ff]/60 hover:bg-white hover:border-[#2563EB]/40 transition-all shadow-2xs cursor-grab active:cursor-grabbing ${productDragClass(index)}`}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
                 <div className="flex items-start gap-2.5 sm:gap-3.5 flex-1 min-w-0">
+                  <GripVertical className="w-4 h-4 text-gray-400 shrink-0 mt-1" />
                   <span className="hidden sm:flex w-6 h-6 rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs items-center justify-center font-bold shrink-0 mt-0.5">
                     {index + 1}
                   </span>

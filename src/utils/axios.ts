@@ -1,4 +1,4 @@
-import { Token, User } from '@/types';
+﻿import { Token, User } from '@/types';
 import { QUERY_KEYS } from '@/lib/react-query/queryKeys';
 import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
 import { jwtDecode } from 'jwt-decode';
@@ -133,12 +133,24 @@ export const api: AxiosInstance = axios.create({
 });
 
 api.interceptors.request.use(async (req) => {
+  const isFranchise = isFranchiseUser();
+
   // Strict guard: on SuperAdmin or Franchise sessions, NEVER dispatch any request to customers/*
-  if (isSuperAdminUser() || isFranchiseUser()) {
+  if (isSuperAdminUser() || isFranchise) {
     const targetUrl = req.url || '';
     if (targetUrl.startsWith('customers/') || targetUrl.includes('/customers/')) {
       console.warn(`[axios] Blocked customers/ route on Admin/Franchise session: ${targetUrl}`);
       return Promise.reject(new Error(`[Admin Protection] Customers endpoint blocked on management session: ${targetUrl}`));
+    }
+  }
+
+  // Franchise panel: superAdmin/admin/:id/... => franchise/admin/:id/...
+  // e.g. superAdmin/admin/:adminId/info -> franchise/admin/:adminId/info
+  if (isFranchise && req.url) {
+    if (/^\/?superAdmin\/admin\//i.test(req.url)) {
+      req.url = req.url.replace(/^(\/?)superAdmin\/admin\//i, '$1franchise/admin/');
+    } else if (/^\/?superadmin\//i.test(req.url)) {
+      req.url = req.url.replace(/^(\/?)superadmin\//i, '$1franchise/');
     }
   }
 

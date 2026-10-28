@@ -9,7 +9,10 @@ import {
   useGetAdmin,
   useSaveAdmin,
   useUpdateAdmin,
+  useToggleAdminStatus,
 } from '@/lib/react-query/superadmin/admin';
+import { isRecordActive, readIsActive } from '@/lib/api/superadmin/admin';
+import StatusToggle from '@/components/Forms/StatusToggle';
 import { useGetCategories } from '@/lib/react-query/superadmin/category';
 import { isFranchiseUser } from '@/utils/axios';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -93,6 +96,7 @@ type AdminRow = {
   startDate: string;
   endDate: string;
   dateTime: string;
+  isActive: boolean;
   raw?: any;
 };
 
@@ -126,6 +130,10 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
   const [selectedProjectBusiness, setSelectedProjectBusiness] = useState<AdminRow | null>(null);
   const [copyModalBusiness, setCopyModalBusiness] = useState<AdminRow | null>(null);
   const [activeMenuRowId, setActiveMenuRowId] = useState<string | null>(null);
+  const { mutateAsync: toggleAdminStatus } = useToggleAdminStatus();
+  const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null);
+  // isActive returned by the toggle API, per admin id (wins over the list until it refreshes)
+  const [adminStatusOverride, setAdminStatusOverride] = useState<Record<string, boolean>>({});
   const isFranchise = isFranchiseUser();
 
   useEffect(() => {
@@ -260,10 +268,34 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
       },
     },
     {
-      accessor: () => 'Active',
-      header: 'Digital Status',
-      className: 'text-center w-24 text-[13px]',
-      render: () => <span className="text-[13px] text-[#212121]">Active</span>,
+      accessor: (row) => (row.isActive ? 'Active' : 'Inactive'),
+      header: 'Status',
+      className: 'text-center w-28',
+      render: (row) => {
+        const active = adminStatusOverride[row.id] ?? row.isActive;
+        return (
+          <StatusToggle
+            active={active}
+            name={row.fullname}
+            disabled={togglingAdminId === row.id}
+            onToggle={async () => {
+              setTogglingAdminId(row.id);
+              try {
+                const res = await toggleAdminStatus({ id: row.id, isActive: !active });
+                // Show exactly what the API reports (isActive: false -> switch off)
+                const apiActive = readIsActive(res);
+                if (apiActive !== undefined) {
+                  setAdminStatusOverride((prev) => ({ ...prev, [row.id]: apiActive }));
+                }
+              } catch {
+                // error toast comes from the mutation; switch keeps its previous state
+              } finally {
+                setTogglingAdminId(null);
+              }
+            }}
+          />
+        );
+      },
     },
     {
       header: 'Actions',
@@ -497,6 +529,7 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
       startDate: each.startDate ? String(each.startDate).split('T')[0] : '',
       endDate: endRaw ? String(endRaw).split('T')[0] : '',
       dateTime: formattedDateTime,
+      isActive: isRecordActive(each),
       raw: each,
     };
   });

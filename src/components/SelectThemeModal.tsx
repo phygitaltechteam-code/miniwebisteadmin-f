@@ -1,82 +1,63 @@
-import React, { useState } from 'react';
-import { X, Check, Palette } from 'lucide-react';
-import toast from 'react-hot-toast';
+import React, { useEffect, useState } from 'react';
+import { X, Check, Palette, Loader2 } from 'lucide-react';
+import { PORTAL_THEMES, PortalThemeId, getPortalTheme } from '@/types/theme';
 
 interface SelectThemeModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentTheme?: string;
-  onSelectTheme: (themeId: string) => void;
+  /** Applies the theme (preview + API). Return false or throw to keep the popup open. */
+  onSelectTheme: (themeId: string) => void | boolean | Promise<void | boolean>;
   onOpenTypography?: () => void;
 }
+
+// The four card themes offered here (Orange, Violet, Blue, Green); ids are the ones the preview understands
+const THEME_CHOICES: PortalThemeId[] = ['navy-orange', 'violet-white', 'sapphire-cyan', 'emerald-obsidian'];
+
+/** "#07162C + #F97316" -> ['#07162C', '#F97316'] */
+const themeColors = (id: PortalThemeId): [string, string] => {
+  const [primary, accent] = PORTAL_THEMES[id].colorCombination.split('+').map((c) => c.trim());
+  return [primary || '#07162C', accent || '#F97316'];
+};
 
 export const SelectThemeModal: React.FC<SelectThemeModalProps> = ({
   isOpen,
   onClose,
-  currentTheme = 'theme_3',
+  currentTheme,
   onSelectTheme,
   onOpenTypography,
 }) => {
+  // Map any saved/legacy theme value onto one of the offered themes
+  const resolveTheme = (val?: string): PortalThemeId => {
+    const id = getPortalTheme(val).id;
+    return THEME_CHOICES.includes(id) ? id : THEME_CHOICES[0];
+  };
 
-  const [selectedTheme, setSelectedTheme] = useState<string>(currentTheme);
+  const [selectedTheme, setSelectedTheme] = useState<PortalThemeId>(() => resolveTheme(currentTheme));
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Re-sync with the card's current theme every time the popup opens
+  useEffect(() => {
+    if (isOpen) setSelectedTheme(resolveTheme(currentTheme));
+  }, [isOpen, currentTheme]);
 
   if (!isOpen) return null;
 
-  const themes = [
-    {
-      id: 'theme_1',
-      name: 'Dark Wood Header',
-      bgColor: 'bg-[#1e1e24]',
-      headerImage: '🪵 Wood Header',
-      textColor: 'text-white',
-      accentColor: '#e91e63',
-    },
-    {
-      id: 'theme_2',
-      name: 'Light Cork Header',
-      bgColor: 'bg-[#f4f7f6]',
-      headerImage: '🪵 Cork Header',
-      textColor: 'text-[#212121]',
-      accentColor: '#00bcd4',
-    },
-    {
-      id: 'theme_3',
-      name: 'Modern Soft Gray',
-      bgColor: 'bg-[#eceff1]',
-      headerImage: '',
-      textColor: 'text-[#212121]',
-      accentColor: '#e91e63',
-    },
-    {
-      id: 'theme_4',
-      name: 'Charcoal Minimal',
-      bgColor: 'bg-[#18191a]',
-      headerImage: '',
-      textColor: 'text-white',
-      accentColor: '#f44336',
-    },
-    {
-      id: 'theme_5',
-      name: 'Clean Lilac White',
-      bgColor: 'bg-[#f8f7ff]',
-      headerImage: '',
-      textColor: 'text-[#212121]',
-      accentColor: '#673ab7',
-    },
-    {
-      id: 'theme_6',
-      name: 'Royal Midnight Violet',
-      bgColor: 'bg-[#120e24]',
-      headerImage: '',
-      textColor: 'text-white',
-      accentColor: '#7c4dff',
-    },
-  ];
+  const themes = THEME_CHOICES.map((id) => {
+    const [primary, accent] = themeColors(id);
+    return { id, name: PORTAL_THEMES[id].name, badge: PORTAL_THEMES[id].badge, primary, accent };
+  });
 
-  const handleSave = () => {
-    onSelectTheme(selectedTheme);
-    toast.success('Theme applied successfully!');
-    onClose();
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const result = await onSelectTheme(selectedTheme);
+      if (result !== false) onClose();
+    } catch {
+      // caller reports the error; keep the popup open
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -98,19 +79,20 @@ export const SelectThemeModal: React.FC<SelectThemeModalProps> = ({
           Click on template to select.
         </p>
 
-        {/* Scrollable Templates Grid */}
-        <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-3 gap-3.5 pb-3">
+        {/* Templates Grid — the four card themes, drawn in their real colors */}
+        <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-2 sm:grid-cols-4 gap-3.5 pb-3">
           {themes.map((th) => {
             const isSelected = selectedTheme === th.id;
             return (
               <div key={th.id} className="flex flex-col items-center">
                 <div
                   onClick={() => setSelectedTheme(th.id)}
-                  className={`w-full aspect-[9/16] rounded-md border-2 cursor-pointer transition-all relative overflow-hidden flex flex-col p-2 select-none shadow-xs hover:shadow-md ${
+                  style={{ backgroundColor: th.primary }}
+                  className={`w-full aspect-[9/16] rounded-md border-2 cursor-pointer transition-all relative overflow-hidden flex flex-col p-2 select-none shadow-xs hover:shadow-md text-white ${
                     isSelected
                       ? 'border-gray-800 ring-2 ring-[#2196F3]'
                       : 'border-dashed border-gray-400 hover:border-gray-600'
-                  } ${th.bgColor}`}
+                  }`}
                 >
                   {/* Selected checkmark badge */}
                   {isSelected && (
@@ -119,47 +101,42 @@ export const SelectThemeModal: React.FC<SelectThemeModalProps> = ({
                     </div>
                   )}
 
-                  {/* Mock Phone Card Preview */}
-                  {th.headerImage ? (
-                    <div className="w-full h-8 bg-amber-800/40 rounded-t flex items-center justify-center text-[8px] text-amber-200">
-                      {th.headerImage}
-                    </div>
-                  ) : null}
-
                   <div className="p-1.5 flex items-center gap-1.5">
-                    <div className="w-5 h-5 rounded border border-gray-400/40 bg-white/80 flex items-center justify-center text-[7px] font-bold text-gray-800">
+                    <div
+                      className="w-5 h-5 rounded border flex items-center justify-center text-[7px] font-bold bg-white/90 text-gray-800"
+                      style={{ borderColor: th.accent }}
+                    >
                       demo
                     </div>
                     <div className="leading-tight">
-                      <div className={`text-[8px] font-bold ${th.textColor}`}>Demo Company</div>
-                      <div className="text-[6px] text-gray-400">Mr. Demo Name</div>
+                      <div className="text-[8px] font-bold">Demo Company</div>
+                      <div className="text-[6px]" style={{ color: th.accent }}>Mr. Demo Name</div>
                     </div>
                   </div>
 
-                  {/* Rows mockup */}
+                  {/* Rows mockup in the accent color */}
                   <div className="space-y-1 mt-1 flex-1">
-                    <div className="h-3 rounded bg-white/10 border border-white/10 px-1 flex items-center">
-                      <div className="w-1.5 h-1.5 rounded-full bg-current opacity-60 mr-1" />
-                      <div className="h-1 w-10 bg-current opacity-30 rounded" />
-                    </div>
-                    <div className="h-3 rounded bg-white/10 border border-white/10 px-1 flex items-center">
-                      <div className="w-1.5 h-1.5 rounded-full bg-current opacity-60 mr-1" />
-                      <div className="h-1 w-12 bg-current opacity-30 rounded" />
-                    </div>
-                    <div className="h-3 rounded bg-white/10 border border-white/10 px-1 flex items-center">
-                      <div className="w-1.5 h-1.5 rounded-full bg-current opacity-60 mr-1" />
-                      <div className="h-1 w-14 bg-current opacity-30 rounded" />
+                    {[10, 12, 14].map((w) => (
+                      <div key={w} className="h-3 rounded bg-white/10 border border-white/10 px-1 flex items-center">
+                        <div className="w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: th.accent }} />
+                        <div className="h-1 bg-white/40 rounded" style={{ width: `${w * 4}px` }} />
+                      </div>
+                    ))}
+                    <div className="mt-1.5 h-3.5 rounded text-[6px] font-bold flex items-center justify-center" style={{ backgroundColor: th.accent }}>
+                      Contact
                     </div>
                   </div>
 
                   {/* Bottom Nav mock */}
-                  <div className="pt-1 border-t border-white/10 flex justify-around text-[6px] opacity-60">
-                    <span>Home</span>
+                  <div className="pt-1 border-t border-white/10 flex justify-around text-[6px] opacity-70">
+                    <span style={{ color: th.accent }}>Home</span>
                     <span>Links</span>
                     <span>About</span>
                     <span>Product</span>
                   </div>
                 </div>
+
+                <span className="mt-1.5 text-[11px] font-semibold text-[#212121] text-center leading-tight">{th.badge}</span>
 
                 {/* Pink COLOR button under the selected theme (Image 1) */}
                 {isSelected && (
@@ -170,8 +147,6 @@ export const SelectThemeModal: React.FC<SelectThemeModalProps> = ({
                       if (onOpenTypography) {
                         onClose();
                         onOpenTypography();
-                      } else {
-                        toast.success('Color & typography customizer opened');
                       }
                     }}
                     className="mt-2 flex items-center justify-center gap-1.5 rounded bg-[#e91e63] hover:bg-[#d81b60] text-white px-3 py-1 text-[11px] font-bold uppercase tracking-wide shadow-sm transition-all"
@@ -198,9 +173,11 @@ export const SelectThemeModal: React.FC<SelectThemeModalProps> = ({
           <button
             type="button"
             onClick={handleSave}
-            className="rounded bg-[#2196F3] hover:bg-[#1E88E5] px-6 py-1.5 text-[13px] font-bold text-white uppercase tracking-wide shadow-xs transition-colors"
+            disabled={isSaving}
+            className="rounded bg-[#2196F3] hover:bg-[#1E88E5] px-6 py-1.5 text-[13px] font-bold text-white uppercase tracking-wide shadow-xs transition-colors disabled:opacity-60 flex items-center gap-1.5"
           >
-            SAVE
+            {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {isSaving ? 'SAVING...' : 'SAVE'}
           </button>
         </div>
       </div>

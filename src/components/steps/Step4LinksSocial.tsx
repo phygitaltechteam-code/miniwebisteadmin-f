@@ -13,6 +13,8 @@ import {
 import { ProfileData } from '../../types/profile';
 import GenericButton from '@/components/Forms/Buttons/GenericButton';
 import { AddLinkModal } from '@/components/AddLinkModal';
+import { saveSettingsOrder, sortByOrder } from '@/lib/api/customerSettingsApi';
+import { useDragReorder, moveItem } from '@/hooks/useDragReorder';
 import {
   getCustomerLinks,
   saveOrUpdateCustomerLinks,
@@ -251,8 +253,9 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
     }
   };
 
-  // Filter links by category & search query
-  const filteredLinks = ALL_LINK_ITEMS.filter((item) => {
+  // Links sorted by the saved linkOrder (drag & drop), then filtered by category & search query
+  const orderedLinkItems = sortByOrder(ALL_LINK_ITEMS, profile.linkOrder, (item) => item.key);
+  const filteredLinks = orderedLinkItems.filter((item) => {
     const matchesCategory =
       selectedCategory === 'All Links' || item.category === selectedCategory;
     const matchesSearch =
@@ -260,6 +263,22 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
+  });
+
+  // Drag & drop link order, saved to the settings API as linkOrder (unique link keys, full list)
+  const { dragProps: linkDragProps, dragClass: linkDragClass } = useDragReorder(async (from, to) => {
+    const fromKey = filteredLinks[from]?.key;
+    const toKey = filteredLinks[to]?.key;
+    if (!fromKey || !toKey || fromKey === toKey) return;
+    const keys = Array.from(new Set(orderedLinkItems.map((i) => i.key)));
+    const order = moveItem(keys, keys.indexOf(fromKey), keys.indexOf(toKey));
+    onChange('linkOrder', order);
+    try {
+      await saveSettingsOrder({ linkOrder: order }, adminId);
+      toast.success('Link order saved');
+    } catch (error: any) {
+      toast.error(`API Error: ${error?.response?.data?.message || error?.message || 'Failed to save link order'}`);
+    }
   });
 
   return (
@@ -345,7 +364,9 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
               return (
                 <div
                   key={`${item.category}-${item.name}-${idx}`}
-                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 bg-white hover:border-[#2563EB]/40 hover:shadow-xs transition-all group"
+                  {...linkDragProps(idx)}
+                  title="Drag to reorder"
+                  className={`flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 bg-white hover:border-[#2563EB]/40 hover:shadow-xs transition-all group cursor-grab active:cursor-grabbing ${linkDragClass(idx)}`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <div className="w-8 h-8 rounded-lg bg-[#f8f9fc] border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden">

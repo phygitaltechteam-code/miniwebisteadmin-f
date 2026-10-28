@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, Smartphone, Tablet, Monitor } from 'lucide-react';
 import { ProfileData } from '../types/profile';
-import { PortalThemeId, PORTAL_THEMES } from '../types/theme';
-import { AdminWebsitePage } from './AdminWebsitePage';
+import { PortalThemeId } from '../types/theme';
+import { TemplateWebsitePreview, TEMPLATE_PALETTES, paletteForTheme } from './TemplateWebsitePreview';
+
+// Card theme ids behind the four template colors: Orange, Violet, Blue, Green
+const TEMPLATE_THEME_IDS: PortalThemeId[] = ['navy-orange', 'violet-white', 'sapphire-cyan', 'emerald-obsidian'];
 
 interface FullCardModalProps {
   isOpen: boolean;
@@ -77,41 +80,29 @@ export const FullCardModal: React.FC<FullCardModalProps> = ({
             </span>
           </div>
 
-          {/* 4 Two-Color Combination Themes Pills (Shown on Tablet & Desktop preview, hidden in mobile view to prevent overflowing the 420px frame) */}
+          {/* Template color pills: Orange / Violet / Blue / Green (try colors in the preview; Change theme saves) */}
           {viewMode !== 'mobile' && (
             <div className="hidden md:flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 shrink-0">
-              {(Object.keys(PORTAL_THEMES) as PortalThemeId[]).map((thId) => {
-                const th = PORTAL_THEMES[thId];
-                const isSelected = activeTheme === thId;
+              {TEMPLATE_THEME_IDS.map((thId) => {
+                const pal = TEMPLATE_PALETTES[paletteForTheme(thId)];
+                const isSelected = paletteForTheme(activeTheme) === paletteForTheme(thId);
                 return (
                   <button
                     key={thId}
                     type="button"
                     onClick={() => {
                       setActiveTheme(thId);
-                      onToast(`Theme switched to ${th.name}`);
+                      onToast(`Preview color: ${pal.label}`);
                     }}
-                    title={`${th.name} (${th.colorCombination})`}
+                    title={pal.label}
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 ${
                       isSelected
                         ? 'bg-white text-slate-950 shadow-xs'
                         : 'text-slate-400 hover:text-white hover:bg-slate-800'
                     }`}
                   >
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        thId === 'navy-orange'
-                          ? 'bg-orange-500'
-                          : thId === 'emerald-obsidian'
-                          ? 'bg-emerald-500'
-                          : thId === 'sapphire-cyan'
-                          ? 'bg-sky-400'
-                          : thId === 'violet-white'
-                          ? 'bg-violet-500'
-                          : 'bg-amber-400'
-                      }`}
-                    />
-                    <span>{th.badge}</span>
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pal.primary }} />
+                    <span>{pal.label}</span>
                   </button>
                 );
               })}
@@ -181,12 +172,7 @@ export const FullCardModal: React.FC<FullCardModalProps> = ({
 
         {/* Scrollable Website Page Preview */}
         <div className="flex-1 overflow-y-auto custom-scroll p-0 bg-slate-50">
-          <AdminWebsitePage
-            profile={profile}
-            themeOverride={activeTheme}
-            onThemeChange={setActiveTheme}
-            viewMode={viewMode}
-          />
+          <TemplateWebsitePreview profile={profile} themeId={activeTheme} viewMode={viewMode} />
         </div>
       </div>
     </div>

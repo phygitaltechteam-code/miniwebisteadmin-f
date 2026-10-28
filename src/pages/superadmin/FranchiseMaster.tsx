@@ -6,9 +6,13 @@ import {
   useGetFranchises,
   useSaveFranchise,
   useUpdateFranchise,
+  useToggleFranchiseStatus,
 } from '@/lib/react-query/superadmin/franchise';
+import { isRecordActive, readIsActive } from '@/lib/api/superadmin/admin';
+import StatusToggle from '@/components/Forms/StatusToggle';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { FormProvider, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -43,6 +47,7 @@ type FranchiseRow = {
   address: string;
   city?: string;
   email?: string;
+  isActive: boolean;
   raw?: any;
 };
 
@@ -67,6 +72,10 @@ export const FranchiseMaster: React.FC = () => {
   const { mutateAsync: saveFranchise, isPending: isAdding } = useSaveFranchise();
   const { mutateAsync: updateFranchise, isPending: isUpdating } = useUpdateFranchise();
   const { mutateAsync: deleteFranchise } = useDeleteFranchise();
+  const { mutateAsync: toggleFranchiseStatus } = useToggleFranchiseStatus();
+  const [togglingFranchiseId, setTogglingFranchiseId] = useState<string | null>(null);
+  // isActive returned by the toggle API, per franchise id (wins over the list until it refreshes)
+  const [franchiseStatusOverride, setFranchiseStatusOverride] = useState<Record<string, boolean>>({});
 
   const handleBack = () => {
     setEditingFranchiseId(null);
@@ -88,6 +97,36 @@ export const FranchiseMaster: React.FC = () => {
     { accessor: 'phoneNumber', header: 'Phone' },
     { accessor: 'adminLimit', header: 'Admin Limit' },
     { accessor: 'address', header: 'Address' },
+    {
+      accessor: (row) => (row.isActive ? 'Active' : 'Inactive'),
+      header: 'Status',
+      className: 'text-center w-28',
+      render: (row) => {
+        const active = franchiseStatusOverride[row.id] ?? row.isActive;
+        return (
+          <StatusToggle
+            active={active}
+            name={row.fullname}
+            disabled={togglingFranchiseId === row.id}
+            onToggle={async () => {
+              setTogglingFranchiseId(row.id);
+              try {
+                const res = await toggleFranchiseStatus({ id: row.id, isActive: !active });
+                // Show exactly what the API reports (isActive: false -> switch off)
+                const apiActive = readIsActive(res);
+                if (apiActive !== undefined) {
+                  setFranchiseStatusOverride((prev) => ({ ...prev, [row.id]: apiActive }));
+                }
+              } catch {
+                // error toast comes from the mutation; switch keeps its previous state
+              } finally {
+                setTogglingFranchiseId(null);
+              }
+            }}
+          />
+        );
+      },
+    },
   ];
 
   const rawList: any[] = Array.isArray(franchiseList) ? franchiseList : [];
@@ -127,6 +166,7 @@ export const FranchiseMaster: React.FC = () => {
       address: item.address || item.user?.address || '',
       city: item.city || '',
       email: item.email || item.user?.email || '',
+      isActive: isRecordActive(item),
       raw: item,
     };
   });

@@ -5,6 +5,7 @@ import {
   editAdmin,
   getAdmins,
   saveAdminProfile,
+  toggleAdminStatus,
   admin,
 } from '@/lib/api/superadmin/admin';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -75,6 +76,25 @@ export const useUpdateAdmin = () => {
       const backendMessage =
         error?.response?.data?.message || 'Failed to edit admin';
       toast.error(backendMessage);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['admin'],
+      });
+    },
+  });
+};
+
+export const useToggleAdminStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => toggleAdminStatus(id, isActive),
+    onSuccess: (res: any) => {
+      toast.success(res?.message || 'Admin status updated');
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to update admin status');
     },
     onSettled: () => {
       queryClient.invalidateQueries({

@@ -53,13 +53,13 @@ export interface admin {
 
 export type AdminItem = admin;
 
-// GET admins (calls frencise/admin or franchise/admin for franchise role, else superadmin/admin)
+// GET admins — franchise role uses franchise/admins, superadmin uses superadmin/admin
 export const getAdmins = async (): Promise<admin[]> => {
   try {
     const isFranchise = isFranchiseUser();
     const endpoints = isFranchise
-      ? ['frencise/admin', 'franchise/admins', 'superadmin/admin']
-      : ['superadmin/admin', 'superAdmin/admin', 'frencise/admin', 'franchise/admin'];
+      ? ['franchise/admins', 'franchise/admin']
+      : ['superadmin/admin', 'superAdmin/admin'];
 
     let response: any;
     let success = false;
@@ -99,7 +99,7 @@ export const getAdmins = async (): Promise<admin[]> => {
 
 export const getAdmin = getAdmins;
 
-// POST save admin (calls frencise/admin or franchise/admin for franchise role, else superadmin/admin)
+// POST save admin — franchise role uses franchise/admins, superadmin uses superadmin/admin
 export const saveAdminProfile = async (data: adminPayload): Promise<admin> => {
   const priceVal = data.price !== undefined ? Number(data.price) : (data as any).amount !== undefined ? Number((data as any).amount) : undefined;
   const renewalVal = data.renewalAmount !== undefined ? Number(data.renewalAmount) : undefined;
@@ -146,7 +146,7 @@ export const saveAdminProfile = async (data: adminPayload): Promise<admin> => {
 
   const isFranchise = isFranchiseUser();
   const endpoints = isFranchise
-    ? ['frencise/admin', 'franchise/admin']
+    ? ['franchise/admins', 'franchise/admin']
     : ['superadmin/admin', 'superAdmin/admin'];
 
   let lastError: any;
@@ -235,7 +235,7 @@ export const editAdmin = async (id: string, data: Partial<adminPayload>): Promis
 
   const isFranchise = isFranchiseUser();
   const prefixes = isFranchise
-    ? ['frencise/admin', 'franchise/admin']
+    ? ['franchise/admins', 'franchise/admin']
     : ['superadmin/admin', 'superAdmin/admin'];
 
   let lastError: any;
@@ -274,11 +274,33 @@ export const editAdmin = async (id: string, data: Partial<adminPayload>): Promis
 export const updateAdmin = editAdmin;
 export const updateAdminProfile = editAdmin;
 
+// PATCH superAdmin/admin/:id/toggle with { isActive } — sets the admin active or inactive.
+// On a franchise session the axios interceptor sends this to franchise/admin/:id/toggle.
+export const toggleAdminStatus = async (id: string, isActive: boolean): Promise<any> => {
+  const response = await api.patch(`superAdmin/admin/${id}/toggle`, { isActive });
+  return (response as any)?.data || response;
+};
+
+/** isActive from a toggle response ({ isActive } or { data: { isActive } }); undefined when absent */
+export const readIsActive = (res: any): boolean | undefined => {
+  const val = res?.isActive ?? res?.data?.isActive;
+  return typeof val === 'boolean' ? val : undefined;
+};
+
+/** Read the active flag from an admin / franchise record (true when nothing says otherwise) */
+export const isRecordActive = (each: any): boolean => {
+  const flag = each?.isActive ?? each?.active ?? each?.user?.isActive;
+  if (typeof flag === 'boolean') return flag;
+  const status = String(each?.status || each?.user?.status || '').toUpperCase();
+  if (status) return status === 'ACTIVE';
+  return true;
+};
+
 // DELETE admin
 export const deleteAdmin = async (id: string): Promise<{ success: boolean; id: string }> => {
   const isFranchise = isFranchiseUser();
   const prefixes = isFranchise
-    ? ['frencise/admin', 'franchise/admin']
+    ? ['franchise/admins', 'franchise/admin']
     : ['superadmin/admin', 'superAdmin/admin'];
 
   let lastError: any;

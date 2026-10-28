@@ -52,6 +52,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const initialColor = typography?.elements?.p?.color || typography?.globalColor || '#091426';
 
   const [currentHeading, setCurrentHeading] = useState<'Paragraph' | 'Heading 1' | 'Heading 2' | 'Heading 3'>('Paragraph');
+  // Base style of the whole editor; kept separate from the toolbar state below so styling a
+  // selection never restyles the entire text
+  const [baseStyle, setBaseStyle] = useState({ font: initialFont, size: initialSize, color: initialColor });
+  // Toolbar display state: reflects the current selection
   const [currentFont, setCurrentFont] = useState<string>(initialFont);
   const [fontSize, setFontSize] = useState<number>(initialSize);
   const [textColor, setTextColor] = useState<string>(initialColor);
@@ -90,6 +94,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           : range.commonAncestorContainer.parentElement;
 
         if (parentEl) {
+          // Keep the heading dropdown in sync with the block the cursor is in
+          const block = parentEl.closest('h1, h2, h3, p');
+          const blockTag = block && editorRef.current.contains(block) ? block.tagName : '';
+          setCurrentHeading(
+            blockTag === 'H1' ? 'Heading 1' : blockTag === 'H2' ? 'Heading 2' : blockTag === 'H3' ? 'Heading 3' : 'Paragraph'
+          );
+
           const computed = window.getComputedStyle(parentEl);
           if (computed.fontFamily) {
             const cleanFont = computed.fontFamily.replace(/["']/g, '').split(',')[0].trim();
@@ -132,18 +143,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       const size = typography.elements?.p?.fontSize || 15;
       const color = typography.elements?.p?.color || typography.globalColor || '#091426';
 
+      setBaseStyle({ font, size, color });
       setCurrentFont(font);
       setFontSize(size);
       setTextColor(color);
-
-      if (editorRef.current) {
-        editorRef.current.style.fontFamily = `'${font}', sans-serif`;
-        editorRef.current.style.fontSize = `${size}px`;
-        editorRef.current.style.color = color;
-        if (typography.elements?.p?.lineHeight) {
-          editorRef.current.style.lineHeight = String(typography.elements.p.lineHeight);
-        }
-      }
     }
   }, [typography]);
 
@@ -249,6 +252,68 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
   };
 
+  // Returns the active non-collapsed selection range inside the editor, or null
+  const getSelectedRange = (): Range | null => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed || !editorRef.current) return null;
+    const range = sel.getRangeAt(0);
+    return editorRef.current.contains(range.commonAncestorContainer) ? range : null;
+  };
+
+  // Split `container` around `range`: the part before stays in `container`, the selected part is returned,
+  // and the part after is moved into a shallow clone of `container` placed right after it.
+  const splitAroundSelection = (range: Range, container: HTMLElement): DocumentFragment => {
+    const afterRange = document.createRange();
+    afterRange.setStart(range.endContainer, range.endOffset);
+    afterRange.setEnd(container, container.childNodes.length);
+    const afterFrag = afterRange.extractContents();
+    const middleFrag = range.extractContents();
+
+    if (afterFrag.textContent?.trim()) {
+      const afterEl = container.cloneNode(false) as HTMLElement;
+      afterEl.appendChild(afterFrag);
+      container.after(afterEl);
+    }
+    return middleFrag;
+  };
+
+  // Insert `node` where the selection was (after `container` when it was split), select it, and save
+  const placeAndSelect = (node: HTMLElement, container: HTMLElement | null, range: Range) => {
+    if (container) {
+      container.after(node);
+      if (!container.textContent?.trim()) container.remove();
+    } else {
+      range.insertNode(node);
+    }
+    const sel = window.getSelection();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(node);
+    sel?.removeAllRanges();
+    sel?.addRange(newRange);
+    savedSelection.current = newRange.cloneRange();
+    handleInput();
+  };
+
+  // Turn only the selected text into its own block (heading, paragraph or list)
+  const wrapSelectionInBlock = (build: (content: DocumentFragment) => HTMLElement): boolean => {
+    restoreSelection();
+    const range = getSelectedRange();
+    if (!range || !editorRef.current) return false;
+
+    const startEl = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? (range.startContainer as HTMLElement)
+      : range.startContainer.parentElement;
+    const block = startEl?.closest('p, h1, h2, h3, blockquote') as HTMLElement | null;
+    const container = block && editorRef.current.contains(block) && block !== editorRef.current ? block : null;
+
+    // Selection crossing into another block can't be split cleanly; let the browser handle it
+    if (container && !container.contains(range.endContainer)) return false;
+
+    const content = container ? splitAroundSelection(range, container) : range.extractContents();
+    placeAndSelect(build(content), container, range);
+    return true;
+  };
+
   // Heading dropdown handler
   const setHeading = (heading: 'Paragraph' | 'Heading 1' | 'Heading 2' | 'Heading 3') => {
     restoreSelection();
@@ -262,6 +327,14 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     if (editorRef.current) {
       editorRef.current.focus();
     }
+
+    // With text selected, only that text becomes the heading
+    const applied = wrapSelectionInBlock((content) => {
+      const el = document.createElement(tag);
+      el.appendChild(content);
+      return el;
+    });
+    if (applied) return;
 
     try {
       const ok = document.execCommand('formatBlock', false, `<${tag}>`);
@@ -285,9 +358,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     if (hasSelection) {
       applyInlineStyleToSelection({ 'font-family': `'${fontName}', sans-serif` });
     } else {
-      if (editorRef.current) {
-        editorRef.current.style.fontFamily = `'${fontName}', sans-serif`;
-      }
+      setBaseStyle((prev) => ({ ...prev, font: fontName }));
       if (onTypographyChange && typography) {
         onTypographyChange({
           ...typography,
@@ -320,9 +391,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         'line-height': '1.3',
       });
     } else {
-      if (editorRef.current) {
-        editorRef.current.style.fontSize = `${newSize}px`;
-      }
+      setBaseStyle((prev) => ({ ...prev, size: newSize }));
     }
     handleInput();
   };
@@ -339,26 +408,57 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     if (hasSelection) {
       applyInlineStyleToSelection({ color: colorHex });
     } else {
-      if (editorRef.current) {
-        editorRef.current.style.color = colorHex;
-      }
+      setBaseStyle((prev) => ({ ...prev, color: colorHex }));
     }
     handleInput();
   };
 
+  // Bullet / numbered list: with text selected, only that text becomes the list
+  const applyList = (ordered: boolean) => {
+    const applied = wrapSelectionInBlock((content) => {
+      const list = document.createElement(ordered ? 'ol' : 'ul');
+      const li = document.createElement('li');
+      li.appendChild(content);
+      list.appendChild(li);
+      return list;
+    });
+    if (!applied) executeCommand(ordered ? 'insertOrderedList' : 'insertUnorderedList');
+  };
+
   const handleRemoveFormat = () => {
     restoreSelection();
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
-      const range = sel.getRangeAt(0);
+    const range = getSelectedRange();
+    if (range && editorRef.current) {
       const text = range.toString();
-      range.deleteContents();
+
+      // Find the outermost inline styling wrapper (span / b / i / font ...) around the selection
+      const startEl = range.startContainer.nodeType === Node.ELEMENT_NODE
+        ? (range.startContainer as HTMLElement)
+        : range.startContainer.parentElement;
+      let styled: HTMLElement | null = null;
+      for (let el = startEl; el && el !== editorRef.current; el = el.parentElement) {
+        if (/^(SPAN|B|STRONG|I|EM|U|S|STRIKE|FONT|A)$/.test(el.tagName)) styled = el;
+        else break;
+      }
+
+      const plain = document.createElement('span');
+      plain.textContent = text;
+      if (styled && styled.contains(range.endContainer)) {
+        // Lift the selected text out of the styled wrapper so it no longer inherits its styles
+        splitAroundSelection(range, styled);
+        placeAndSelect(plain, styled, range);
+      } else {
+        range.deleteContents();
+        placeAndSelect(plain, null, range);
+      }
+      // Unwrap the helper span so plain text remains
       const textNode = document.createTextNode(text);
-      range.insertNode(textNode);
-      sel.removeAllRanges();
+      plain.replaceWith(textNode);
+      const sel = window.getSelection();
       const newRange = document.createRange();
       newRange.selectNodeContents(textNode);
-      sel.addRange(newRange);
+      sel?.removeAllRanges();
+      sel?.addRange(newRange);
       savedSelection.current = newRange.cloneRange();
       setSelectedText(text.trim());
     } else {
@@ -597,7 +697,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <div className="flex items-center gap-0.5 shrink-0">
             <button
               type="button"
-              onMouseDown={(e) => { e.preventDefault(); executeCommand('insertUnorderedList'); }}
+              onMouseDown={(e) => { e.preventDefault(); applyList(false); }}
               className="w-7 h-7 rounded hover:bg-gray-200/80 flex items-center justify-center text-gray-700 transition-colors"
               title="Bullet list"
             >
@@ -605,7 +705,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             </button>
             <button
               type="button"
-              onMouseDown={(e) => { e.preventDefault(); executeCommand('insertOrderedList'); }}
+              onMouseDown={(e) => { e.preventDefault(); applyList(true); }}
               className="w-7 h-7 rounded hover:bg-gray-200/80 flex items-center justify-center text-gray-700 transition-colors"
               title="Numbered list"
             >
@@ -667,10 +767,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           onBlur={handleInput}
           style={{
             minHeight,
-            fontFamily: `'${currentFont}', sans-serif`,
-            fontSize: `${fontSize}px`,
+            fontFamily: `'${baseStyle.font}', sans-serif`,
+            fontSize: `${baseStyle.size}px`,
             lineHeight: typography?.elements?.p?.lineHeight ?? typography?.globalLineHeight ?? 1.6,
-            color: textColor,
+            color: baseStyle.color,
             letterSpacing: typography?.elements?.p?.letterSpacing ? `${typography.elements.p.letterSpacing}px` : undefined,
           }}
           className="w-full p-3 sm:p-3.5 leading-relaxed focus:outline-none overflow-y-auto max-h-[360px] empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none transition-all [&_h1]:font-black [&_h1]:text-2xl [&_h1]:mb-2 [&_h2]:font-bold [&_h2]:text-xl [&_h2]:mb-1.5 [&_h3]:font-bold [&_h3]:text-lg [&_h3]:mb-1 [&_p]:mb-2 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-400 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-gray-600"

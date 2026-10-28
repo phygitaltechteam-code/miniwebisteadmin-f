@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { 
-  Video, Plus, Trash2, ArrowRight, ArrowLeft, Play, ExternalLink, Loader2 
+  Video, Plus, Trash2, ArrowRight, ArrowLeft, Play, ExternalLink, Loader2, GripVertical
 } from 'lucide-react';
 import { ProfileData } from '../../types/profile';
 import GenericInputField from '@/components/Forms/Input/GenericInputField';
@@ -13,6 +13,8 @@ import {
   parseCustomerVideosResponse,
   deleteCustomerVideo
 } from '@/lib/api/customerVideosApi';
+import { saveSettingsOrder } from '@/lib/api/customerSettingsApi';
+import { useDragReorder, moveItem } from '@/hooks/useDragReorder';
 
 interface Step7Props {
   profile: ProfileData;
@@ -102,6 +104,22 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
     onChange('youtubeVideos', profile.youtubeVideos.filter(v => v.id !== id));
     onToast('Video embed removed from gallery.');
   };
+
+  // Drag & drop video order, saved to the settings API as videoOrder
+  const { dragProps: videoDragProps, dragClass: videoDragClass, isDragging: isDraggingVideo } = useDragReorder(async (from, to) => {
+    const reordered = moveItem(profile.youtubeVideos, from, to);
+    const order = reordered
+      .map((v: any) => String(v._id || v.id))
+      .filter((id) => !/^(temp-|new-|vid-)/.test(id) && !/^\d+$/.test(id));
+    onChange('youtubeVideos', reordered);
+    onChange('videoOrder', order);
+    try {
+      await saveSettingsOrder({ videoOrder: order }, adminId);
+      toast.success('Video order saved');
+    } catch (error: any) {
+      toast.error(`API Error: ${error?.response?.data?.message || error?.message || 'Failed to save video order'}`);
+    }
+  });
 
   const handleSaveAndNext = async () => {
     const result = step7YoutubeVideosSchema.safeParse({
@@ -245,19 +263,30 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-          {profile.youtubeVideos.map((video) => {
+          {profile.youtubeVideos.map((video, index) => {
             const embed = video.embedUrl || getEmbedUrl(video.url || video.videoUrl || '');
             return (
               <div
                 key={video.id}
-                className="border border-[#E0E0E0] rounded-lg overflow-hidden bg-white hover:border-[#2196F3]/50 transition-all shadow-none flex flex-col"
+                {...videoDragProps(index)}
+                title="Drag to reorder"
+                className={`border border-[#E0E0E0] rounded-lg overflow-hidden bg-white hover:border-[#2196F3]/50 transition-all shadow-none flex flex-col ${videoDragClass(index)}`}
               >
-                {/* Embedded Player */}
+                {/* Drag handle bar (the iframe below can't start a drag itself) */}
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#FAFAFA] border-b border-[#E0E0E0] cursor-grab active:cursor-grabbing select-none">
+                  <GripVertical className="w-4 h-4 text-gray-400" />
+                  <span className="w-5 h-5 rounded-full bg-[#EFF6FF] text-[#2196F3] text-[11px] font-bold flex items-center justify-center">
+                    {index + 1}
+                  </span>
+                  <span className="text-[11px] text-[#757575]">Drag to reorder</span>
+                </div>
+
+                {/* Embedded Player — ignores the mouse while dragging so drops reach the card */}
                 <div className="aspect-video w-full bg-black">
                   <iframe
                     src={embed}
                     title={video.title}
-                    className="w-full h-full"
+                    className={`w-full h-full ${isDraggingVideo ? 'pointer-events-none' : ''}`}
                     allowFullScreen
                   />
                 </div>

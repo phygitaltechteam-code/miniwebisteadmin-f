@@ -1,5 +1,6 @@
 import { api } from '@/utils/axios';
 import { ProfileData } from '@/types/profile';
+import { base64ToFile } from './customerAboutApi';
 
 /**
  * Exact payload shape that the backend `customers/payment` API accepts & returns:
@@ -91,7 +92,7 @@ export const formatCustomerPaymentPayload = (profile: Partial<ProfileData>): Cus
  * Parse backend payment response back into frontend ProfileData fields
  */
 export const parseCustomerPaymentResponse = (res: any): Partial<ProfileData> => {
-  const raw = res?.data || res?.payment || res;
+  let raw = res?.data || res?.payment || res;
   if (!raw || typeof raw !== 'object') return {};
 
   const upiId = raw.upiId || '';
@@ -101,6 +102,35 @@ export const parseCustomerPaymentResponse = (res: any): Partial<ProfileData> => 
   const accNo = raw.bankAccountNumber || raw.accountNumber || '';
   const ifsc = raw.bankIfscCode || raw.ifscCode || '';
   const accType = raw.accountType || 'Savings Account';
+
+  // Wallets may come back as an array of { walletName, walletPhoneNo, walletQr }; map them onto
+  // Paytm / PhonePe / Google Pay by name, falling back to their position (same order they are sent in)
+  const walletList: any[] = Array.isArray(raw.wallets) ? raw.wallets : Array.isArray(raw.walletDetails) ? raw.walletDetails : [];
+  const findWallet = (pattern: RegExp, idx: number) =>
+    walletList.find((w) => pattern.test(String(w?.walletName || w?.name || ''))) || walletList[idx];
+  const [paytmW, phonePeW, gPayW] = [
+    findWallet(/paytm/i, 0),
+    findWallet(/phone\s*pe/i, 1),
+    findWallet(/google|gpay/i, 2),
+  ];
+  const wName = (w: any) => w?.walletName || w?.name || '';
+  const wPhone = (w: any) => w?.walletPhoneNo || w?.phoneNo || w?.phone || '';
+  const wQr = (w: any) => w?.walletQr || w?.qr || w?.qrUrl || '';
+
+  if (walletList.length > 0) {
+    raw = {
+      ...raw,
+      paytmQrProviderName: raw.paytmQrProviderName || wName(paytmW),
+      paytmPhone: raw.paytmPhone || wPhone(paytmW),
+      paytmQrUrl: raw.paytmQrUrl || wQr(paytmW),
+      phonePeQrProviderName: raw.phonePeQrProviderName || wName(phonePeW),
+      phonePePhone: raw.phonePePhone || wPhone(phonePeW),
+      phonePeQrUrl: raw.phonePeQrUrl || wQr(phonePeW),
+      gPayQrProviderName: raw.gPayQrProviderName || wName(gPayW),
+      gPayPhone: raw.gPayPhone || wPhone(gPayW),
+      gPayQrUrl: raw.gPayQrUrl || wQr(gPayW),
+    };
+  }
 
   return {
     upiId,
@@ -154,14 +184,62 @@ export const getCustomerPayment = async (adminId?: string): Promise<CustomerPaym
   }
 };
 
+// Wallet-specific keys; these go out as repeated walletName / walletPhoneNo / walletQr entries instead
+const WALLET_KEYS = [
+  'paytmPhone', 'phonePePhone', 'gPayPhone',
+  'paytmQrUrl', 'phonePeQrUrl', 'gPayQrUrl',
+  'paytmQrProviderName', 'phonePeQrProviderName', 'gPayQrProviderName',
+];
+
+/**
+ * Build the multipart body for the payment API.
+ * Bank / UPI fields are plain text; each wallet (Paytm, PhonePe, Google Pay) that has a phone or QR repeats
+ * walletName, walletPhoneNo and walletQr in that order. walletQr is a File for a newly uploaded QR,
+ * the existing URL to keep the old QR, or empty for no QR.
+ */
+export const formatCustomerPaymentFormData = (profile: Partial<ProfileData>): FormData => {
+  const payload = formatCustomerPaymentPayload(profile);
+  const formData = new FormData();
+
+  Object.entries(payload).forEach(([key, val]) => {
+    if (WALLET_KEYS.includes(key) || val === null || val === undefined || val === '') return;
+    formData.append(key, String(val));
+  });
+
+  const wallets = [
+    { name: payload.paytmQrProviderName || 'Paytm', phone: payload.paytmPhone, qr: payload.paytmQrUrl, file: 'paytm-qr' },
+    { name: payload.phonePeQrProviderName || 'PhonePe', phone: payload.phonePePhone, qr: payload.phonePeQrUrl, file: 'phonepe-qr' },
+    { name: payload.gPayQrProviderName || 'Google Pay', phone: payload.gPayPhone, qr: payload.gPayQrUrl, file: 'gpay-qr' },
+  ];
+
+  wallets
+    .filter((w) => w.phone || w.qr)
+    .forEach((w) => {
+      formData.append('walletName', w.name);
+      formData.append('walletPhoneNo', w.phone || '');
+      const qr: string = w.qr || '';
+      const qrFile = qr.startsWith('data:') ? base64ToFile(qr, w.file) : null;
+      if (qrFile) {
+        formData.append('walletQr', qrFile);
+      } else if (qr.startsWith('blob:')) {
+        formData.append('walletQr', ''); // local preview only, nothing to upload
+      } else {
+        formData.append('walletQr', qr);
+      }
+    });
+
+  return formData;
+};
+
 /**
  * Save or update payment methods & dynamic QR (POST/PATCH customers/payment OR superAdmin/admin/:adminId/payment)
+ * Sent as multipart/form-data (see formatCustomerPaymentFormData).
  */
 export const saveOrUpdateCustomerPayment = async (
   profile: Partial<ProfileData>,
   adminId?: string
 ): Promise<CustomerPaymentResponse> => {
-  const payload = formatCustomerPaymentPayload(profile);
+  const payload = formatCustomerPaymentFormData(profile);
   const endpoint = adminId ? `superAdmin/admin/${adminId}/payment` : 'customers/payment';
 
   // 1. Try POST

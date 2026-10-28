@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initialProfileData } from '@/data/initialProfile';
-import { ProfileData } from '@/types/profile';
-import { TabStepper } from '@/components/TabStepper';
+import { ProfileData, CardSectionKey, DEFAULT_SECTION_ORDER } from '@/types/profile';
+import { TabStepper, getOrderedSteps } from '@/components/TabStepper';
 import { FullCardModal } from '@/components/FullCardModal';
 import { SelectThemeModal } from '@/components/SelectThemeModal';
 import { TypographyCustomizerModal } from '@/components/TypographyCustomizerModal';
@@ -15,14 +15,14 @@ import { Step6GalleryMedia } from '@/components/steps/Step6GalleryMedia';
 import { Step7YoutubeVideos } from '@/components/steps/Step7YoutubeVideos';
 import { Step7SettingsHeadings } from '@/components/steps/Step7SettingsHeadings';
 import { useGetAdmin } from '@/lib/react-query/superadmin/admin';
-import { getCustomerInfo } from '@/lib/api/customerInfoApi';
+import { getCustomerInfo, updateCustomerInfo, formatAdminInfoPayload } from '@/lib/api/customerInfoApi';
 import { getCustomerAbout } from '@/lib/api/customerAboutApi';
 import { getCustomerProducts, normalizeBackendProduct } from '@/lib/api/customerProductsApi';
 import { getCustomerLinks, parseCustomerLinksResponse } from '@/lib/api/customerSocialApi';
 import { getCustomerPayment, parseCustomerPaymentResponse } from '@/lib/api/customerPaymentApi';
 import { getCustomerGallery, parseCustomerGalleryResponse } from '@/lib/api/customerGalleryApi';
 import { getCustomerVideos, parseCustomerVideosResponse } from '@/lib/api/customerVideosApi';
-import { getCustomerSettings } from '@/lib/api/customerSettingsApi';
+import { getCustomerSettings, saveSectionOrder, parseSettingsOrder, sortByOrder } from '@/lib/api/customerSettingsApi';
 
 export interface SuperAdminCardForgeProps {
   selectedAdmin?: any;
@@ -310,6 +310,21 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
               if (rawSett.visibility) updated.visibility = { ...updated.visibility, ...rawSett.visibility };
               if (rawSett.amount !== undefined) updated.amount = rawSett.amount;
               if (rawSett.renewalAmount !== undefined) updated.renewalAmount = rawSett.renewalAmount;
+              const orders = parseSettingsOrder(rawSett);
+              if (orders.sectionOrder) {
+                const valid = orders.sectionOrder.filter((k) => DEFAULT_SECTION_ORDER.includes(k as CardSectionKey));
+                if (valid.length > 0) updated.sectionOrder = valid;
+              }
+              if (orders.aboutBlockOrder) updated.aboutBlockOrder = orders.aboutBlockOrder;
+              if (orders.linkOrder) updated.linkOrder = orders.linkOrder;
+              if (orders.productOrder) {
+                updated.productOrder = orders.productOrder;
+                updated.products = sortByOrder(updated.products || [], orders.productOrder, (p) => String(p._id || p.id));
+              }
+              if (orders.videoOrder) {
+                updated.videoOrder = orders.videoOrder;
+                updated.youtubeVideos = sortByOrder(updated.youtubeVideos || [], orders.videoOrder, (v: any) => String(v._id || v.id));
+              }
             }
           }
 
@@ -338,8 +353,47 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const next = () => { if (currentStep < 8) handleSelectStep(currentStep + 1); };
-  const prev = () => { if (currentStep > 1) handleSelectStep(currentStep - 1); };
+  // Next / Previous follow the (possibly reordered) tab order, not the raw step numbers
+  const orderedSteps = getOrderedSteps(profile.sectionOrder);
+  const stepIndex = orderedSteps.indexOf(currentStep);
+  const next = () => { if (stepIndex < orderedSteps.length - 1) handleSelectStep(orderedSteps[stepIndex + 1]); };
+  const prev = () => { if (stepIndex > 0) handleSelectStep(orderedSteps[stepIndex - 1]); };
+
+  // Apply the theme to the preview right away, then save it with the info API (theme field)
+  const handleSelectTheme = async (themeId: string): Promise<boolean> => {
+    const previous = profile.theme;
+    handleFieldChange('theme', themeId);
+
+    // The info API needs the Step 1 basics; without them the theme is only applied to the preview
+    if (!profile.businessName || !profile.contactName) {
+      showToast('🎨 Theme applied to preview. Save Basic Details first to store it on the card.');
+      return true;
+    }
+
+    try {
+      await updateCustomerInfo(formatAdminInfoPayload({ ...profile, theme: themeId }), effectiveAdminId || undefined);
+      showToast('✅ Theme saved');
+      return true;
+    } catch (error: any) {
+      handleFieldChange('theme', previous);
+      const backendMessage = error?.response?.data?.message || error?.message || 'Failed to save theme';
+      showToast(`❌ API Error: ${backendMessage}`);
+      return false;
+    }
+  };
+
+  const handleReorderSections = async (order: CardSectionKey[]) => {
+    const previous = profile.sectionOrder;
+    handleFieldChange('sectionOrder', order);
+    try {
+      await saveSectionOrder(order, effectiveAdminId || undefined);
+      showToast('✅ Section order saved');
+    } catch (error: any) {
+      handleFieldChange('sectionOrder', previous);
+      const backendMessage = error?.response?.data?.message || error?.message || 'Failed to save section order';
+      showToast(`❌ API Error: ${backendMessage}`);
+    }
+  };
 
   const handleSaveAll = () => {
     showToast('🎉 Digital Card configured successfully for this administrator!');
@@ -376,6 +430,8 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
           currentStep={currentStep}
           onSelectStep={handleSelectStep}
           productCount={profile.products.length}
+          sectionOrder={profile.sectionOrder}
+          onReorderSections={handleReorderSections}
         />
 
         {/* Form Process Step Area (Full Width) */}
@@ -460,7 +516,7 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
         isOpen={isThemeModalOpen}
         onClose={() => setIsThemeModalOpen(false)}
         currentTheme={profile.theme}
-        onSelectTheme={(th) => handleFieldChange('theme', th)}
+        onSelectTheme={handleSelectTheme}
         onOpenTypography={() => setIsTypographyModalOpen(true)}
       />
 

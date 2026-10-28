@@ -24,6 +24,16 @@ export interface ProductItem {
   images?: string[];
 }
 
+/** Card sections whose order can be changed by drag & drop (steps 2-7 in the builder) */
+export type CardSectionKey = 'about' | 'products' | 'links' | 'payment' | 'gallery' | 'youtube';
+
+export const DEFAULT_SECTION_ORDER: CardSectionKey[] = ['about', 'products', 'links', 'payment', 'gallery', 'youtube'];
+
+/** Blocks inside the About section whose order can be changed by drag & drop */
+export type AboutBlockKey = 'services' | 'specialities' | 'about' | 'documents';
+
+export const DEFAULT_ABOUT_BLOCK_ORDER: AboutBlockKey[] = ['services', 'specialities', 'about', 'documents'];
+
 export interface QuickLink {
   id: string;
   name: string;
@@ -91,6 +101,17 @@ export interface YoutubeVideo {
 }
 
 export interface ProfileData {
+  /** Display order of the card sections, saved via the settings API */
+  sectionOrder?: CardSectionKey[];
+  /** Order of the blocks inside the About section, saved via the settings API */
+  aboutBlockOrder?: AboutBlockKey[];
+  /** Product ids in display order, saved via the settings API */
+  productOrder?: string[];
+  /** Video ids in display order, saved via the settings API */
+  videoOrder?: string[];
+  /** Link keys (e.g. whatsappLinks, customLink) in display order, saved via the settings API */
+  linkOrder?: string[];
+
   // Step 1: Basic Details & Theme & Location
   theme: PortalThemeId | 'clean-white' | 'white-orange' | 'white-minimal' | 'white-emerald' | 'white-royal' | 'dark-gold' | 'royal-blue' | 'emerald-luxe' | string;
   category: string;

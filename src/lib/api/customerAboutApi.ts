@@ -1,5 +1,6 @@
 import { api } from '@/utils/axios';
 import { ProfileData, CompanyDocument } from '@/types/profile';
+import { resolveCategoryForSave } from './customerCategoriesApi';
 
 export interface CustomerAboutPayload {
   establishmentYear?: Number | string;
@@ -92,7 +93,9 @@ export const formatAdminAboutPayload = (profile: Partial<ProfileData>): Customer
       : [];
 
   sourceCategoryList.forEach((item: any) => {
-    const str = (typeof item === 'object' ? String(item.id || item._id || item.name || '') : String(item || '')).trim();
+    const raw = (typeof item === 'object' ? String(item.id || item._id || item.name || '') : String(item || '')).trim();
+    // Manual categories: send the name, never their own id (backend rejects it as "Invalid categories")
+    const str = resolveCategoryForSave(raw);
     if (str && !seenCats.has(str.toLowerCase())) {
       seenCats.add(str.toLowerCase());
       catIdsList.push(str);

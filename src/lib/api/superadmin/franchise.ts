@@ -151,6 +151,12 @@ export const updateFranchise = async (
   return (response as any)?.data || response;
 };
 
+// PATCH superAdmin/franchise/:id/toggle with { isActive } — sets the franchise active or inactive
+export const toggleFranchiseStatus = async (id: string, isActive: boolean): Promise<any> => {
+  const response = await api.patch(`superAdmin/franchise/${id}/toggle`, { isActive });
+  return (response as any)?.data || response;
+};
+
 // DELETE /superadmin/franchise/:id
 export const deleteFranchise = async (id: string): Promise<{ success: boolean; id: string }> => {
   try {

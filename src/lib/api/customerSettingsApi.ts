@@ -34,7 +34,64 @@ export const formatCustomerSettingsPayload = (profile: Partial<ProfileData>): Cu
     theme: profile.theme || 'clean-white',
     hasLogoBorder: profile.hasGoldenBorder ?? profile.hasLogoBorder ?? true,
     hasGoldenBorder: profile.hasGoldenBorder ?? true,
+    ...(profile.sectionOrder?.length ? { sectionOrder: profile.sectionOrder } : {}),
+    ...(profile.aboutBlockOrder?.length ? { aboutBlockOrder: profile.aboutBlockOrder } : {}),
+    ...(profile.productOrder?.length ? { productOrder: profile.productOrder } : {}),
+    ...(profile.videoOrder?.length ? { videoOrder: profile.videoOrder } : {}),
+    ...(profile.linkOrder?.length ? { linkOrder: profile.linkOrder } : {}),
   };
+};
+
+/** Order keys stored in the settings API */
+export type SettingsOrderFields = Partial<
+  Pick<ProfileData, 'sectionOrder' | 'aboutBlockOrder' | 'productOrder' | 'videoOrder' | 'linkOrder'>
+>;
+
+/**
+ * Save only the given order fields (PATCH settings with just those keys), so a reorder never
+ * overwrites headings or other settings with unsaved local values. Falls back to POST.
+ */
+export const saveSettingsOrder = async (
+  fields: SettingsOrderFields,
+  adminId?: string
+): Promise<CustomerSettingsResponse> => {
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/settings` : 'customers/settings';
+  try {
+    const res = await api.patch(endpoint, fields);
+    return (res as any)?.data || res;
+  } catch (err: any) {
+    if ([404, 405].includes(err?.response?.status)) {
+      const res = await api.post(endpoint, fields);
+      return (res as any)?.data || res;
+    }
+    throw err;
+  }
+};
+
+export const saveSectionOrder = (sectionOrder: string[], adminId?: string) =>
+  saveSettingsOrder({ sectionOrder: sectionOrder as ProfileData['sectionOrder'] }, adminId);
+
+/** Read the order fields out of a settings GET response, keeping only well-formed string arrays */
+export const parseSettingsOrder = (raw: any): SettingsOrderFields => {
+  const result: SettingsOrderFields = {};
+  const keys: (keyof SettingsOrderFields)[] = ['sectionOrder', 'aboutBlockOrder', 'productOrder', 'videoOrder', 'linkOrder'];
+  keys.forEach((key) => {
+    const val = raw?.[key];
+    if (Array.isArray(val) && val.length > 0 && val.every((v: any) => typeof v === 'string')) {
+      (result as any)[key] = val;
+    }
+  });
+  return result;
+};
+
+/** Sort `items` by the position of their id in `order`; items not in `order` keep their relative order at the end */
+export const sortByOrder = <T,>(items: T[], order: string[] | undefined, getId: (item: T) => string): T[] => {
+  if (!order?.length) return items;
+  const rank = new Map(order.map((id, idx) => [id, idx]));
+  return items
+    .map((item, idx) => ({ item, idx, r: rank.get(getId(item)) ?? order.length + idx }))
+    .sort((a, b) => a.r - b.r)
+    .map((x) => x.item);
 };
 
 /**

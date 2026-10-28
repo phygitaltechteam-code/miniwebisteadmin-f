@@ -81,6 +81,9 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
         if (parsed.paytmQrUrl) onChange('paytmQrUrl', parsed.paytmQrUrl);
         if (parsed.phonePeQrUrl) onChange('phonePeQrUrl', parsed.phonePeQrUrl);
         if (parsed.gPayQrUrl) onChange('gPayQrUrl', parsed.gPayQrUrl);
+        if (parsed.paytmQrProviderName) onChange('paytmQrProviderName', parsed.paytmQrProviderName);
+        if (parsed.phonePeQrProviderName) onChange('phonePeQrProviderName', parsed.phonePeQrProviderName);
+        if (parsed.gPayQrProviderName) onChange('gPayQrProviderName', parsed.gPayQrProviderName);
       } catch (err) {
         // Normal if payment details are not yet configured
       }
@@ -262,8 +265,8 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
           </div>
 
           <div className="space-y-2 sm:space-y-2.5">
-            {/* Row 1: Bank Name & IFSC */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
+            {/* Row 1: Bank Name, IFSC & UPI ID */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
               <div>
                 <GenericInputField
                   label="Enter Bank Name (Optional)"
@@ -300,6 +303,24 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
                     <span className="text-[11px] text-amber-600 font-normal mt-1 block">
                       Format: 4 letters + 0 + 6 alphanumeric characters (e.g. HDFC0001234)
                     </span>
+                  );
+                })()}
+              </div>
+
+              <div>
+                <GenericInputField
+                  label="Enter UPI ID (Optional)"
+                  value={profile.upiId || ''}
+                  onChange={(e) => onChange('upiId', e.target.value.replace(/\s/g, ''))}
+                  placeholder="e.g. business@okhdfcbank"
+                />
+                {(() => {
+                  const upi = (profile.upiId || '').trim();
+                  if (!upi) return null;
+                  return /^[\w.-]{2,}@[a-zA-Z][a-zA-Z0-9.-]{1,}$/.test(upi) ? (
+                    <span className="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1">✓ Valid UPI ID</span>
+                  ) : (
+                    <span className="text-[11px] text-amber-600 font-normal mt-1 block">Format: name@bank (e.g. business@okhdfcbank)</span>
                   );
                 })()}
               </div>
@@ -388,6 +409,12 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-3">
             {/* 1. Paytm QR */}
             <div className="bg-white p-2.5 rounded-lg border border-[#E0E0E0] flex flex-col justify-between space-y-2">
+              <GenericInputField
+                label="Name (Optional)"
+                value={profile.paytmQrProviderName ?? 'Paytm'}
+                onChange={(e) => onChange('paytmQrProviderName', e.target.value)}
+                placeholder="Paytm"
+              />
               {renderWalletPhoneInput('paytmPhone', 'Enter Paytm Phone No')}
 
               <div className="flex-1 flex flex-col items-center justify-center p-3 rounded-lg border border-dashed border-[#C4C4C4] bg-gray-50/60 text-center min-h-[130px]">
@@ -445,6 +472,12 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
 
             {/* 2. PhonePe QR */}
             <div className="bg-white p-2.5 rounded-lg border border-[#E0E0E0] flex flex-col justify-between space-y-2">
+              <GenericInputField
+                label="Name (Optional)"
+                value={profile.phonePeQrProviderName ?? 'PhonePe'}
+                onChange={(e) => onChange('phonePeQrProviderName', e.target.value)}
+                placeholder="PhonePe"
+              />
               {renderWalletPhoneInput('phonePePhone', 'Enter PhonePe Phone No')}
 
               <div className="flex-1 flex flex-col items-center justify-center p-3 rounded-lg border border-dashed border-[#C4C4C4] bg-gray-50/60 text-center min-h-[130px]">
@@ -502,6 +535,12 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
 
             {/* 3. Google Pay QR */}
             <div className="bg-white p-2.5 rounded-lg border border-[#E0E0E0] flex flex-col justify-between space-y-2">
+              <GenericInputField
+                label="Name (Optional)"
+                value={profile.gPayQrProviderName ?? 'Google Pay'}
+                onChange={(e) => onChange('gPayQrProviderName', e.target.value)}
+                placeholder="Google Pay"
+              />
               {renderWalletPhoneInput('gPayPhone', 'Enter Google Pay Phone No')}
 
               <div className="flex-1 flex flex-col items-center justify-center p-3 rounded-lg border border-dashed border-[#C4C4C4] bg-gray-50/60 text-center min-h-[130px]">

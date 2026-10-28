@@ -5,6 +5,7 @@ import {
   FranchisePayload,
   saveFranchise,
   updateFranchise,
+  toggleFranchiseStatus,
 } from '@/lib/api/superadmin/franchise';
 import { SUPERADMIN_FRANCHISE_KEYS } from '@/lib/react-query/queryKeys';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -65,6 +66,24 @@ export const useUpdateFranchise = () => {
         error?.response?.data?.message ||
         'Failed to update franchise';
       toast.error(errMsg);
+    },
+  });
+};
+
+export const useToggleFranchiseStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => toggleFranchiseStatus(id, isActive),
+    onSuccess: (res: any) => {
+      toast.success(res?.message || 'Franchise status updated');
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to update franchise status');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: [SUPERADMIN_FRANCHISE_KEYS.GET_ALL],
+      });
     },
   });
 };

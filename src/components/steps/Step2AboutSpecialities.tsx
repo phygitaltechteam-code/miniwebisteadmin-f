@@ -4,16 +4,18 @@ import {
   CheckCircle2, Plus, X, Bold, Italic,
   Underline, List, ListOrdered, Link2,
   Image as ImageIcon, FileText, Download,
-  Trash2, Upload, ArrowRight, ArrowLeft, Sparkles, Loader2, Check, Type
+  Trash2, Upload, ArrowRight, ArrowLeft, Sparkles, Loader2, Check, Type, GripVertical
 } from 'lucide-react';
-import { ProfileData, CompanyDocument } from '../../types/profile';
+import { ProfileData, CompanyDocument, AboutBlockKey, DEFAULT_ABOUT_BLOCK_ORDER } from '../../types/profile';
+import { saveSettingsOrder } from '@/lib/api/customerSettingsApi';
+import { useDragReorder, moveItem } from '@/hooks/useDragReorder';
 import GenericInputField from '@/components/Forms/Input/GenericInputField';
 import GenericButton from '@/components/Forms/Buttons/GenericButton';
 import { RichTextEditor } from '@/components/Forms/RichTextEditor';
 
 import { step2AboutSpecialitiesSchema } from '@/schemas/cardProfileSchema';
 import { generateAiKeywords, generateAiNarrative, generateAiServices } from '@/utils/aiGenerator';
-import { getCustomerCategories, CustomerCategory } from '@/lib/api/customerCategoriesApi';
+import { getCustomerCategories, CustomerCategory, rememberCategoryName } from '@/lib/api/customerCategoriesApi';
 import {
   getCustomerInfo,
   updateCustomerInfo,
@@ -64,6 +66,9 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
   const [selectedDocFile, setSelectedDocFile] = useState<{ file: File; base64: string } | null>(null);
   const [hasExistingAbout, setHasExistingAbout] = useState(false);
   const [backendServices, setBackendServices] = useState<string[]>([]);
+  // Chip currently being dragged for reordering
+  const [dragItem, setDragItem] = useState<{ list: 'servicesOffered' | 'specialities'; index: number } | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Auto-fetch existing about info on mount (GET customers/about or superAdmin/admin/:adminId/about)
   useEffect(() => {
@@ -184,7 +189,10 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
                 if (id && !ids.includes(id)) ids.push(id);
                 if (name && !names.includes(name)) names.push(name);
                 else if (id && !names.includes(id)) names.push(id);
-                if (id && name) newAvail.push({ id, name });
+                if (id && name) {
+                  newAvail.push({ id, name });
+                  rememberCategoryName(id, name);
+                }
               } else if (typeof item === 'string') {
                 const str = item.trim();
                 if (str) {
@@ -270,7 +278,10 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
             if (id && !ids.includes(id)) ids.push(id);
             if (name && !names.includes(name)) names.push(name);
             else if (id && !names.includes(id)) names.push(id);
-            if (id && name) newCatsList.push({ id, name });
+            if (id && name) {
+              newCatsList.push({ id, name });
+              rememberCategoryName(id, name);
+            }
           } else if (typeof item === 'string') {
             const str = item.trim();
             if (str) {
@@ -600,6 +611,112 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
     onToast(`Removed speciality: "${item}"`);
   };
 
+  // Drag & drop reorder for services / specialities; the new order is saved to the API immediately
+  const handleChipDrop = async (list: 'servicesOffered' | 'specialities', toIndex: number) => {
+    const from = dragItem;
+    setDragItem(null);
+    setDragOverIndex(null);
+    if (!from || from.list !== list || from.index === toIndex) return;
+
+    const items = [...((profile[list] as any[]) || [])];
+    const [moved] = items.splice(from.index, 1);
+    items.splice(toIndex, 0, moved);
+    onChange(list, items as any);
+
+    const nextProfile = { ...profile, [list]: items } as ProfileData;
+    const toastId = toast.loading('Saving new order...');
+    try {
+      // Services are also part of the info API; only sync it when Step 1 data exists (same rule as Save & Next)
+      if (list === 'servicesOffered' && nextProfile.businessName && nextProfile.contactName) {
+        await updateCustomerInfo(formatAdminInfoPayload(nextProfile), adminId);
+      }
+      await saveOrUpdateCustomerAbout(
+        formatAboutFormData(nextProfile),
+        hasExistingAbout,
+        formatAdminAboutPayload(nextProfile),
+        adminId
+      );
+      setHasExistingAbout(true);
+      toast.success('Order saved', { id: toastId });
+    } catch (error: any) {
+      const backendMessage = error?.response?.data?.message || error?.message || 'Failed to save order';
+      toast.error(`API Error: ${backendMessage}`, { id: toastId });
+    }
+  };
+
+  // ─── Reorderable About blocks (services / specialities / about text / documents) ───
+  const aboutBlockOrder: AboutBlockKey[] = [
+    ...(profile.aboutBlockOrder || []).filter((k) => DEFAULT_ABOUT_BLOCK_ORDER.includes(k)),
+    ...DEFAULT_ABOUT_BLOCK_ORDER.filter((k) => !(profile.aboutBlockOrder || []).includes(k)),
+  ];
+
+  const { dragProps: blockDragProps, dragClass: blockDragClass } = useDragReorder(async (from, to) => {
+    const order = moveItem(aboutBlockOrder, from, to);
+    onChange('aboutBlockOrder', order);
+    try {
+      await saveSettingsOrder({ aboutBlockOrder: order }, adminId);
+      toast.success('Section order saved');
+    } catch (error: any) {
+      toast.error(`API Error: ${error?.response?.data?.message || error?.message || 'Failed to save order'}`);
+    }
+  });
+
+  // Block container: positioned with CSS order and accepts drops
+  const aboutBlockDropProps = (key: AboutBlockKey) => {
+    const idx = aboutBlockOrder.indexOf(key);
+    const { onDragOver, onDrop } = blockDragProps(idx);
+    return { style: { order: idx }, onDragOver, onDrop };
+  };
+
+  const aboutBlockClass = (key: AboutBlockKey) => blockDragClass(aboutBlockOrder.indexOf(key));
+
+  // Only the grip starts a drag, so typing/selecting inside the block still works
+  const aboutBlockHandle = (key: AboutBlockKey) => {
+    const { draggable, onDragStart, onDragEnd } = blockDragProps(aboutBlockOrder.indexOf(key));
+    return (
+      <span
+        draggable={draggable}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-[#2563EB] -ml-1"
+        title="Drag to move this block"
+      >
+        <GripVertical className="w-4 h-4" />
+      </span>
+    );
+  };
+
+  // Shared drag props for a chip at `index` in `list`
+  const chipDragProps = (list: 'servicesOffered' | 'specialities', index: number) => ({
+    draggable: true,
+    onDragStart: (e: React.DragEvent) => {
+      e.dataTransfer.effectAllowed = 'move';
+      setDragItem({ list, index });
+    },
+    onDragOver: (e: React.DragEvent) => {
+      if (dragItem?.list !== list) return;
+      e.preventDefault();
+      if (dragOverIndex !== index) setDragOverIndex(index);
+    },
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault();
+      handleChipDrop(list, index);
+    },
+    onDragEnd: () => {
+      setDragItem(null);
+      setDragOverIndex(null);
+    },
+  });
+
+  const chipDragClass = (list: 'servicesOffered' | 'specialities', index: number) =>
+    dragItem?.list === list
+      ? dragItem.index === index
+        ? 'opacity-40'
+        : dragOverIndex === index
+          ? 'ring-2 ring-[#2563EB]'
+          : ''
+      : '';
+
   const handleSaveAndNext = async () => {
     const rawNatures = (profile.natureOfBusiness && profile.natureOfBusiness.length > 0)
       ? profile.natureOfBusiness
@@ -888,10 +1005,13 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
         </div>
       </div>
 
+      {/* Reorderable blocks: drag a block's grip to change its position (saved as aboutBlockOrder) */}
+      <div className="flex flex-col">
       {/* ─── Key Services Offered (Multiple Entry) ───────────────── */}
-      <div className="mb-3 pt-3 border-t border-[#c5c6cd]/40">
+      <div {...aboutBlockDropProps('services')} className={`mb-3 pt-3 border-t border-[#c5c6cd]/40 ${aboutBlockClass('services')}`}>
         <div className="flex items-center justify-between gap-1.5 mb-1.5">
-          <label className="text-xs font-bold text-[#091426] block">
+          <label className="text-xs font-bold text-[#091426] flex items-center gap-1">
+            {aboutBlockHandle('services')}
             Key Services Offered
           </label>
 
@@ -913,9 +1033,11 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
             return (
               <span
                 key={idx}
-                className="px-2.5 py-1 rounded-lg bg-white text-[#091426] text-xs font-semibold flex items-center gap-1.5 border border-stroke shadow-2xs"
+                {...chipDragProps('servicesOffered', idx)}
+                className={`px-2.5 py-1 rounded-lg bg-white text-[#091426] text-xs font-semibold flex items-center gap-1.5 border border-stroke shadow-2xs cursor-grab active:cursor-grabbing ${chipDragClass('servicesOffered', idx)}`}
+                title="Drag to reorder"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]" />
+                <GripVertical className="w-3 h-3 text-gray-400 -ml-1" />
                 <span>{cleanSrv}</span>
                 <button
                   type="button"
@@ -985,10 +1107,11 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
       </div>
 
       {/* Core Specialities (Configured tags) */}
-      <div className="mb-3 pt-3 border-t border-[#c5c6cd]/40">
+      <div {...aboutBlockDropProps('specialities')} className={`mb-3 pt-3 border-t border-[#c5c6cd]/40 ${aboutBlockClass('specialities')}`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5">
           <div className="flex items-center justify-between sm:justify-start gap-2">
-            <label className="text-xs font-bold text-[#091426]">
+            <label className="text-xs font-bold text-[#091426] flex items-center gap-1">
+              {aboutBlockHandle('specialities')}
               Core Specialities
             </label>
             <button
@@ -1029,8 +1152,11 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
             return (
               <span
                 key={index}
-                className="px-2.5 py-1 rounded-full bg-blue-50 text-[#2563EB] border border-blue-200 text-xs font-semibold flex items-center gap-1.5 shadow-2xs group hover:bg-blue-100 transition-colors"
+                {...chipDragProps('specialities', index)}
+                className={`px-2.5 py-1 rounded-full bg-blue-50 text-[#2563EB] border border-blue-200 text-xs font-semibold flex items-center gap-1.5 shadow-2xs group hover:bg-blue-100 transition-colors cursor-grab active:cursor-grabbing ${chipDragClass('specialities', index)}`}
+                title="Drag to reorder"
               >
+                <GripVertical className="w-3 h-3 text-blue-300 -ml-1" />
                 <span>{itemText}</span>
                 <button
                   type="button"
@@ -1047,9 +1173,10 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
       </div>
 
       {/* About Us Narrative Rich Text Editor */}
-      <div className="mb-3 pt-3 border-t border-[#c5c6cd]/40">
+      <div {...aboutBlockDropProps('about')} className={`mb-3 pt-3 border-t border-[#c5c6cd]/40 ${aboutBlockClass('about')}`}>
         <div className="flex items-center justify-between mb-1.5">
-          <label className="text-xs sm:text-[13px] font-bold text-[#091426]">
+          <label className="text-xs sm:text-[13px] font-bold text-[#091426] flex items-center gap-1">
+            {aboutBlockHandle('about')}
             About us text
           </label>
           <button
@@ -1080,9 +1207,10 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
       </div>
 
       {/* Upload Company Documents / Brochures */}
-      <div className="pt-3 border-t border-[#c5c6cd]/40">
+      <div {...aboutBlockDropProps('documents')} className={`mb-3 pt-3 border-t border-[#c5c6cd]/40 ${aboutBlockClass('documents')}`}>
         <div className="flex items-center justify-between gap-2 mb-2">
-          <label className="text-xs font-bold text-[#091426]">
+          <label className="text-xs font-bold text-[#091426] flex items-center gap-1">
+            {aboutBlockHandle('documents')}
             Documents & Brochures
           </label>
 
@@ -1366,6 +1494,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
             </div>
           )}
         </div>
+      </div>
       </div>
 
       {/* Step Navigation Buttons */}
