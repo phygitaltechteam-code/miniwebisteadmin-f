@@ -1,11 +1,22 @@
 ﻿import { Token, User } from '@/types';
 import { QUERY_KEYS } from '@/lib/react-query/queryKeys';
-import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { jwtDecode } from 'jwt-decode';
+import { compressFormDataImages } from '@/utils/imageCompressor';
 
 export const unAuthenticatedApi: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_SERVER_URL,
 });
+
+// Every upload: image files in a FormData body are compressed before sending (other fields untouched)
+const compressUploadImages = async (req: InternalAxiosRequestConfig) => {
+  if (typeof FormData !== 'undefined' && req.data instanceof FormData) {
+    req.data = await compressFormDataImages(req.data);
+  }
+  return req;
+};
+
+unAuthenticatedApi.interceptors.request.use(compressUploadImages);
 
 /**
  * Robust helper to extract accessToken string from localStorage
@@ -131,6 +142,8 @@ export const isFranchiseUser = (): boolean => {
 export const api: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_SERVER_URL,
 });
+
+api.interceptors.request.use(compressUploadImages);
 
 api.interceptors.request.use(async (req) => {
   const isFranchise = isFranchiseUser();

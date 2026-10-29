@@ -9,7 +9,7 @@ import {
   useToggleFranchiseStatus,
 } from '@/lib/react-query/superadmin/franchise';
 import { isRecordActive, readIsActive } from '@/lib/api/superadmin/admin';
-import { pickPlanTerms } from '@/lib/api/superadmin/plan';
+import { isPlanLive, pickPlanTerms } from '@/lib/api/superadmin/plan';
 import StatusToggle from '@/components/Forms/StatusToggle';
 import ProjectsAndPayments from '@/pages/superadmin/ProjectsAndPayments';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -111,6 +111,26 @@ export const FranchiseMaster: React.FC = () => {
           {row.fullname}
         </button>
       ),
+    },
+    {
+      accessor: 'id',
+      header: 'Subscription',
+      className: 'text-center',
+      // Same rule as All Businesses: subscribed while the selected plan has not expired
+      render: (row) => {
+        const terms = pickPlanTerms(row.raw);
+        const live = isPlanLive(terms);
+        return (
+          <div className="flex flex-col items-center gap-0.5">
+            <span
+              className={`inline-block whitespace-nowrap px-2.5 py-0.5 text-[11px] font-medium rounded-full text-white ${live ? 'bg-[#4CAF50]' : 'bg-[#F44336]'}`}
+            >
+              {live ? 'Subscribed' : 'Not Subscribed'}
+            </span>
+            {terms?.planName && <span className="text-[11px] text-gray-500 whitespace-nowrap">{terms.planName}</span>}
+          </div>
+        );
+      },
     },
     { accessor: 'phoneNumber', header: 'Phone' },
     { accessor: 'adminLimit', header: 'Admin Limit' },
@@ -439,6 +459,8 @@ export const FranchiseMaster: React.FC = () => {
           showSrNo={true}
           onDelete={(row) => handleDelete(row)}
           onEdit={(row) => handleEdit(row)}
+          // Row click opens the franchise's Subscription & Payments page (buttons and toggles keep their own action)
+          onRowClick={(row) => setSelectedFranchise(row)}
         />
       )}
     </div>

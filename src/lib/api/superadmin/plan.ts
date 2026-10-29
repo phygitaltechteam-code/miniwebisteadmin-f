@@ -41,6 +41,8 @@ export interface SelectPlanPayload {
   price?: number;
   startDate?: string; // ISO date-time
   expiryDate?: string; // ISO date-time
+  /** Admins only; left out = unchanged */
+  paymentStatus?: 'DONE' | 'PENDING';
 }
 
 /** Plan terms saved on the admin / franchise row by "select plan" */

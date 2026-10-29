@@ -3,6 +3,7 @@ import GenericDropdown from '@/components/Forms/DropDown/GenericDropDown';
 import GenericInputField from '@/components/Forms/Input/GenericInputField';
 import GenericTable, { Column } from '@/components/Forms/Table/GenericTable';
 import CopyBusinessModal from '@/components/superadmin/CopyBusinessModal';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import ProjectsAndPayments from '@/pages/superadmin/ProjectsAndPayments';
 import {
   useDeleteAdmin,
@@ -127,6 +128,22 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
   const [editingAdminId, setEditingAdminId] = useState<string | null>(null);
   const [selectedProjectBusiness, setSelectedProjectBusiness] = useState<AdminRow | null>(null);
   const [copyModalBusiness, setCopyModalBusiness] = useState<AdminRow | null>(null);
+  // Business waiting for delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<AdminRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await deleteAdmin(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch {
+      // useDeleteAdmin shows the error; keep the popup open to retry or cancel
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   const { mutateAsync: toggleAdminStatus } = useToggleAdminStatus();
   const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null);
   // isActive returned by the toggle API, per admin id (wins over the list until it refreshes)
@@ -235,11 +252,6 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
       },
     },
     {
-      accessor: 'aiCredit',
-      header: 'AI Credit',
-      className: 'text-center w-16 text-[13px]',
-    },
-    {
       accessor: 'subscriptionStatus',
       header: 'Subscription Status',
       className: 'text-center w-28',
@@ -315,7 +327,7 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
           <button
             type="button"
             title="Delete Business"
-            onClick={() => deleteAdmin(row.id)}
+            onClick={() => setDeleteTarget(row)}
             className="p-1.5 rounded text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors"
           >
             <Trash2 className="w-4 h-4" />
@@ -438,7 +450,7 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
       categoryNames: extractedCatNames,
       contactDisplay: each?.user?.phoneNumber || each.phoneNumber || each.user?.email || each.email || '-',
       creationDate: formattedDateTime,
-      madeBy: creatorDisplay,
+      madeBy: each.digitalCard?.madeBy?.label || creatorDisplay,
       aiCredit: each.aiCredit !== undefined ? each.aiCredit : 0,
       subscriptionStatus: isSubscribed ? 'Subscribed' : 'Not Subscribed',
       email: each.user?.email || each.email || '',
@@ -848,6 +860,19 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
         isOpen={copyModalBusiness !== null}
         business={copyModalBusiness}
         onClose={() => setCopyModalBusiness(null)}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete business?"
+        message={
+          <>
+            Are you sure you want to delete <span className="font-semibold text-[#212121]">{deleteTarget?.fullname}</span>? This cannot be undone.
+          </>
+        }
+        busy={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

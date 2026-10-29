@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { 
   CheckCircle2, Upload, MapPin, Phone, ArrowRight,
@@ -19,6 +19,8 @@ import {
   formatAdminInfoPayload,
   formatCustomerInfoFormData,
   submitCustomerInfoFormData,
+  checkVanityUrl,
+  VanityCheckResult,
 } from '@/lib/api/customerInfoApi';
 
 interface Step1Props {
@@ -125,12 +127,54 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
     onChange('businessName', name);
   };
 
-  const handleCheckUrl = () => {
+  // Display link availability (vanity-check API): on Check, and automatically 600ms after typing stops
+  const [vanityResult, setVanityResult] = useState<VanityCheckResult | null>(null);
+  const [vanityError, setVanityError] = useState('');
+  const vanityRequestRef = useRef(0);
+
+  const runVanityCheck = async (value: string, showToast: boolean) => {
+    const link = value.trim();
+    if (!link) {
+      setVanityResult(null);
+      setVanityError('');
+      return;
+    }
+    const requestId = ++vanityRequestRef.current;
     setCheckingUrl(true);
-    setTimeout(() => {
-      setCheckingUrl(false);
-      onToast(`digiwebcard.in/${profile.vanityUrl || 'your-card'} is available & reserved!`);
-    }, 350);
+    try {
+      const result = await checkVanityUrl(link, adminId);
+      if (requestId !== vanityRequestRef.current) return; // a newer check started
+      setVanityResult(result);
+      setVanityError('');
+      if (showToast) {
+        if (result.available) toast.success(`digiwebcard.in/${result.vanityUrl} is available`);
+        else toast.error(`digiwebcard.in/${result.vanityUrl} is already taken`);
+      }
+    } catch (error: any) {
+      if (requestId !== vanityRequestRef.current) return;
+      const msg = error?.response?.data?.message || error?.message || 'Could not check the display link';
+      setVanityResult(null);
+      setVanityError(msg);
+      if (showToast) toast.error(msg);
+    } finally {
+      if (requestId === vanityRequestRef.current) setCheckingUrl(false);
+    }
+  };
+
+  useEffect(() => {
+    setVanityResult(null);
+    setVanityError('');
+    if (!profile.vanityUrl?.trim()) return;
+    const t = setTimeout(() => runVanityCheck(profile.vanityUrl, false), 600);
+    return () => clearTimeout(t);
+  }, [profile.vanityUrl, adminId]);
+
+  const handleCheckUrl = () => {
+    if (!profile.vanityUrl?.trim()) {
+      toast.error('Enter a display link first');
+      return;
+    }
+    runVanityCheck(profile.vanityUrl, true);
   };
 
   const handleTestPin = (link?: string) => {
@@ -487,6 +531,29 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
                   {checkingUrl ? 'Checking...' : 'Check'}
                 </button>
               </div>
+              {/* Result of the vanity-check API */}
+              {vanityResult && !checkingUrl && (
+                vanityResult.available ? (
+                  <p className="mt-1 text-[12px] text-emerald-600">✓ digiwebcard.in/{vanityResult.vanityUrl} is available</p>
+                ) : (
+                  <p className="mt-1 text-[12px] text-red-600">
+                    ✕ digiwebcard.in/{vanityResult.vanityUrl} is already taken
+                    {vanityResult.suggestion && (
+                      <>
+                        {' · '}
+                        <button
+                          type="button"
+                          onClick={() => onChange('vanityUrl', vanityResult.suggestion as string)}
+                          className="font-semibold text-[#2196F3] hover:underline"
+                        >
+                          Use {vanityResult.suggestion}
+                        </button>
+                      </>
+                    )}
+                  </p>
+                )
+              )}
+              {vanityError && !checkingUrl && <p className="mt-1 text-[12px] text-red-600">{vanityError}</p>}
             </div>
 
             <div>

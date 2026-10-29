@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
+import { copyAdmin } from '@/lib/api/superadmin/admin';
 
 interface CopyBusinessModalProps {
   isOpen: boolean;
@@ -19,8 +21,11 @@ export const CopyBusinessModal: React.FC<CopyBusinessModalProps> = ({
   business,
   onCopySuccess,
 }) => {
-  const [useSamePhone, setUseSamePhone] = useState(true);
+  const queryClient = useQueryClient();
+  const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [copyDigitalCard, setCopyDigitalCard] = useState(true);
   const [copyViews, setCopyViews] = useState(false);
   const [copyFeedbacks, setCopyFeedbacks] = useState(false);
@@ -28,8 +33,10 @@ export const CopyBusinessModal: React.FC<CopyBusinessModalProps> = ({
 
   useEffect(() => {
     if (business) {
-      setPhoneNumber(business.phoneNumber || '9930000993');
-      setUseSamePhone(true);
+      setName(business.fullname ? `${business.fullname} (Copy)` : '');
+      setPhoneNumber(business.phoneNumber || '');
+      setPassword('');
+      setShowPassword(false);
       setCopyDigitalCard(true);
       setCopyViews(false);
       setCopyFeedbacks(false);
@@ -38,23 +45,45 @@ export const CopyBusinessModal: React.FC<CopyBusinessModalProps> = ({
 
   if (!isOpen || !business) return null;
 
-  const handleCopy = () => {
-    if (!phoneNumber.trim()) {
-      toast.error('Please enter a phone number');
+  const handleCopy = async () => {
+    if (!name.trim()) {
+      toast.error('Please enter a name');
+      return;
+    }
+    if (!/^\d{10}$/.test(phoneNumber.trim())) {
+      toast.error('Phone number must be exactly 10 digits');
+      return;
+    }
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters');
       return;
     }
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      toast.success(`Business card for "${business.fullname || 'Business'}" copied successfully!`);
-      onCopySuccess?.({
-        ...business,
-        id: `${business.id}_copy_${Date.now()}`,
-        fullname: `${business.fullname || 'Business'} (Copy)`,
-        phoneNumber,
+    try {
+      // Creates a new business from the form and copies this one's data onto it (the original is unchanged)
+      const result = await copyAdmin(business.id, {
+        name: name.trim(),
+        phoneNumber: phoneNumber.trim(),
+        password,
+        copyCard: copyDigitalCard,
+        copyViews,
+        copyFeedbacks,
       });
+      toast.success(`"${name.trim()}" created as a copy of "${business.fullname || 'Business'}". Select a plan for it.`);
+      queryClient.invalidateQueries({ queryKey: ['admin'] });
+      onCopySuccess?.(result?.admin ?? result);
       onClose();
-    }, 600);
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const message = error?.response?.data?.message || error?.message;
+      toast.error(
+        status === 409
+          ? 'This phone number is already registered'
+          : message || 'Failed to copy business',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -74,24 +103,27 @@ export const CopyBusinessModal: React.FC<CopyBusinessModalProps> = ({
 
         {/* Content */}
         <div className="mt-2 space-y-4">
-          <p className="text-[14px] text-gray-700">
-            Register Customer'sPhone Number
-          </p>
-
-          <label className="flex items-center gap-2 cursor-pointer select-none text-[14px] text-[#212121]">
+          {/* Name of the new business */}
+          <div className="relative">
             <input
-              type="checkbox"
-              checked={useSamePhone}
-              onChange={(e) => {
-                setUseSamePhone(e.target.checked);
-                if (e.target.checked && business.phoneNumber) {
-                  setPhoneNumber(business.phoneNumber);
-                }
-              }}
-              className="h-4 w-4 rounded border-gray-300 text-[#2196F3] focus:ring-[#2196F3]"
+              type="text"
+              id="copy-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder=" "
+              className="peer w-full rounded border border-gray-300 bg-white px-3.5 pt-3.5 pb-2 text-[14px] text-gray-900 focus:border-[#2196F3] focus:outline-none focus:ring-1 focus:ring-[#2196F3]"
             />
-            <span>Use Same Registered Phone Number</span>
-          </label>
+            <label
+              htmlFor="copy-name"
+              className="absolute left-3 top-1 -translate-y-1/2 bg-white px-1 text-[11px] text-gray-500 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-[14px] peer-placeholder-shown:text-gray-400 peer-focus:top-1 peer-focus:text-[11px] peer-focus:text-[#2196F3]"
+            >
+              Name *
+            </label>
+          </div>
+
+          <p className="text-[14px] text-gray-700">
+            Register Customer's Phone Number
+          </p>
 
           {/* Outlined Phone Input with floating label */}
           <div className="relative mt-2">
@@ -99,8 +131,7 @@ export const CopyBusinessModal: React.FC<CopyBusinessModalProps> = ({
               type="tel"
               id="copy-phone-number"
               value={phoneNumber}
-              disabled={useSamePhone}
-              onChange={(e) => setPhoneNumber(e.target.value)}
+              onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
               placeholder=" "
               className="peer w-full rounded border border-gray-300 bg-white px-3.5 pt-3.5 pb-2 text-[14px] text-gray-900 focus:border-[#2196F3] focus:outline-none focus:ring-1 focus:ring-[#2196F3] disabled:bg-gray-50 disabled:text-gray-600"
             />
@@ -108,8 +139,35 @@ export const CopyBusinessModal: React.FC<CopyBusinessModalProps> = ({
               htmlFor="copy-phone-number"
               className="absolute left-3 top-1 -translate-y-1/2 bg-white px-1 text-[11px] text-gray-500 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-[14px] peer-placeholder-shown:text-gray-400 peer-focus:top-1 peer-focus:text-[11px] peer-focus:text-[#2196F3]"
             >
-              Phone Number
+              Phone Number *
             </label>
+          </div>
+
+          {/* Login password for the new business */}
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              id="copy-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder=" "
+              autoComplete="new-password"
+              className="peer w-full rounded border border-gray-300 bg-white pl-3.5 pr-10 pt-3.5 pb-2 text-[14px] text-gray-900 focus:border-[#2196F3] focus:outline-none focus:ring-1 focus:ring-[#2196F3]"
+            />
+            <label
+              htmlFor="copy-password"
+              className="absolute left-3 top-1 -translate-y-1/2 bg-white px-1 text-[11px] text-gray-500 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-[14px] peer-placeholder-shown:text-gray-400 peer-focus:top-1 peer-focus:text-[11px] peer-focus:text-[#2196F3]"
+            >
+              Password *
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowPassword((s) => !s)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer select-none text-[14px] text-[#212121]">

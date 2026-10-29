@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import {
   ArrowLeft,
-  Edit2,
-  Trash2,
   Crown,
-  MoreVertical,
   Plus,
   ExternalLink,
   Loader2,
@@ -12,15 +9,12 @@ import {
 import toast from 'react-hot-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ValidityDates,
-  useValidityDates,
   PlanCard,
-  fromApiUnit,
   formatPlanValidity,
   formatDisplayDateTime,
-  inputToIso,
 } from '@/pages/superadmin/CustomerPricingManagement';
-import { getPlans, isPlanLive, planErrorText, selectPlan, SelectedPlanTerms } from '@/lib/api/superadmin/plan';
+import { getPlans, isPlanLive, pickPlanTerms, planErrorText, selectPlan, SelectedPlanTerms } from '@/lib/api/superadmin/plan';
+import { getAdminById, DigitalCardInfo } from '@/lib/api/superadmin/admin';
 import { SUPERADMIN_FRANCHISE_KEYS } from '@/lib/react-query/queryKeys';
 
 const formatDisplayDate = formatDisplayDateTime;
@@ -64,15 +58,24 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
   const [activeTab, setActiveTab] = useState<'projects' | 'payments'>(paymentsOnly ? 'payments' : 'projects');
   const queryClient = useQueryClient();
 
-  // Plan on the record; replaced by the API response after a selection
-  const [currentPlan, setCurrentPlan] = useState<SelectedPlanTerms | null>(savedPlan);
+  // Business details by id: digital card table + latest plan terms
+  const { data: adminDetail } = useQuery({
+    queryKey: ['admin', 'detail', business.id],
+    queryFn: () => getAdminById(business.id),
+    enabled: planTarget === 'admin' && Boolean(business.id),
+  });
+  const card: DigitalCardInfo | undefined = adminDetail?.digitalCard;
 
-  // Upgrade popup: pick one of the active plans, then edit price and dates
+  // Plan just selected here, else the one on the record
+  const [selectedTerms, setCurrentPlan] = useState<SelectedPlanTerms | null>(null);
+  const currentPlan = selectedTerms || (adminDetail ? pickPlanTerms(adminDetail) : null) || savedPlan;
+
+  // Upgrade popup: pick one of the active plans, then a price popup (price editable; dates come from the plan)
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState('');
-  const [upgradePrice, setUpgradePrice] = useState('');
+  const [showPrice, setShowPrice] = useState(false);
+  const [price, setPrice] = useState('');
   const [isUpgrading, setIsUpgrading] = useState(false);
-  const upgradeDates = useValidityDates();
 
   const audience = planTarget === 'franchise' ? 'FRANCHISE' : 'ADMIN';
   const { data: plans = [], isLoading: plansLoading, isError: plansError, error: plansErr } = useQuery({
@@ -82,19 +85,22 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
   });
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
 
+  /** Select plan → price popup, prefilled with the plan price */
   const choosePlan = (planId: string) => {
     const plan = plans.find((p) => p.id === planId);
     setSelectedPlanId(planId);
-    if (!plan) return;
-    setUpgradePrice(String(plan.isFreeTrial ? 0 : plan.price));
-    upgradeDates.applyLength(fromApiUnit(plan.validityUnit), plan.validityValue);
+    setPrice(String(plan ? (plan.isFreeTrial ? 0 : plan.price) : ''));
+    setShowPrice(true);
+  };
+
+  const closePrice = () => {
+    setShowPrice(false);
+    setSelectedPlanId('');
   };
 
   const closeUpgrade = () => {
     setShowUpgrade(false);
-    setSelectedPlanId('');
-    setUpgradePrice('');
-    upgradeDates.reset();
+    closePrice();
   };
 
   const handleUpgradeSubmit = async (e: React.FormEvent) => {
@@ -103,31 +109,27 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
       toast.error('Please select a plan');
       return;
     }
-    if (upgradeDates.count < 1 || upgradeDates.to <= upgradeDates.from) {
-      toast.error('Enter the number of years / months / days (1 or more)');
+    if (price.trim() === '' || Number(price) < 0) {
+      toast.error('Please enter the price');
       return;
     }
     setIsUpgrading(true);
     try {
-      const saved = await selectPlan(planTarget, business.id, {
-        planId: selectedPlan.id,
-        price: Number(upgradePrice) || 0,
-        startDate: inputToIso(upgradeDates.from),
-        expiryDate: inputToIso(upgradeDates.to),
-      });
+      // Plan + edited price; the backend starts it today and sets expiry from the plan's validity
+      const saved = await selectPlan(planTarget, business.id, { planId: selectedPlan.id, price: Number(price) });
       setCurrentPlan({
         planId: saved?.planId || selectedPlan.id,
         planName: saved?.planName || selectedPlan.name,
         isFreeTrial: saved?.isFreeTrial ?? selectedPlan.isFreeTrial,
-        amount: saved?.amount ?? (Number(upgradePrice) || 0),
-        startDate: saved?.startDate || upgradeDates.from,
-        expiryDate: saved?.expiryDate || upgradeDates.to,
+        amount: saved?.amount ?? Number(price),
+        startDate: saved?.startDate,
+        expiryDate: saved?.expiryDate,
         plan: saved?.plan || selectedPlan,
       });
       // Lists show the new status / plan
       queryClient.invalidateQueries({ queryKey: planTarget === 'franchise' ? [SUPERADMIN_FRANCHISE_KEYS.GET_ALL] : ['admin'] });
       queryClient.invalidateQueries({ queryKey: ['plans'] });
-      toast.success(`${selectedPlan.name} active till ${formatDisplayDate(saved?.expiryDate || upgradeDates.to)}`);
+      toast.success(saved?.expiryDate ? `${selectedPlan.name} active till ${formatDisplayDate(saved.expiryDate)}` : `${selectedPlan.name} selected`);
       closeUpgrade();
     } catch (error) {
       toast.error(planErrorText(error, 'Failed to select plan'));
@@ -141,8 +143,25 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-  const cardLink = `https://digiwebcard.in/${businessSlug}`;
-  const cardNumber = business.businessId || '14687';
+  // Digital card table: values from digitalCard, older fields until it loads
+  const cardLink = card?.cardLink || `https://digiwebcard.in/${businessSlug}`;
+  const cardNumber = card?.cardNo || business.businessId || '-';
+  const cardCreated = card?.createdAt ? formatDisplayDate(card.createdAt) : business.creationDate || '-';
+  const cardMadeBy = card?.madeBy?.label || business.madeBy || '-';
+  const paymentLabel = card?.paymentStatus
+    ? { DONE: 'Done', PENDING: 'Pending', FREE_TRIAL: 'Free trial' }[card.paymentStatus] || card.paymentStatus
+    : null;
+  const cardStatus = card?.status
+    ? { ACTIVE: 'Active', EXPIRED: 'Expired', INACTIVE: 'Inactive', DELETED: 'Deleted' }[card.status] || card.status
+    : null;
+  const statusTone = (value?: string) =>
+    value === 'DONE' || value === 'ACTIVE'
+      ? 'text-[#2E7D32]'
+      : value === 'FREE_TRIAL'
+        ? 'text-[#1976D2]'
+        : value
+          ? 'text-[#D32F2F]'
+          : 'text-[#212121]';
   const isSubscribed = currentPlan ? isPlanLive(currentPlan) : business.subscriptionStatus === 'Subscribed';
   const planLength = currentPlan?.plan?.validityValue
     ? formatPlanValidity(currentPlan.plan.validityValue, currentPlan.plan.validityUnit)
@@ -190,33 +209,11 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
           )}
         </div>
 
-        {/* Edit and Delete action boxes */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => onEdit?.(business)}
-            title="Edit Business"
-            className="p-2 rounded border border-[#2196F3] text-[#2196F3] hover:bg-blue-50 transition-colors"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete?.(business)}
-            title="Delete Business"
-            className="p-2 rounded border border-[#F44336] text-[#F44336] hover:bg-red-50 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Upgrade: opens the subscription popup */}
-      <div className="flex flex-wrap items-center gap-2 pt-1">
+        {/* Upgrade: opens the subscription popup (same line as the name) */}
         <button
           type="button"
           onClick={() => setShowUpgrade(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[13px] font-medium transition-colors"
+          className="shrink-0 self-start md:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[13px] font-medium whitespace-nowrap transition-colors"
         >
           <Crown className="w-3.5 h-3.5 text-amber-500" />
           Upgrade
@@ -270,7 +267,6 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
                     <th className="px-3 py-2.5 text-[14px] font-medium text-white">Card Made By</th>
                     <th className="px-3 py-2.5 text-[14px] font-medium text-white">Payment status</th>
                     <th className="px-3 py-2.5 text-[14px] font-medium text-white">Digital card Status</th>
-                    <th className="px-3 py-2.5 text-[14px] font-medium text-white text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white">
@@ -287,34 +283,12 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
                         <span className="truncate max-w-[200px]">{cardLink}</span>
                       </a>
                     </td>
-                    <td className="px-3 py-2.5 text-[14px] text-[#212121]">
-                      {business.creationDate || '24 Oct, 2026 (2 days ago)'}
+                    <td className="px-3 py-2.5 text-[14px] text-[#212121]">{cardCreated}</td>
+                    <td className="px-3 py-2.5 text-[14px] text-[#212121]">{cardMadeBy}</td>
+                    <td className={`px-3 py-2.5 text-[14px] font-medium ${statusTone(card?.paymentStatus)}`}>
+                      {paymentLabel || (isSubscribed ? 'Done' : 'Not Done')}
                     </td>
-                    <td className="px-3 py-2.5 text-[14px] text-[#212121]">
-                      {business.madeBy || 'Ratan Chavan (8482980338)'}
-                    </td>
-                    <td className="px-3 py-2.5 text-[14px] text-[#212121]">
-                      {isSubscribed ? 'Done' : 'Not Done'}
-                    </td>
-                    <td className="px-3 py-2.5 text-[14px] text-[#212121]">Active</td>
-                    <td className="px-3 py-2.5 text-[14px] text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onEdit?.(business)}
-                          className="p-1 text-gray-600 hover:text-[#2196F3]"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => toast.success('Card options')}
-                          className="p-1 text-gray-600 hover:text-[#2196F3]"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+                    <td className={`px-3 py-2.5 text-[14px] font-medium ${statusTone(card?.status)}`}>{cardStatus || 'Active'}</td>
                   </tr>
                 </tbody>
               </table>
@@ -373,7 +347,7 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
             <h3 className="text-[18px] font-bold text-[#212121]">Select subscription plan</h3>
             <p className="text-[12px] text-gray-500 mb-4">{business.fullname}</p>
 
-            <form onSubmit={handleUpgradeSubmit} className="space-y-4">
+            <div className="space-y-4">
               {/* Active plans of the right list (business / franchise, owner franchise) */}
               {plansLoading ? (
                 <div className="flex items-center justify-center gap-2 py-10 text-[14px] text-gray-500">
@@ -414,38 +388,6 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
                 </div>
               )}
 
-              {selectedPlan && (
-              <div className="space-y-4 rounded-lg border border-gray-200 bg-gray-50/60 p-4">
-              <p className="text-[13px] font-medium text-[#212121]">
-                {selectedPlan.name}: change the price or dates for this {planTarget === 'franchise' ? 'franchise' : 'business'} if needed
-              </p>
-              {/* Unit + number → To date filled from From date (same day & month) */}
-              <ValidityDates
-                unit={upgradeDates.unit}
-                count={upgradeDates.count}
-                from={upgradeDates.from}
-                to={upgradeDates.to}
-                onUnitChange={upgradeDates.onUnitChange}
-                onCountChange={upgradeDates.onCountChange}
-                onFromChange={upgradeDates.onFromChange}
-                onToChange={upgradeDates.onToChange}
-              />
-
-              <div className="relative">
-                <input
-                  type="number"
-                  min="0"
-                  value={upgradePrice}
-                  onChange={(e) => setUpgradePrice(e.target.value)}
-                  required
-                  className="w-full rounded border border-gray-300 px-3.5 pt-3 pb-2 text-[14px] text-gray-800 bg-white focus:border-[#2196F3] focus:outline-none"
-                />
-                <label className="absolute left-3 top-1 -translate-y-1/2 bg-white px-1 text-[11px] text-gray-500">
-                  Price (₹) * · plan price ₹{selectedPlan.price.toLocaleString('en-IN')}
-                </label>
-              </div>
-              </div>
-              )}
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
                 <button
@@ -455,16 +397,57 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={isUpgrading || !selectedPlan}
-                  className="rounded border border-[#2196F3] px-5 py-1.5 text-[13px] font-bold text-[#2196F3] hover:bg-blue-50 uppercase tracking-wide transition-colors disabled:opacity-60"
-                >
-                  {isUpgrading ? 'Saving…' : 'Save plan'}
-                </button>
               </div>
-            </form>
+            </div>
           </div>
+
+          {/* ─── Price popup (after Select plan) ─── */}
+          {showPrice && selectedPlan && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={(e) => { e.stopPropagation(); closePrice(); }}>
+              <form
+                onSubmit={handleUpgradeSubmit}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl space-y-4"
+              >
+                <div>
+                  <h3 className="text-[17px] font-bold text-[#212121]">{selectedPlan.name}</h3>
+                  <p className="text-[12px] text-gray-500">
+                    {business.fullname} · {formatPlanValidity(selectedPlan.validityValue, selectedPlan.validityUnit)}
+                  </p>
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    required
+                    autoFocus
+                    className="w-full rounded border border-gray-300 px-3.5 pt-3 pb-2 text-[14px] text-gray-800 bg-white focus:border-[#2196F3] focus:outline-none"
+                  />
+                  <label className="absolute left-3 top-1 -translate-y-1/2 bg-white px-1 text-[11px] text-gray-500">
+                    Price (₹) * · plan price ₹{selectedPlan.price.toLocaleString('en-IN')}
+                  </label>
+                </div>
+                <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={closePrice}
+                    className="px-4 py-1.5 text-[13px] font-bold text-[#2196F3] hover:text-[#1976D2] uppercase tracking-wide transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUpgrading}
+                    className="rounded border border-[#2196F3] px-5 py-1.5 text-[13px] font-bold text-[#2196F3] hover:bg-blue-50 uppercase tracking-wide transition-colors disabled:opacity-60"
+                  >
+                    {isUpgrading ? 'Saving…' : 'Save plan'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       )}
 

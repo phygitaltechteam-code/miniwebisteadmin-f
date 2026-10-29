@@ -4,7 +4,7 @@ import {
   Home, Building2, Factory, Briefcase, Camera, Fingerprint, Zap, Settings, ShieldCheck, Lightbulb,
   Sparkles, Leaf, Play, Facebook, Instagram, Youtube, Linkedin, Globe, Share2, Package,
   Link2, Twitter, Users, BookOpen, Calendar, ShoppingBag, Smartphone, Music, FileText, Image as ImageIcon,
-  QrCode, Copy, Check, Landmark, Wallet, X, ZoomIn,
+  QrCode, Copy, Check, Landmark, Wallet, X, ZoomIn, Download,
 } from 'lucide-react';
 import { ProfileData, CardSectionKey, AboutBlockKey, DEFAULT_SECTION_ORDER, DEFAULT_ABOUT_BLOCK_ORDER } from '../types/profile';
 import { getPortalTheme } from '../types/theme';
@@ -261,6 +261,31 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
   const whatsappUrl = whatsapp ? `https://wa.me/${whatsapp.length === 10 ? `91${whatsapp}` : whatsapp}` : '#';
   const enquireUrl = (subject: string) =>
     whatsapp ? `${whatsappUrl}?text=${encodeURIComponent(`Hi ${businessName}, I want to enquire about ${subject}.`)}` : '#';
+  /** Product Enquire: the product's saved enquiry message, else the default text */
+  const productEnquiryUrl = (message: string | undefined, name: string) => {
+    const text = message?.trim();
+    if (!text) return enquireUrl(name);
+    return whatsapp ? `${whatsappUrl}?text=${encodeURIComponent(text)}` : '#';
+  };
+  /** Saves the product image; opens it in a new tab when the file can't be fetched (CORS) */
+  const downloadImage = async (url: string, name: string) => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(String(res.status));
+      const blob = await res.blob();
+      const href = URL.createObjectURL(blob);
+      const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+      const a = document.createElement('a');
+      a.href = href;
+      a.download = `${(name || 'product').replace(/[^\w\s-]+/g, '').trim() || 'product'}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(href);
+    } catch {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
   const cardUrl = `https://digiwebcard.in/${profile.vanityUrl || 'business'}`;
   const vis = profile.visibility || ({} as ProfileData['visibility']);
 
@@ -823,11 +848,25 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                         {p.description && <p className="mt-0.5 text-[10.5px] text-slate-500 leading-snug line-clamp-2">{stripHtml(p.description)}</p>}
                         <div className="mt-auto pt-2 flex items-center justify-between gap-1.5">
                           {price && <span className="text-[13px] font-extrabold text-[#0B1B33]">{price}</span>}
-                          {!(p.isHideEnquiry ?? p.hideEnquiry) && (
-                            <a href={enquireUrl(name)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md bg-[var(--c)] hover:bg-[var(--cd)] px-2 py-1 text-[10.5px] font-semibold text-white">
-                              <Mail className="w-3 h-3" /> Enquire
-                            </a>
-                          )}
+                          <div className="ml-auto flex items-center gap-1.5">
+                            {/* Download shown only while the product's "hide download" option is off */}
+                            {img && !(p.isHideDownloadProductCart ?? p.hideDownload) && (
+                              <button
+                                type="button"
+                                onClick={() => downloadImage(img, name)}
+                                title="Download"
+                                aria-label={`Download ${name}`}
+                                className="w-6 h-6 rounded-full border border-[var(--c)] text-[var(--c)] hover:bg-[var(--c)] hover:text-white flex items-center justify-center transition-colors"
+                              >
+                                <Download className="w-3 h-3" />
+                              </button>
+                            )}
+                            {!(p.isHideEnquiry ?? p.hideEnquiry) && (
+                              <a href={productEnquiryUrl(p.customEnquiryMessage, name)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md bg-[var(--c)] hover:bg-[var(--cd)] px-2 py-1 text-[10.5px] font-semibold text-white">
+                                <Mail className="w-3 h-3" /> Enquire
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

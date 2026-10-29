@@ -5,6 +5,7 @@ import {
 } from '@/schemas/cardProfileSchema';
 import { ProfileData } from '@/types/profile';
 import { base64ToFile } from './customerAboutApi';
+import { compressFormDataImages } from '@/utils/imageCompressor';
 import { isUnlistedCategoryId, resolveCategoryForSave } from './customerCategoriesApi';
 
 export type CustomerInfoPayload = CreateAdminInfoValues & {
@@ -223,6 +224,25 @@ export const getCustomerInfo = async (adminId?: string): Promise<CustomerInfoRes
     console.error(`Error fetching ${endpoint}:`, error);
     throw error;
   }
+};
+
+export interface VanityCheckResult {
+  /** The link exactly as it would be saved (lowercase, dashes) */
+  vanityUrl: string;
+  available: boolean;
+  /** First free link, e.g. xyz-shop2 */
+  suggestion?: string;
+}
+
+/**
+ * Is a display link free? customers/info/vanity-check, or superAdmin/admin/:adminId/info/vanity-check
+ * (franchise sessions are rewritten to franchise/admin/... by the axios interceptor).
+ * For an admin's own page, its current link counts as free.
+ */
+export const checkVanityUrl = async (vanityUrl: string, adminId?: string): Promise<VanityCheckResult> => {
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/info/vanity-check` : 'customers/info/vanity-check';
+  const response: any = await api.get(endpoint, { params: { vanityUrl } });
+  return response?.data ?? response;
 };
 
 /**
@@ -470,7 +490,8 @@ export const submitCustomerInfoFormData = async (
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: fd,
+      // Same image compression the axios upload applies
+      body: await compressFormDataImages(fd),
     });
 
     if (!response.ok) {

@@ -99,6 +99,38 @@ export const getAdmins = async (): Promise<admin[]> => {
 
 export const getAdmin = getAdmins;
 
+/** Digital card summary returned with an admin (Projects tab table) */
+export interface DigitalCardInfo {
+  cardNo?: string;
+  cardLink?: string;
+  createdAt?: string;
+  madeBy?: { id?: string; fullname?: string; phoneNumber?: string; role?: string; label?: string } | null;
+  paymentStatus?: 'DONE' | 'PENDING' | 'FREE_TRIAL';
+  status?: 'ACTIVE' | 'EXPIRED' | 'INACTIVE' | 'DELETED';
+}
+
+export interface CopyAdminPayload {
+  name: string;
+  phoneNumber: string;
+  password: string;
+  copyCard: boolean;
+  copyViews: boolean;
+  copyFeedbacks: boolean;
+}
+
+// POST copy of an admin (new admin from the form, data copied from :id) —
+// superAdmin/admin/:id/copy, or franchise/admins/:id/copy on a franchise session
+export const copyAdmin = async (id: string, payload: CopyAdminPayload): Promise<{ admin: any; copied?: any }> => {
+  const res: any = await api.post(isFranchiseUser() ? `franchise/admins/${id}/copy` : `superAdmin/admin/${id}/copy`, payload);
+  return res?.data ?? res;
+};
+
+// GET one admin — superAdmin/admin/:id, or franchise/admins/:id on a franchise session
+export const getAdminById = async (id: string): Promise<any> => {
+  const res: any = await api.get(isFranchiseUser() ? `franchise/admins/${id}` : `superAdmin/admin/${id}`);
+  return res?.data ?? res;
+};
+
 // POST save admin — franchise role uses franchise/admins, superadmin uses superadmin/admin
 export const saveAdminProfile = async (data: adminPayload): Promise<admin> => {
   const priceVal = data.price !== undefined ? Number(data.price) : (data as any).amount !== undefined ? Number((data as any).amount) : undefined;
