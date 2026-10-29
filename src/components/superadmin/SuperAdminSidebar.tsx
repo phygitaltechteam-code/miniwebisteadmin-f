@@ -72,7 +72,7 @@ const navItems: NavItemConfig[] = [
     label: 'Customer plans & pricing management',
     icon: DollarSign,
   },
-  // Report, Greetings Management and AI Credit Ledger are hidden from the sidebar (pages still exist)
+  // Report, Greetings Management and AI Credit Ledger are hidden from the sidebar (pages still exist; Billing shows the bills)
 ];
 
 // Nav items shown only to Franchise role (limited panel)

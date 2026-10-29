@@ -130,6 +130,9 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
       // Lists show the new status / plan
       queryClient.invalidateQueries({ queryKey: planTarget === 'franchise' ? [SUPERADMIN_FRANCHISE_KEYS.GET_ALL] : ['admin'] });
       queryClient.invalidateQueries({ queryKey: ['plans'] });
+      // A new bill was added: refresh Billing and Report
+      queryClient.invalidateQueries({ queryKey: ['transactions-recent'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-report'] });
       toast.success(saved?.expiryDate ? `${selectedPlan.name} active till ${formatDisplayDate(saved.expiryDate)}` : `${selectedPlan.name} selected`);
       closeUpgrade();
     } catch (error) {

@@ -120,7 +120,7 @@ function SuperAdminPortal({
       case 'pricing':
         return 'Customer Pricing';
       case 'report':
-        return 'Reports & Analytics';
+        return 'Report';
       case 'greetings':
         return 'Greetings Management';
       case 'ai-ledger':
