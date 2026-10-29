@@ -111,6 +111,10 @@ export interface ProfileData {
   videoOrder?: string[];
   /** Link keys (e.g. whatsappLinks, customLink) in display order, saved via the settings API */
   linkOrder?: string[];
+  /** Link keys the customer unticked in Link Store (not shown on the card), saved via the settings API */
+  hiddenLinks?: string[];
+  /** Wallets unticked in Payment & QR ('paytm' | 'phonePe' | 'gPay'), saved via the settings API */
+  hiddenPayments?: string[];
 
   // Step 1: Basic Details & Theme & Location
   theme: PortalThemeId | 'clean-white' | 'white-orange' | 'white-minimal' | 'white-emerald' | 'white-royal' | 'dark-gold' | 'royal-blue' | 'emerald-luxe' | string;
@@ -279,6 +283,8 @@ export interface ProfileData {
     hideShareSection: boolean;
     hideUnenteredSocialMediaLinks: boolean;
     hideViewsCounter: boolean;
+    /** Hides the business natures (Our Services block and the line above the hero title) */
+    hideBusinessNature?: boolean;
   };
   headings: {
     linksHeading: string;

@@ -25,7 +25,7 @@ import {
   isTempProductId
 
 } from '@/lib/api/customerProductsApi';
-import { saveSettingsOrder } from '@/lib/api/customerSettingsApi';
+import { reorderList, reorderErrorText } from '@/lib/api/reorderApi';
 import { useDragReorder, moveItem } from '@/hooks/useDragReorder';
 
 interface Step3Props {
@@ -267,19 +267,20 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
     }
   };
 
-  // Drag & drop product order, saved to the settings API as productOrder
+  // Drag & drop product order, saved with PATCH products/reorder (every saved product id, new order)
   const { dragProps: productDragProps, dragClass: productDragClass } = useDragReorder(async (from, to) => {
-    const reordered = moveItem(profile.products, from, to);
-    const order = reordered
+    const previous = profile.products;
+    const reordered = moveItem(previous, from, to);
+    const ids = reordered
       .map((p) => String(p._id || p.id))
       .filter((id) => !isTempProductId(id));
     onChange('products', reordered);
-    onChange('productOrder', order);
     try {
-      await saveSettingsOrder({ productOrder: order }, adminId);
+      await reorderList('products', ids, adminId);
       toast.success('Product order saved');
     } catch (error: any) {
-      toast.error(`API Error: ${error?.response?.data?.message || error?.message || 'Failed to save product order'}`);
+      onChange('products', previous);
+      toast.error(`API Error: ${reorderErrorText(error, 'Failed to save product order')}`);
     }
   });
 

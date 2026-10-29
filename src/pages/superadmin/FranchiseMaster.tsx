@@ -9,7 +9,9 @@ import {
   useToggleFranchiseStatus,
 } from '@/lib/react-query/superadmin/franchise';
 import { isRecordActive, readIsActive } from '@/lib/api/superadmin/admin';
+import { pickPlanTerms } from '@/lib/api/superadmin/plan';
 import StatusToggle from '@/components/Forms/StatusToggle';
+import ProjectsAndPayments from '@/pages/superadmin/ProjectsAndPayments';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
@@ -66,6 +68,7 @@ export const FranchiseMaster: React.FC = () => {
   });
 
   const [showForm, setShowForm] = useState(false);
+  const [selectedFranchise, setSelectedFranchise] = useState<FranchiseRow | null>(null);
   const [editingFranchiseId, setEditingFranchiseId] = useState<string | null>(null);
 
   const { data: franchiseList, isLoading } = useGetFranchises();
@@ -93,7 +96,22 @@ export const FranchiseMaster: React.FC = () => {
 
   const columns: Column<FranchiseRow>[] = [
     { accessor: 'dateTime', header: 'Date & Time', sortable: true },
-    { accessor: 'fullname', header: 'Name', sortable: true },
+    {
+      accessor: 'fullname',
+      header: 'Name',
+      sortable: true,
+      // Opens the franchise's Subscription & Payments page
+      render: (row) => (
+        <button
+          type="button"
+          onClick={() => setSelectedFranchise(row)}
+          className="text-left font-medium text-[#2196F3] hover:underline"
+          title="Subscription & Payments"
+        >
+          {row.fullname}
+        </button>
+      ),
+    },
     { accessor: 'phoneNumber', header: 'Phone' },
     { accessor: 'adminLimit', header: 'Admin Limit' },
     { accessor: 'address', header: 'Address' },
@@ -366,6 +384,29 @@ export const FranchiseMaster: React.FC = () => {
             </div>
           </form>
         </FormProvider>
+      ) : selectedFranchise ? (
+        /* ─── SUBSCRIPTION & PAYMENTS (payments tab only, with Upgrade) ──────── */
+        <ProjectsAndPayments
+          paymentsOnly
+          planTarget="franchise"
+          currentPlan={pickPlanTerms(selectedFranchise.raw)}
+          business={{
+            id: selectedFranchise.id,
+            fullname: selectedFranchise.fullname,
+            phoneNumber: selectedFranchise.phoneNumber,
+          }}
+          onBack={() => setSelectedFranchise(null)}
+          onEdit={() => {
+            const row = selectedFranchise;
+            setSelectedFranchise(null);
+            handleEdit(row);
+          }}
+          onDelete={() => {
+            const row = selectedFranchise;
+            setSelectedFranchise(null);
+            handleDelete(row);
+          }}
+        />
       ) : (
         /* ─── TABLE VIEW (Exact same GenericTable layout as CreateAdmin) ──────── */
         <GenericTable

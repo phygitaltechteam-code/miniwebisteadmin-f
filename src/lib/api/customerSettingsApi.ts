@@ -39,12 +39,14 @@ export const formatCustomerSettingsPayload = (profile: Partial<ProfileData>): Cu
     ...(profile.productOrder?.length ? { productOrder: profile.productOrder } : {}),
     ...(profile.videoOrder?.length ? { videoOrder: profile.videoOrder } : {}),
     ...(profile.linkOrder?.length ? { linkOrder: profile.linkOrder } : {}),
+    ...(profile.hiddenLinks ? { hiddenLinks: profile.hiddenLinks } : {}),
+    ...(profile.hiddenPayments ? { hiddenPayments: profile.hiddenPayments } : {}),
   };
 };
 
-/** Order keys stored in the settings API */
+/** Order and show/hide keys stored in the settings API */
 export type SettingsOrderFields = Partial<
-  Pick<ProfileData, 'sectionOrder' | 'aboutBlockOrder' | 'productOrder' | 'videoOrder' | 'linkOrder'>
+  Pick<ProfileData, 'sectionOrder' | 'aboutBlockOrder' | 'productOrder' | 'videoOrder' | 'linkOrder' | 'hiddenLinks' | 'hiddenPayments'>
 >;
 
 /**
@@ -80,6 +82,11 @@ export const parseSettingsOrder = (raw: any): SettingsOrderFields => {
     if (Array.isArray(val) && val.length > 0 && val.every((v: any) => typeof v === 'string')) {
       (result as any)[key] = val;
     }
+  });
+  // Hidden lists may legitimately be empty (everything shown)
+  (['hiddenLinks', 'hiddenPayments'] as const).forEach((key) => {
+    const val = raw?.[key];
+    if (Array.isArray(val) && val.every((v: any) => typeof v === 'string')) result[key] = val;
   });
   return result;
 };

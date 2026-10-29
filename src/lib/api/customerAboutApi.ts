@@ -232,6 +232,7 @@ export const formatAboutFormData = (profile: Partial<ProfileData>): FormData => 
     }
   });
 
+
   return formData;
 };
 

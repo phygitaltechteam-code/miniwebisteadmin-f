@@ -178,6 +178,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
     { key: 'hideShareSection', label: 'Hide Share Section' },
     { key: 'hideUnenteredSocialMediaLinks', label: 'Hide Unentered Social Media Links' },
     { key: 'hideViewsCounter', label: 'Hide Views Counter' },
+    { key: 'hideBusinessNature', label: 'Hide Business Nature' },
   ];
 
   const headingFields: { key: keyof ProfileData['headings']; label: string }[] = [

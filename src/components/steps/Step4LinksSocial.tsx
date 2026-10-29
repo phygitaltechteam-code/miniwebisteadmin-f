@@ -18,8 +18,11 @@ import { useDragReorder, moveItem } from '@/hooks/useDragReorder';
 import {
   getCustomerLinks,
   saveOrUpdateCustomerLinks,
-  parseCustomerLinksResponse
+  parseCustomerLinksResponse,
+  customLinkKeys,
+  toBackendLinkOrder
 } from '@/lib/api/customerSocialApi';
+import { reorderLinks, reorderErrorText } from '@/lib/api/reorderApi';
 
 // ─── Link Item Definition ─────────────────────────────────────────────────────
 
@@ -111,7 +114,6 @@ const ALL_LINK_ITEMS: LinkItemDef[] = [
   { key: 'ajioLink', name: 'Ajio', defaultDescription: 'Shop trendy styles on Ajio', category: 'Shopping', icon: <Tag className="w-4 h-4 text-slate-800" /> },
 
   // 11. More
-  { key: 'customLink', name: 'Custom Link', defaultDescription: 'Open custom destination URL', category: 'More', icon: <ExternalLink className="w-4 h-4 text-[#2563EB]" /> },
   { key: 'playStoreLink', name: 'PlayStore', defaultDescription: 'Download our Android app on Play Store', category: 'More', icon: <Play className="w-4 h-4 text-emerald-600" /> },
   { key: 'appStoreLink', name: 'App Store', defaultDescription: 'Download our iOS app on App Store', category: 'More', icon: <Smartphone className="w-4 h-4 text-blue-600" /> },
   { key: 'mediumLink', name: 'Medium', defaultDescription: 'Read our blog and articles on Medium', category: 'More', icon: <BookOpen className="w-4 h-4 text-slate-900" /> },
@@ -253,8 +255,31 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
     }
   };
 
+  // Custom links: every saved one (customLink, customLink2, …) plus one empty slot to add another
+  const savedCustomKeys = customLinkKeys(profile).filter((key) => getCurrentValue(key).trim());
+  const emptyCustomKey = ['customLink', ...Array.from({ length: savedCustomKeys.length + 1 }, (_, i) => `customLink${i + 2}`)]
+    .find((key) => !savedCustomKeys.includes(key))!;
+  const linkItems = ALL_LINK_ITEMS.flatMap((item) =>
+    item.key === 'customLink' ? [...savedCustomKeys, emptyCustomKey].map((key) => ({ ...item, key })) : [item]
+  );
+
+  // Show / hide a link on the card, saved to the settings API as hiddenLinks
+  const hiddenLinks = profile.hiddenLinks || [];
+  const toggleLinkVisibility = async (key: string, name: string) => {
+    const isHidden = hiddenLinks.includes(key);
+    const next = isHidden ? hiddenLinks.filter((k) => k !== key) : [...hiddenLinks, key];
+    onChange('hiddenLinks', next);
+    try {
+      await saveSettingsOrder({ hiddenLinks: next }, adminId);
+      toast.success(`${name} ${isHidden ? 'shown on' : 'hidden from'} card`);
+    } catch (error: any) {
+      onChange('hiddenLinks', hiddenLinks);
+      toast.error(`API Error: ${error?.response?.data?.message || error?.message || 'Failed to save link visibility'}`);
+    }
+  };
+
   // Links sorted by the saved linkOrder (drag & drop), then filtered by category & search query
-  const orderedLinkItems = sortByOrder(ALL_LINK_ITEMS, profile.linkOrder, (item) => item.key);
+  const orderedLinkItems = sortByOrder(linkItems, profile.linkOrder, (item) => item.key);
   const filteredLinks = orderedLinkItems.filter((item) => {
     const matchesCategory =
       selectedCategory === 'All Links' || item.category === selectedCategory;
@@ -265,19 +290,24 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
     return matchesCategory && matchesSearch;
   });
 
-  // Drag & drop link order, saved to the settings API as linkOrder (unique link keys, full list)
+  // Drag & drop link order: the full key list is kept locally; the links that hold a value are saved
+  // with PATCH links/reorder as linkOrder (custom links as custom:<n>)
   const { dragProps: linkDragProps, dragClass: linkDragClass } = useDragReorder(async (from, to) => {
     const fromKey = filteredLinks[from]?.key;
     const toKey = filteredLinks[to]?.key;
     if (!fromKey || !toKey || fromKey === toKey) return;
+    const previous = profile.linkOrder;
     const keys = Array.from(new Set(orderedLinkItems.map((i) => i.key)));
     const order = moveItem(keys, keys.indexOf(fromKey), keys.indexOf(toKey));
     onChange('linkOrder', order);
+    const backendOrder = toBackendLinkOrder(order, profile);
+    if (backendOrder.length === 0) return; // nothing saved yet to order on the server
     try {
-      await saveSettingsOrder({ linkOrder: order }, adminId);
+      await reorderLinks(backendOrder, adminId);
       toast.success('Link order saved');
     } catch (error: any) {
-      toast.error(`API Error: ${error?.response?.data?.message || error?.message || 'Failed to save link order'}`);
+      onChange('linkOrder', previous);
+      toast.error(`API Error: ${reorderErrorText(error, 'Failed to save link order')}`);
     }
   });
 
@@ -360,6 +390,7 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
               const val = getCurrentValue(item.key);
               const customIcon = getCurrentIcon(item.key);
               const isLinked = Boolean(val && val.trim());
+              const displayName = (item.key.startsWith('customLink') && profile.linksDetails?.[item.key]?.name) || item.name;
 
               return (
                 <div
@@ -369,6 +400,14 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
                   className={`flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 bg-white hover:border-[#2563EB]/40 hover:shadow-xs transition-all group cursor-grab active:cursor-grabbing ${linkDragClass(idx)}`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <input
+                      type="checkbox"
+                      checked={isLinked && !hiddenLinks.includes(item.key)}
+                      disabled={!isLinked}
+                      onChange={() => toggleLinkVisibility(item.key, displayName)}
+                      title={isLinked ? 'Show this link on the card' : 'Add the link first'}
+                      className="w-4 h-4 shrink-0 accent-[#2563EB] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                    />
                     <div className="w-8 h-8 rounded-lg bg-[#f8f9fc] border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
                       {customIcon ? (
                         <img
@@ -382,7 +421,7 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
                     </div>
                     <div className="min-w-0 flex-1">
                       <h4 className="text-xs font-bold text-[#091426] truncate">
-                        {(item.key === 'customLink' && profile.linksDetails?.[item.key]?.name) || item.name}
+                        {displayName}
                       </h4>
                       <p className="text-[10px] text-gray-500 truncate" title={val || item.defaultDescription}>
                         {val || item.category}

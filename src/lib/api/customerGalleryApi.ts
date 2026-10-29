@@ -81,7 +81,7 @@ export const parseCustomerGalleryResponse = (res: any): GalleryImage[] => {
         id: `img-${idx}`,
         url: img,
         image: img,
-        title: `Photo ${idx + 1}`,
+        title: '',
         description: '',
       };
     }
@@ -90,7 +90,7 @@ export const parseCustomerGalleryResponse = (res: any): GalleryImage[] => {
       id: img.id || img._id || `img-${idx}-${Date.now()}`,
       url: imgUrl,
       image: imgUrl,
-      title: img.title || `Photo ${idx + 1}`,
+      title: img.title || '',
       description: img.description || '',
       alt: img.alt || img.title || '',
     };
@@ -99,14 +99,17 @@ export const parseCustomerGalleryResponse = (res: any): GalleryImage[] => {
 
 /**
  * GET customers/gallery OR superAdmin/admin/:adminId/gallery
+ * The list is paginated; a large limit loads every image (gallery reorder needs all ids).
  */
+const GALLERY_PARAMS = { page: 1, limit: 100 };
+
 export const getCustomerGallery = async (adminId?: string): Promise<CustomerGalleryResponse> => {
   if (adminId) {
-    const response = await api.get(`superAdmin/admin/${adminId}/gallery`);
+    const response = await api.get(`superAdmin/admin/${adminId}/gallery`, { params: GALLERY_PARAMS });
     return (response as any)?.data || response;
   }
   try {
-    const response = await api.get('customers/gallery');
+    const response = await api.get('customers/gallery', { params: GALLERY_PARAMS });
     return (response as any)?.data || response;
   } catch (error: any) {
     if (error?.response?.status === 404 || error?.response?.status === 405) {
@@ -195,10 +198,9 @@ export const formatGalleryFormData = (
     const title = (item.title || item.name || '').trim();
     const description = (item.description || '').trim();
 
+    // Always append both (even empty) so title[i] / description[i] / image[i] stay lined up
     formData.append('title', title);
-    if (description) {
-      formData.append('description', description);
-    }
+    formData.append('description', description);
 
     const rawFile =
       item.file instanceof File

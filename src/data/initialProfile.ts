@@ -120,6 +120,7 @@ export const initialProfileData: ProfileData = {
     hideShareSection: false,
     hideUnenteredSocialMediaLinks: true,
     hideViewsCounter: false,
+    hideBusinessNature: false,
   },
   headings: {
     linksHeading: 'Connect & Social Media',

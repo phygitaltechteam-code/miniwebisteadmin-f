@@ -11,8 +11,11 @@ import { compressImage } from '@/utils/imageCompressor';
 import { 
   getCustomerGallery, 
   saveOrUpdateCustomerGallery,
-  parseCustomerGalleryResponse
+  parseCustomerGalleryResponse,
+  deleteCustomerGallery
 } from '@/lib/api/customerGalleryApi';
+import { reorderList, reorderErrorText } from '@/lib/api/reorderApi';
+import { useDragReorder, moveItem } from '@/hooks/useDragReorder';
 
 interface Step6Props {
   profile: ProfileData;
@@ -66,25 +69,24 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
     try {
       const compressed = await compressImage(file, 1200, 800, 0.82);
       setSelectedFileUrl(compressed);
-      if (!photoTitle) {
-        setPhotoTitle(file.name.replace(/\.[^/.]+$/, ''));
-      }
       onToast('Photo selected and compressed successfully.');
     } catch {
       setSelectedFileUrl(URL.createObjectURL(file));
-      if (!photoTitle) {
-        setPhotoTitle(file.name.replace(/\.[^/.]+$/, ''));
-      }
     } finally {
       setIsCompressing(false);
     }
   };
 
-  const handleAddPhoto = () => {
-    if (!photoTitle.trim()) {
-      onToast('Please enter a photo title.');
-      return;
-    }
+  const resetForm = () => {
+    setPhotoTitle('');
+    setPhotoDesc('');
+    setSelectedFileUrl(null);
+    setSelectedRawFile(null);
+    setShowAddForm(false);
+  };
+
+  // Save Photo uploads this one photo to the gallery API right away (title & description are optional)
+  const handleAddPhoto = async () => {
     if (!selectedFileUrl) {
       onToast('Please select and upload an image.');
       return;
@@ -100,78 +102,77 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
       file: selectedRawFile || undefined,
     };
 
-    onChange('galleryImages', [...profile.galleryImages, newPhoto]);
-    setPhotoTitle('');
-    setPhotoDesc('');
-    setSelectedFileUrl(null);
-    setSelectedRawFile(null);
-    setShowAddForm(false);
-    onToast(`Added photo: "${newPhoto.title}" to gallery.`);
-  };
-
-  const handleDeletePhoto = (id: string) => {
-    onChange('galleryImages', profile.galleryImages.filter(img => img.id !== id));
-    onToast('Photo removed from gallery.');
-  };
-
-  const handleSaveAndNext = async () => {
-    const result = step6GallerySchema.safeParse({
-      galleryImages: (profile.galleryImages || []).map(img => ({
-        id: img.id,
-        url: img.url,
-        image: img.image || img.url,
-        title: img.title,
-        description: img.description,
-        alt: img.alt,
-      })),
-    });
-
+    const result = step6GallerySchema.safeParse({ galleryImages: [{ id: newPhoto.id, url: newPhoto.url, image: newPhoto.image }] });
     if (!result.success) {
-      const msg = result.error.errors[0]?.message || 'Please check gallery entries';
+      const msg = result.error.errors[0]?.message || 'Please check the photo';
       toast.error(`Validation: ${msg}`, { id: 'save-step6' });
       onToast(`⚠️ Validation: ${msg}`);
       return;
     }
 
     setIsSubmitting(true);
-    const toastId = toast.loading('Syncing photo gallery to customers/gallery API...');
-    onToast('Submitting photos to server...');
-
+    const toastId = toast.loading('Uploading photo...');
     try {
-      // Sends array of { title, description, image }
-      const res = await saveOrUpdateCustomerGallery(profile.galleryImages || [], adminId);
-      const serverMsg = res?.message || 'Step 6: Photo Gallery saved successfully!';
-      const displayMsg = `${serverMsg} (customers/gallery)`;
-
-      toast.success(displayMsg, { id: toastId, duration: 4000 });
-      onToast(`✅ ${displayMsg}`);
-      onNext();
+      const res = await saveOrUpdateCustomerGallery([newPhoto], adminId);
+      // Reload so the list holds the server ids (needed for delete)
+      let saved = [...(profile.galleryImages || []), newPhoto];
+      try {
+        const fresh = parseCustomerGalleryResponse(await getCustomerGallery(adminId));
+        if (fresh.length > 0) saved = fresh;
+      } catch {
+        // keep the local list
+      }
+      onChange('galleryImages', saved);
+      const msg = res?.message || 'Photo saved to gallery!';
+      toast.success(msg, { id: toastId, duration: 4000 });
+      onToast(`✅ ${msg}`);
+      resetForm();
     } catch (error: any) {
-      console.error('[Step6GalleryMedia] API Error on customers/gallery:', error);
       const backendErrors = error?.response?.data?.errors;
-      let fieldError = '';
-      if (Array.isArray(backendErrors) && backendErrors.length > 0) {
-        fieldError = backendErrors
-          .map((e: any) => `${e.field ? e.field + ': ' : ''}${e.message}`)
-          .join(', ');
-      }
-      const backendMessage =
-        fieldError ||
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        error?.message ||
-        'Failed to sync gallery to customers/gallery API.';
+      const fieldError = Array.isArray(backendErrors) && backendErrors.length > 0
+        ? backendErrors.map((e: any) => `${e.field ? e.field + ': ' : ''}${e.message}`).join(', ')
+        : '';
+      const backendMessage = fieldError || error?.response?.data?.message || error?.message || 'Failed to save photo.';
       const statusCode = error?.response?.status ? ` [HTTP ${error.response.status}]` : '';
-
-      const errText = `API Error${statusCode}: ${backendMessage}`;
-      toast.error(errText, { id: toastId, duration: 5000 });
-      onToast(`❌ ${errText}`);
-      if (error?.response?.status !== 400) {
-        onNext();
-      }
+      toast.error(`API Error${statusCode}: ${backendMessage}`, { id: toastId, duration: 5000 });
+      onToast(`❌ API Error${statusCode}: ${backendMessage}`);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDeletePhoto = async (id: string) => {
+    const isSaved = !String(id).startsWith('img-') && !String(id).startsWith('temp-');
+    if (isSaved) {
+      const res = await deleteCustomerGallery(id, adminId);
+      if (res === null) {
+        toast.error('Failed to delete photo.');
+        return;
+      }
+    }
+    onChange('galleryImages', profile.galleryImages.filter(img => img.id !== id));
+    toast.success('Photo deleted');
+    onToast('Photo removed from gallery.');
+  };
+
+  // Photos are saved one by one with Save Photo, so this only moves to the next step
+  // Drag & drop photo order, saved with PATCH gallery/reorder (every saved photo id, new order)
+  const { dragProps: photoDragProps, dragClass: photoDragClass } = useDragReorder(async (from, to) => {
+    const previous = profile.galleryImages;
+    const reordered = moveItem(previous, from, to);
+    const ids = reordered.map((g) => String(g.id)).filter((id) => !id.startsWith('img-') && !id.startsWith('temp-'));
+    onChange('galleryImages', reordered);
+    try {
+      await reorderList('gallery', ids, adminId);
+      toast.success('Photo order saved');
+    } catch (error: any) {
+      onChange('galleryImages', previous);
+      toast.error(`API Error: ${reorderErrorText(error, 'Failed to save photo order')}`);
+    }
+  });
+
+  const handleSaveAndNext = () => {
+    onNext();
   };
 
   return (
@@ -202,15 +203,14 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
         <div className="mb-3 p-2.5 sm:p-3 rounded-lg bg-[#FAFAFA] border border-[#E0E0E0] space-y-2.5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             <GenericInputField
-              label="Photo Title"
+              label="Photo Title (Optional)"
               value={photoTitle}
               onChange={(e) => setPhotoTitle(e.target.value)}
               placeholder="e.g. Annual Business Conclave Stage / Main Office"
-              required
             />
 
             <GenericInputField
-              label="Photo Description"
+              label="Photo Description (Optional)"
               value={photoDesc}
               onChange={(e) => setPhotoDesc(e.target.value)}
               placeholder="e.g. Keynote address by founder leaders & members"
@@ -232,7 +232,10 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
                 />
                 <button
                   type="button"
-                  onClick={() => setSelectedFileUrl(null)}
+                  onClick={() => {
+                    setSelectedFileUrl(null);
+                    setSelectedRawFile(null);
+                  }}
                   className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white hover:bg-black transition-colors"
                   title="Remove Image"
                 >
@@ -259,12 +262,8 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
           <div className="flex justify-end gap-2 pt-2 border-t border-[#E0E0E0]">
             <button
               type="button"
-              onClick={() => {
-                setShowAddForm(false);
-                setSelectedFileUrl(null);
-                setPhotoTitle('');
-                setPhotoDesc('');
-              }}
+              onClick={resetForm}
+              disabled={isSubmitting}
               className="px-3 py-1.5 rounded text-[13px] font-medium text-[#757575] hover:bg-gray-100 transition-colors"
             >
               Cancel
@@ -272,9 +271,11 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
             <GenericButton
               type="button"
               onClick={handleAddPhoto}
-              className="!bg-[#2196F3] hover:!bg-[#1E88E5] text-white !px-4 !py-1.5 !text-[13px] font-medium rounded shadow-none"
+              disabled={isSubmitting || isCompressing}
+              className="!bg-[#2196F3] hover:!bg-[#1E88E5] text-white !px-4 !py-1.5 !text-[13px] font-medium rounded shadow-none flex items-center gap-1.5 disabled:opacity-60"
             >
-              Save Photo
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isSubmitting ? 'Saving...' : 'Save Photo'}
             </GenericButton>
           </div>
         </div>
@@ -288,10 +289,12 @@ export const Step6GalleryMedia: React.FC<Step6Props> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-          {profile.galleryImages.map((photo) => (
+          {profile.galleryImages.map((photo, idx) => (
             <div
               key={photo.id}
-              className="border border-[#E0E0E0] rounded-lg overflow-hidden bg-white hover:border-[#2196F3]/50 transition-all shadow-none flex flex-col"
+              {...photoDragProps(idx)}
+              title="Drag to reorder"
+              className={`border border-[#E0E0E0] rounded-lg overflow-hidden bg-white hover:border-[#2196F3]/50 transition-all shadow-none flex flex-col cursor-grab active:cursor-grabbing ${photoDragClass(idx)}`}
             >
               {/* Image Thumbnail Display */}
               <div className="aspect-video w-full bg-slate-900 overflow-hidden relative group">

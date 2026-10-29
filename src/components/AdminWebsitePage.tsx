@@ -273,6 +273,13 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
 
   const bannerUrl = bannerList[activeBannerIdx] || bannerList[0];
 
+  // Banner auto-scroll: next banner every 4s; restarts after a dot click so it never jumps right away
+  useEffect(() => {
+    if (bannerList.length < 2) return;
+    const t = setTimeout(() => setActiveBannerIdx((i) => (i + 1) % bannerList.length), 4000);
+    return () => clearTimeout(t);
+  }, [activeBannerIdx, bannerList.length]);
+
   const establishmentYear =
     builderProfile?.establishmentYear ||
     aboutObj.establishmentYear ||
@@ -1044,15 +1051,30 @@ export const AdminWebsitePage: React.FC<AdminWebsitePageProps> = ({
             >
               <div className="relative w-full max-w-md">
                 <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 sm:border-4 border-white/10 bg-slate-800">
-                  <img
-                    src={bannerUrl}
-                    alt={businessName}
-                    className="w-full h-56 sm:h-80 md:h-96 object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        'https://upload.phygitaltech.in/uploads/1792663446147-7244927.png';
-                    }}
-                  />
+                  {/* Sliding track: every banner side by side, moved by translateX (auto-advances, see effect above) */}
+                  <div className="w-full h-56 sm:h-80 md:h-96 overflow-hidden">
+                    <style>{'@keyframes awpBannerZoom { from { transform: scale(1); } to { transform: scale(1.12); } }'}</style>
+                    <div
+                      className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                      style={{ transform: `translateX(-${(bannerList.length > 0 ? activeBannerIdx % bannerList.length : 0) * 100}%)` }}
+                    >
+                      {(bannerList.length > 0 ? bannerList : [bannerUrl]).map((src, i) => (
+                        <img
+                          key={`${src}-${i}`}
+                          src={src}
+                          alt={businessName}
+                          className="w-full h-full shrink-0 object-cover"
+                          // A single banner has nothing to slide to, so it gets a slow zoom instead
+                          style={bannerList.length <= 1 ? { animation: 'awpBannerZoom 8s ease-in-out infinite alternate' } : undefined}
+                          draggable={false}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              'https://upload.phygitaltech.in/uploads/1792663446147-7244927.png';
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
                   {/* Multiple Banners Navigation Dots */}

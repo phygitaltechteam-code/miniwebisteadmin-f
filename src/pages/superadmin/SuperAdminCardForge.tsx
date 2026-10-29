@@ -22,7 +22,7 @@ import { getCustomerLinks, parseCustomerLinksResponse } from '@/lib/api/customer
 import { getCustomerPayment, parseCustomerPaymentResponse } from '@/lib/api/customerPaymentApi';
 import { getCustomerGallery, parseCustomerGalleryResponse } from '@/lib/api/customerGalleryApi';
 import { getCustomerVideos, parseCustomerVideosResponse } from '@/lib/api/customerVideosApi';
-import { getCustomerSettings, saveSectionOrder, parseSettingsOrder, sortByOrder } from '@/lib/api/customerSettingsApi';
+import { getCustomerSettings, saveSectionOrder, parseSettingsOrder } from '@/lib/api/customerSettingsApi';
 
 export interface SuperAdminCardForgeProps {
   selectedAdmin?: any;
@@ -316,15 +316,11 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
                 if (valid.length > 0) updated.sectionOrder = valid;
               }
               if (orders.aboutBlockOrder) updated.aboutBlockOrder = orders.aboutBlockOrder;
-              if (orders.linkOrder) updated.linkOrder = orders.linkOrder;
-              if (orders.productOrder) {
-                updated.productOrder = orders.productOrder;
-                updated.products = sortByOrder(updated.products || [], orders.productOrder, (p) => String(p._id || p.id));
-              }
-              if (orders.videoOrder) {
-                updated.videoOrder = orders.videoOrder;
-                updated.youtubeVideos = sortByOrder(updated.youtubeVideos || [], orders.videoOrder, (v: any) => String(v._id || v.id));
-              }
+              // Products, gallery and videos now arrive in their saved order (reorder APIs), and the links
+              // API returns its own linkOrder, so the older settings orders are only a fallback for links.
+              if (orders.linkOrder && !updated.linkOrder?.length) updated.linkOrder = orders.linkOrder;
+              if (orders.hiddenLinks) updated.hiddenLinks = orders.hiddenLinks;
+              if (orders.hiddenPayments) updated.hiddenPayments = orders.hiddenPayments;
             }
           }
 
@@ -396,8 +392,8 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
   };
 
   const handleSaveAll = () => {
+    // Only confirm the save; the full preview is not opened automatically
     showToast('🎉 Digital Card configured successfully for this administrator!');
-    setIsFullCardModalOpen(true);
   };
 
   const handleSwitchAdmin = (adminId: string) => {

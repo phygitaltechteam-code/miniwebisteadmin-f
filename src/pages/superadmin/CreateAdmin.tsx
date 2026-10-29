@@ -12,6 +12,7 @@ import {
   useToggleAdminStatus,
 } from '@/lib/react-query/superadmin/admin';
 import { isRecordActive, readIsActive } from '@/lib/api/superadmin/admin';
+import { isPlanLive, pickPlanTerms } from '@/lib/api/superadmin/plan';
 import StatusToggle from '@/components/Forms/StatusToggle';
 import { useGetCategories } from '@/lib/react-query/superadmin/category';
 import { isFranchiseUser } from '@/utils/axios';
@@ -22,12 +23,9 @@ import toast from 'react-hot-toast';
 import { z } from 'zod';
 import {
   Edit2,
-  Settings,
-  MoreVertical,
   Copy,
   Trash2,
-  Download,
-  Key,
+  IndianRupee,
   SlidersHorizontal,
   Sparkles,
   ArrowLeft,
@@ -129,20 +127,11 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
   const [editingAdminId, setEditingAdminId] = useState<string | null>(null);
   const [selectedProjectBusiness, setSelectedProjectBusiness] = useState<AdminRow | null>(null);
   const [copyModalBusiness, setCopyModalBusiness] = useState<AdminRow | null>(null);
-  const [activeMenuRowId, setActiveMenuRowId] = useState<string | null>(null);
   const { mutateAsync: toggleAdminStatus } = useToggleAdminStatus();
   const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null);
   // isActive returned by the toggle API, per admin id (wins over the list until it refreshes)
   const [adminStatusOverride, setAdminStatusOverride] = useState<Record<string, boolean>>({});
   const isFranchise = isFranchiseUser();
-
-  useEffect(() => {
-    const handleGlobalClick = () => setActiveMenuRowId(null);
-    if (activeMenuRowId) {
-      window.addEventListener('click', handleGlobalClick);
-      return () => window.removeEventListener('click', handleGlobalClick);
-    }
-  }, [activeMenuRowId]);
 
   const rawCategoryList: any[] = Array.isArray(categoriesData)
     ? categoriesData
@@ -258,7 +247,7 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
         const isSubscribed = row.subscriptionStatus === 'Subscribed';
         return (
           <span
-            className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded-full text-white ${
+            className={`inline-block whitespace-nowrap px-2.5 py-0.5 text-[11px] font-medium rounded-full text-white ${
               isSubscribed ? 'bg-[#4CAF50]' : 'bg-[#F44336]'
             }`}
           >
@@ -300,117 +289,47 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
     {
       header: 'Actions',
       accessor: (row) => row.id,
-      className: 'text-right min-w-[210px]',
-      render: (row) => {
-        const isMenuOpen = activeMenuRowId === row.id;
-        return (
-          <div
-            className="relative flex items-center justify-end gap-1.5 no-row-click"
-            onClick={(e) => e.stopPropagation()}
+      className: 'text-right min-w-[140px]',
+      // Payments, Edit, Delete, Copy card (row click still opens the card builder)
+      render: (row) => (
+        <div
+          className="flex items-center justify-end gap-1 no-row-click"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            title="Projects & Payments"
+            onClick={() => setSelectedProjectBusiness(row)}
+            className="p-1.5 rounded text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
           >
-            <button
-              type="button"
-              onClick={() => setSelectedProjectBusiness(row)}
-              className="rounded border border-gray-300 bg-white px-2 py-0.5 text-[12px] font-medium text-gray-800 hover:bg-gray-100 shadow-2xs transition-colors shrink-0"
-            >
-              Projects & Payments
-            </button>
-
-            <button
-              type="button"
-              title="Edit Business"
-              onClick={() => handleEdit(row)}
-              className="p-1 text-gray-600 hover:text-[#2196F3] rounded transition-colors"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-            </button>
-
-            <button
-              type="button"
-              title="Card Settings"
-              onClick={() => onOpenCardForge?.(row.raw || row)}
-              className="p-1 text-gray-600 hover:text-[#2196F3] rounded transition-colors"
-            >
-              <Settings className="w-3.5 h-3.5" />
-            </button>
-
-            <div className="relative">
-              <button
-                type="button"
-                title="More Options"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveMenuRowId(isMenuOpen ? null : row.id);
-                }}
-                className="p-1 text-gray-600 hover:text-[#2196F3] rounded transition-colors"
-              >
-                <MoreVertical className="w-3.5 h-3.5" />
-              </button>
-
-              {/* Dropdown Menu (Image 2) */}
-              {isMenuOpen && (
-                <div className="absolute right-0 top-full mt-1 z-50 w-60 rounded-md bg-white py-1 shadow-xl ring-1 ring-black/10 font-['Roboto',Helvetica,Arial,sans-serif] text-left">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMenuRowId(null);
-                      setCopyModalBusiness(row);
-                    }}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[14px] text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <Copy className="h-4 w-4 text-gray-500" />
-                    <span>Copy business</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMenuRowId(null);
-                      deleteAdmin(row.id);
-                    }}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[14px] text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4 text-gray-500" />
-                    <span>Delete business</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMenuRowId(null);
-                      toast.success(`Downloading greetings for ${row.fullname}...`);
-                    }}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[14px] text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <Download className="h-4 w-4 text-gray-500" />
-                    <span>Download Greetings</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMenuRowId(null);
-                      toast.success(
-                        `Password regenerated for ${row.fullname}: Temp@${Math.floor(
-                          1000 + Math.random() * 9000,
-                        )}`,
-                      );
-                    }}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[14px] text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <Key className="h-4 w-4 text-gray-500" />
-                    <span>Regenerate User Password</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      },
+            <IndianRupee className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            title="Edit Business"
+            onClick={() => handleEdit(row)}
+            className="p-1.5 rounded text-gray-600 hover:text-[#2196F3] hover:bg-blue-50 transition-colors"
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            title="Delete Business"
+            onClick={() => deleteAdmin(row.id)}
+            className="p-1.5 rounded text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            title="Copy Card"
+            onClick={() => setCopyModalBusiness(row)}
+            className="p-1.5 rounded text-gray-600 hover:text-[#2196F3] hover:bg-blue-50 transition-colors"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
+        </div>
+      ),
     },
   ];
 
@@ -489,7 +408,9 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
     }
 
     const priceNum = Number(each.amount || each.price || 0);
-    const isSubscribed = priceNum > 0 || each.status === 'ACTIVE' || each.isActive;
+    // With a selected plan the status follows its expiry date; older records keep the previous rule
+    const planTerms = pickPlanTerms(each);
+    const isSubscribed = planTerms ? isPlanLive(planTerms) : priceNum > 0 || each.status === 'ACTIVE' || each.isActive;
 
     const rawId = String(each.id || each._id || '');
     const businessId = each.businessId || (rawId.length > 5 ? rawId.slice(-5) : String(14837 - idx));
@@ -860,6 +781,10 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
       ) : selectedProjectBusiness ? (
         <ProjectsAndPayments
           business={selectedProjectBusiness}
+          currentPlan={pickPlanTerms(selectedProjectBusiness.raw)}
+          ownerFranchiseId={
+            isFranchise ? undefined : selectedProjectBusiness.raw?.franchiseId || selectedProjectBusiness.raw?.franchise?.id
+          }
           onBack={() => setSelectedProjectBusiness(null)}
           onEdit={(b) => {
             setSelectedProjectBusiness(null);

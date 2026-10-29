@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, Smartphone, Tablet, Monitor } from 'lucide-react';
+import { X, Copy, Smartphone, Monitor } from 'lucide-react';
 import { ProfileData } from '../types/profile';
 import { PortalThemeId } from '../types/theme';
 import { TemplateWebsitePreview, TEMPLATE_PALETTES, paletteForTheme } from './TemplateWebsitePreview';
@@ -22,7 +22,9 @@ export const FullCardModal: React.FC<FullCardModalProps> = ({
   initialMode = 'desktop',
   onToast,
 }) => {
-  const [viewMode, setViewMode] = useState<'mobile' | 'tablet' | 'desktop'>(initialMode);
+  // Preview offers Mobile and Desktop only; a tablet request opens desktop
+  const startMode = initialMode === 'tablet' ? 'desktop' : initialMode;
+  const [viewMode, setViewMode] = useState<'mobile' | 'tablet' | 'desktop'>(startMode);
   const [activeTheme, setActiveTheme] = useState<PortalThemeId>(
     (profile.theme as PortalThemeId) || 'navy-orange',
   );
@@ -34,10 +36,20 @@ export const FullCardModal: React.FC<FullCardModalProps> = ({
   }, [profile.theme]);
 
   useEffect(() => {
-    setViewMode(initialMode);
-  }, [initialMode, isOpen]);
+    setViewMode(startMode);
+  }, [startMode, isOpen]);
+
+  // Close with the Esc key (the button title already promises it)
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const compact = viewMode === 'mobile';
 
   const handleCopy = () => {
     const url = `https://digiwebcard.in/${profile.vanityUrl || 'business'}`;
@@ -67,22 +79,24 @@ export const FullCardModal: React.FC<FullCardModalProps> = ({
         className={`bg-white w-full ${modalContainerWidth} rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-700 relative animate-in zoom-in-95 duration-200 transition-all`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Top Control Bar */}
-        <div className="px-3 sm:px-6 py-2 sm:py-2.5 border-b border-slate-800 flex items-center justify-between gap-2 bg-slate-950 text-white shrink-0 min-w-0">
+        {/* Modal Top Control Bar (compact in Mobile view: the frame is only 420px wide whatever the screen size) */}
+        <div className={`${compact ? 'px-2.5' : 'px-3 sm:px-6'} py-2 sm:py-2.5 border-b border-slate-800 flex items-center justify-between gap-1.5 sm:gap-2 bg-slate-950 text-white shrink-0 min-w-0`}>
           {/* Left Title & Live Theme Status */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-            <span className="font-bold text-xs uppercase tracking-wider text-slate-300 hidden md:inline shrink-0">
-              Live Preview:
-            </span>
-            <span className="font-mono text-xs text-orange-400 truncate max-w-[90px] xs:max-w-[130px] sm:max-w-[200px]">
-              /{profile.vanityUrl || 'business'}
-            </span>
-          </div>
+          {!compact && (
+            <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <span className="font-bold text-xs uppercase tracking-wider text-slate-300 hidden md:inline shrink-0">
+                Live Preview:
+              </span>
+              <span className="font-mono text-xs text-orange-400 truncate max-w-[90px] xs:max-w-[130px] sm:max-w-[200px]">
+                /{profile.vanityUrl || 'business'}
+              </span>
+            </div>
+          )}
 
           {/* Template color pills: Orange / Violet / Blue / Green (try colors in the preview; Change theme saves) */}
-          {viewMode !== 'mobile' && (
-            <div className="hidden md:flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 shrink-0">
+          {(
+            <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-900 p-0.5 sm:p-1 rounded-xl border border-slate-800 shrink-0">
               {TEMPLATE_THEME_IDS.map((thId) => {
                 const pal = TEMPLATE_PALETTES[paletteForTheme(thId)];
                 const isSelected = paletteForTheme(activeTheme) === paletteForTheme(thId);
@@ -95,14 +109,14 @@ export const FullCardModal: React.FC<FullCardModalProps> = ({
                       onToast(`Preview color: ${pal.label}`);
                     }}
                     title={pal.label}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 ${
+                    className={`${compact ? 'p-1.5' : 'p-1.5 sm:px-2.5 sm:py-1'} rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 ${
                       isSelected
                         ? 'bg-white text-slate-950 shadow-xs'
                         : 'text-slate-400 hover:text-white hover:bg-slate-800'
                     }`}
                   >
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pal.primary }} />
-                    <span>{pal.label}</span>
+                    <span className={`${compact ? 'w-3 h-3' : 'w-3 h-3 sm:w-2 sm:h-2'} rounded-full`} style={{ backgroundColor: pal.primary }} />
+                    <span className={compact ? 'hidden' : 'hidden lg:inline'}>{pal.label}</span>
                   </button>
                 );
               })}
@@ -121,19 +135,7 @@ export const FullCardModal: React.FC<FullCardModalProps> = ({
               title="Mobile View"
             >
               <Smartphone className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Mobile</span>
-            </button>
-            <button
-              onClick={() => setViewMode('tablet')}
-              className={`p-1.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                viewMode === 'tablet'
-                  ? 'bg-orange-500 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="Tablet View"
-            >
-              <Tablet className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Tab</span>
+              <span className={compact ? 'hidden' : 'hidden md:inline'}>Mobile</span>
             </button>
             <button
               onClick={() => setViewMode('desktop')}
@@ -145,7 +147,7 @@ export const FullCardModal: React.FC<FullCardModalProps> = ({
               title="Desktop View"
             >
               <Monitor className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Desktop</span>
+              <span className={compact ? 'hidden' : 'hidden md:inline'}>Desktop</span>
             </button>
           </div>
 
@@ -153,15 +155,15 @@ export const FullCardModal: React.FC<FullCardModalProps> = ({
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={handleCopy}
-              className="p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs text-white font-medium flex items-center gap-1.5 transition-colors border border-slate-800 shrink-0"
+              className={`${compact ? 'p-1.5' : 'p-1.5 sm:px-3 sm:py-1.5'} rounded-xl bg-slate-900 hover:bg-slate-800 text-xs text-white font-medium flex items-center gap-1.5 transition-colors border border-slate-800 shrink-0`}
               title="Copy Link"
             >
               <Copy className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Copy Link</span>
+              <span className={compact ? 'hidden' : 'hidden sm:inline'}>Copy Link</span>
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 sm:p-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-600 hover:text-white transition-all shrink-0 flex items-center justify-center font-bold"
+              className={`${compact ? 'p-1.5' : 'p-1.5 sm:p-2'} rounded-xl bg-red-500/20 text-red-400 hover:bg-red-600 hover:text-white transition-all shrink-0 flex items-center justify-center font-bold`}
               title="Close Preview (ESC)"
               aria-label="Close Preview"
             >

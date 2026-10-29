@@ -67,6 +67,46 @@ const getSocial = (profile: Partial<ProfileData>, platform: string): string | nu
   v((profile as any)[platform]) ||
   null;
 
+/** Custom link keys in use (customLink, customLink2, …) sorted by their number; always includes customLink */
+export const customLinkKeys = (profile: Partial<ProfileData>): string[] => {
+  const keys = new Set<string>(['customLink']);
+  Object.keys(profile.linksDetails || {}).forEach((k) => /^customLink\d*$/.test(k) && keys.add(k));
+  Object.keys(profile).forEach((k) => /^customLink\d+$/.test(k) && keys.add(k));
+  const num = (k: string) => Number(k.replace('customLink', '') || 1);
+  return Array.from(keys).sort((a, b) => num(a) - num(b));
+};
+
+/**
+ * Our ordered link keys → backend linkOrder. Only links that hold a value and that the links API
+ * knows are sent (an unknown name is rejected with 400); custom links become custom:<index>.
+ */
+export const toBackendLinkOrder = (keys: string[], profile: Partial<ProfileData>): string[] => {
+  const known = new Set(Object.keys(formatCustomerLinksPayload({})).filter((k) => k !== 'customLink' && k !== 'customLinks'));
+  const savedCustom = customLinkKeys(profile).filter(
+    (k) => v((profile as any)[k]) || v(profile.linksDetails?.[k]?.url)
+  );
+  return Array.from(new Set(keys))
+    .map((key) => {
+      if (/^customLink\d*$/.test(key)) {
+        // index in the customLinks array that formatCustomerLinksPayload sends
+        const idx = savedCustom.indexOf(key);
+        return idx >= 0 ? `custom:${idx}` : null;
+      }
+      const hasValue = v((profile as any)[key]) || v(profile.linksDetails?.[key]?.url);
+      return known.has(key) && hasValue ? key : null;
+    })
+    .filter((k): k is string => k !== null);
+};
+
+/** Backend linkOrder → our link keys (custom:0 → customLink, custom:1 → customLink2, …) */
+export const fromBackendLinkOrder = (order: string[]): string[] =>
+  order.map((key) => {
+    const m = /^custom:(\d+)$/.exec(key);
+    if (!m) return key;
+    const n = Number(m[1]);
+    return n === 0 ? 'customLink' : `customLink${n + 1}`;
+  });
+
 // ─── Format payload ──────────────────────────────────────────────────────────
 
 /**
@@ -79,16 +119,16 @@ export const formatCustomerLinksPayload = (
   const whatsappQl = profile.quickLinks?.find((l) => l.id === 'whatsapp');
   const customQl   = profile.quickLinks?.find((l) => l.id === 'custom');
 
-  // Custom link name + url + logo go in the customLinks array
+  // Custom link name + url + logo go in the customLinks array (customLink, customLink2, customLink3, …)
   const customDetail = profile.linksDetails?.customLink;
   const customUrl = v(profile.customLink) || v(customDetail?.url) || v(customQl?.value);
-  const customLinks: CustomLinkItem[] = customUrl
-    ? [{
-        name: v(customDetail?.name) || 'Custom Link',
-        url: customUrl,
-        logo: v(customDetail?.icon),
-      }]
-    : [];
+  const customLinks: CustomLinkItem[] = customLinkKeys(profile)
+    .map((key): CustomLinkItem | null => {
+      const detail = profile.linksDetails?.[key];
+      const url = key === 'customLink' ? customUrl : v((profile as any)[key]) || v(detail?.url);
+      return url ? { name: v(detail?.name) || 'Custom Link', url, logo: v(detail?.icon) } : null;
+    })
+    .filter((link): link is CustomLinkItem => link !== null);
 
   return {
     // Website
@@ -225,18 +265,27 @@ export const parseCustomerLinksResponse = (data: any): Partial<ProfileData> => {
   if (data.imageLink)          parsed.imageLink     = data.imageLink;
   if (data.customLink)         parsed.customLink    = data.customLink;
 
-  const firstCustom = Array.isArray(data.customLinks) ? data.customLinks[0] : undefined;
-  if (firstCustom?.url) {
-    parsed.customLink = firstCustom.url;
-    parsed.linksDetails = {
-      customLink: {
-        id: 'customLink',
-        name: firstCustom.name || 'Custom Link',
+  // Saved link order from the links API (custom:<n> mapped back to customLink keys)
+  if (Array.isArray(data.linkOrder) && data.linkOrder.length > 0) {
+    parsed.linkOrder = fromBackendLinkOrder(data.linkOrder.filter((k: any) => typeof k === 'string'));
+  }
+
+  // Every saved custom link becomes customLink, customLink2, customLink3, …
+  const customs = (Array.isArray(data.customLinks) ? data.customLinks : []).filter((c: any) => c?.url);
+  if (customs.length > 0) {
+    const details: NonNullable<ProfileData['linksDetails']> = {};
+    customs.forEach((c: any, idx: number) => {
+      const key = idx === 0 ? 'customLink' : `customLink${idx + 1}`;
+      (parsed as any)[key] = c.url;
+      details[key] = {
+        id: key,
+        name: c.name || 'Custom Link',
         description: '',
-        url: firstCustom.url,
-        icon: firstCustom.logo || undefined,
-      },
-    } as ProfileData['linksDetails'];
+        url: c.url,
+        icon: c.logo || undefined,
+      };
+    });
+    parsed.linksDetails = details;
   }
 
   return parsed;

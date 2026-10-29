@@ -8,9 +8,6 @@ import {
   Tag,
   Receipt,
   DollarSign,
-  BarChart3,
-  Image as ImageIcon,
-  ReceiptText,
   LogOut,
 } from 'lucide-react';
 
@@ -75,27 +72,15 @@ const navItems: NavItemConfig[] = [
     label: 'Customer plans & pricing management',
     icon: DollarSign,
   },
-  {
-    id: 'report',
-    label: 'Report',
-    icon: BarChart3,
-  },
-  {
-    id: 'greetings',
-    label: 'Greetings Management',
-    icon: ImageIcon,
-  },
-  {
-    id: 'ai-ledger',
-    label: 'AI Credit Ledger',
-    icon: ReceiptText,
-  },
+  // Report, Greetings Management and AI Credit Ledger are hidden from the sidebar (pages still exist)
 ];
 
 // Nav items shown only to Franchise role (limited panel)
 const franchiseNavItems: NavItemConfig[] = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'admins', label: 'All Businesses', icon: Briefcase },
+  // Same subscription plans page as the super admin, for the franchise's own businesses
+  { id: 'pricing', label: 'Customer plans & pricing management', icon: DollarSign },
 ];
 
 // Logout Confirmation Modal

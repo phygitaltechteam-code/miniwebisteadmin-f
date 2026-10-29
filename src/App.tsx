@@ -301,8 +301,7 @@ function AdminCardBuilder({
     setIsSaving(true);
     setTimeout(() => { 
       setIsSaving(false); 
-      showToast('🎉 Digital Card configuration completed & live!'); 
-      setIsFullCardModalOpen(true);
+      showToast('🎉 Digital Card configuration completed & live!');
     }, 450);
   };
 

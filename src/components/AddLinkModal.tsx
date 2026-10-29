@@ -30,7 +30,7 @@ export const AddLinkModal: React.FC<AddLinkModalProps> = ({
   onSave,
 }) => {
   // Only the custom link lets the user set its own logo and name
-  const isCustom = linkKey === 'customLink';
+  const isCustom = linkKey.startsWith('customLink');
   const [linkUrl, setLinkUrl] = useState(currentValue);
   const [linkName, setLinkName] = useState(currentName || defaultName);
   const [iconUrl, setIconUrl] = useState(currentIcon);

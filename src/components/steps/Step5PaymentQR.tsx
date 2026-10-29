@@ -16,6 +16,7 @@ import {
   parseCustomerPaymentResponse
 } from '@/lib/api/customerPaymentApi';
 import { compressImage } from '@/utils/imageCompressor';
+import { saveSettingsOrder } from '@/lib/api/customerSettingsApi';
 
 interface Step5Props {
   profile: ProfileData;
@@ -153,6 +154,29 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
       </div>
     </div>
   );
+
+  // Show / hide a wallet (Paytm, PhonePe, Google Pay) on the card, saved to the settings API as hiddenPayments
+  const hiddenPayments = profile.hiddenPayments || [];
+  const renderShowCheckbox = (id: 'paytm' | 'phonePe' | 'gPay', label: string) => {
+    const isShown = !hiddenPayments.includes(id);
+    const toggle = async () => {
+      const next = isShown ? [...hiddenPayments, id] : hiddenPayments.filter((p) => p !== id);
+      onChange('hiddenPayments', next);
+      try {
+        await saveSettingsOrder({ hiddenPayments: next }, adminId);
+        toast.success(`${label} ${isShown ? 'hidden from' : 'shown on'} card`);
+      } catch (error: any) {
+        onChange('hiddenPayments', hiddenPayments);
+        toast.error(`API Error: ${error?.response?.data?.message || error?.message || 'Failed to save payment visibility'}`);
+      }
+    };
+    return (
+      <label className="flex items-center gap-2 text-[13px] font-semibold text-[#091426] cursor-pointer select-none">
+        <input type="checkbox" checked={isShown} onChange={toggle} className="w-4 h-4 accent-[#2196F3] cursor-pointer" />
+        Show {label} on card
+      </label>
+    );
+  };
 
   const handleSaveAndNext = async () => {
     // 1. Pre-validate IFSC code if provided
@@ -409,6 +433,7 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-3">
             {/* 1. Paytm QR */}
             <div className="bg-white p-2.5 rounded-lg border border-[#E0E0E0] flex flex-col justify-between space-y-2">
+              {renderShowCheckbox('paytm', 'Paytm')}
               <GenericInputField
                 label="Name (Optional)"
                 value={profile.paytmQrProviderName ?? 'Paytm'}
@@ -472,6 +497,7 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
 
             {/* 2. PhonePe QR */}
             <div className="bg-white p-2.5 rounded-lg border border-[#E0E0E0] flex flex-col justify-between space-y-2">
+              {renderShowCheckbox('phonePe', 'PhonePe')}
               <GenericInputField
                 label="Name (Optional)"
                 value={profile.phonePeQrProviderName ?? 'PhonePe'}
@@ -535,6 +561,7 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
 
             {/* 3. Google Pay QR */}
             <div className="bg-white p-2.5 rounded-lg border border-[#E0E0E0] flex flex-col justify-between space-y-2">
+              {renderShowCheckbox('gPay', 'Google Pay')}
               <GenericInputField
                 label="Name (Optional)"
                 value={profile.gPayQrProviderName ?? 'Google Pay'}

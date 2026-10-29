@@ -13,7 +13,7 @@ import {
   parseCustomerVideosResponse,
   deleteCustomerVideo
 } from '@/lib/api/customerVideosApi';
-import { saveSettingsOrder } from '@/lib/api/customerSettingsApi';
+import { reorderList, reorderErrorText } from '@/lib/api/reorderApi';
 import { useDragReorder, moveItem } from '@/hooks/useDragReorder';
 
 interface Step7Props {
@@ -105,19 +105,20 @@ export const Step7YoutubeVideos: React.FC<Step7Props> = ({
     onToast('Video embed removed from gallery.');
   };
 
-  // Drag & drop video order, saved to the settings API as videoOrder
+  // Drag & drop video order, saved with PATCH videos/reorder (every saved video id, new order)
   const { dragProps: videoDragProps, dragClass: videoDragClass, isDragging: isDraggingVideo } = useDragReorder(async (from, to) => {
-    const reordered = moveItem(profile.youtubeVideos, from, to);
-    const order = reordered
+    const previous = profile.youtubeVideos;
+    const reordered = moveItem(previous, from, to);
+    const ids = reordered
       .map((v: any) => String(v._id || v.id))
       .filter((id) => !/^(temp-|new-|vid-)/.test(id) && !/^\d+$/.test(id));
     onChange('youtubeVideos', reordered);
-    onChange('videoOrder', order);
     try {
-      await saveSettingsOrder({ videoOrder: order }, adminId);
+      await reorderList('videos', ids, adminId);
       toast.success('Video order saved');
     } catch (error: any) {
-      toast.error(`API Error: ${error?.response?.data?.message || error?.message || 'Failed to save video order'}`);
+      onChange('youtubeVideos', previous);
+      toast.error(`API Error: ${reorderErrorText(error, 'Failed to save video order')}`);
     }
   });
 

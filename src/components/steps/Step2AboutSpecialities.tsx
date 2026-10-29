@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { ProfileData, CompanyDocument, AboutBlockKey, DEFAULT_ABOUT_BLOCK_ORDER } from '../../types/profile';
 import { saveSettingsOrder } from '@/lib/api/customerSettingsApi';
+import { reorderList, reorderErrorText } from '@/lib/api/reorderApi';
 import { useDragReorder, moveItem } from '@/hooks/useDragReorder';
 import GenericInputField from '@/components/Forms/Input/GenericInputField';
 import GenericButton from '@/components/Forms/Buttons/GenericButton';
@@ -658,6 +659,25 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
       toast.success('Section order saved');
     } catch (error: any) {
       toast.error(`API Error: ${error?.response?.data?.message || error?.message || 'Failed to save order'}`);
+    }
+  });
+
+  // Drag & drop document order, saved with PATCH about/documents/reorder (every saved document id, new order).
+  // Documents not uploaded yet (still holding a local file) are left out of the request.
+  const { dragProps: docDragProps, dragClass: docDragClass } = useDragReorder(async (from, to) => {
+    const previous = profile.documents || [];
+    const reordered = moveItem(previous, from, to);
+    const ids = reordered
+      .filter((d) => !d.file && !String(d.id).startsWith('doc_'))
+      .map((d) => String(d.id));
+    onChange('documents', reordered);
+    if (ids.length < 2) return;
+    try {
+      await reorderList('about/documents', ids, adminId);
+      toast.success('Document order saved');
+    } catch (error: any) {
+      onChange('documents', previous);
+      toast.error(`API Error: ${reorderErrorText(error, 'Failed to save document order')}`);
     }
   });
 
@@ -1419,7 +1439,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
 
           {/* Multiple uploaded documents */}
           {profile.documents && profile.documents.length > 0 && (
-            profile.documents.map((doc) => {
+            profile.documents.map((doc, docIdx) => {
               const fileName = doc.fileName || doc.name || 'Document';
               const fileUrl = doc.url || '';
               const isImage = doc.type === 'IMAGE' || fileUrl.match(/\.(jpeg|jpg|png|webp)/i);
@@ -1429,8 +1449,9 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
               return (
                 <div
                   key={doc.id}
-                  className="px-2 py-1.5 rounded-lg border border-slate-200/80 bg-white hover:border-[#2563EB]/40 flex items-center justify-between transition-all group"
-                  title={`${doc.size || (isImage ? 'Image Document' : 'Official Document')} • ${doc.uploadedAt || 'Attached'}`}
+                  {...docDragProps(docIdx)}
+                  className={`px-2 py-1.5 rounded-lg border border-slate-200/80 bg-white hover:border-[#2563EB]/40 flex items-center justify-between transition-all group cursor-grab active:cursor-grabbing ${docDragClass(docIdx)}`}
+                  title={`Drag to reorder • ${doc.size || (isImage ? 'Image Document' : 'Official Document')} • ${doc.uploadedAt || 'Attached'}`}
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <div className={`w-7 h-7 rounded-md flex items-center justify-center font-bold text-[9px] shrink-0 ${
