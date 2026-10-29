@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { cardUrlFor } from '@/utils/cardUrl';
 import {
   Phone, MessageCircle, Send, ArrowRight, ChevronLeft, ChevronRight, Mail, MapPin, Menu, Star,
   Home, Building2, Factory, Briefcase, Camera, Fingerprint, Zap, Settings, ShieldCheck, Lightbulb,
@@ -47,8 +48,6 @@ const TEMPLATE_KEYFRAMES = `
 @keyframes tplFadeIn { from { opacity: 0; } to { opacity: 1; } }
 .tpl-slide-in { animation: tplSlideIn 0.5s ease both; }
 .tpl-fade-in { animation: tplFadeIn 0.6s ease both; }
-@keyframes tplZoom { from { transform: scale(1); } to { transform: scale(1.12); } }
-.tpl-zoom { animation: tplZoom 8s ease-in-out infinite alternate; }
 `;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
@@ -261,11 +260,11 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
   const whatsappUrl = whatsapp ? `https://wa.me/${whatsapp.length === 10 ? `91${whatsapp}` : whatsapp}` : '#';
   const enquireUrl = (subject: string) =>
     whatsapp ? `${whatsappUrl}?text=${encodeURIComponent(`Hi ${businessName}, I want to enquire about ${subject}.`)}` : '#';
-  /** Product Enquire: the product's saved enquiry message, else the default text */
-  const productEnquiryUrl = (message: string | undefined, name: string) => {
+  /** Product Enquire: WhatsApp with the product's saved enquiry message; no saved message = chat opens empty */
+  const productEnquiryUrl = (message: string | undefined) => {
     const text = message?.trim();
-    if (!text) return enquireUrl(name);
-    return whatsapp ? `${whatsappUrl}?text=${encodeURIComponent(text)}` : '#';
+    if (!whatsapp) return '#';
+    return text ? `${whatsappUrl}?text=${encodeURIComponent(text)}` : whatsappUrl;
   };
   /** Saves the product image; opens it in a new tab when the file can't be fetched (CORS) */
   const downloadImage = async (url: string, name: string) => {
@@ -286,7 +285,7 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
       window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
-  const cardUrl = `https://digiwebcard.in/${profile.vanityUrl || 'business'}`;
+  const cardUrl = cardUrlFor(profile.vanityUrl);
   const vis = profile.visibility || ({} as ProfileData['visibility']);
 
   // Business natures ("Our Services"); empty when Hide Business Nature is ticked in Card Settings
@@ -647,8 +646,8 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
               style={{ transform: `translateX(-${bannerSlider.start * 100}%)` }}
             >
               {banners.map((b, i) => (
-                // A single banner has nothing to slide to, so it gets a slow zoom instead
-                <img key={`${b}-${i}`} src={b} alt="" className={`w-full h-full shrink-0 object-cover ${banners.length === 1 ? 'tpl-zoom' : ''}`} draggable={false} />
+                // A single banner stays still; two or more slide
+                <img key={`${b}-${i}`} src={b} alt="" className="w-full h-full shrink-0 object-cover" draggable={false} />
               ))}
             </div>
             {!isMobile && banners.length > 1 && (
@@ -862,7 +861,7 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                               </button>
                             )}
                             {!(p.isHideEnquiry ?? p.hideEnquiry) && (
-                              <a href={productEnquiryUrl(p.customEnquiryMessage, name)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md bg-[var(--c)] hover:bg-[var(--cd)] px-2 py-1 text-[10.5px] font-semibold text-white">
+                              <a href={productEnquiryUrl(p.customEnquiryMessage)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md bg-[var(--c)] hover:bg-[var(--cd)] px-2 py-1 text-[10.5px] font-semibold text-white">
                                 <Mail className="w-3 h-3" /> Enquire
                               </a>
                             )}

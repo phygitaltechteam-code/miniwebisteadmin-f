@@ -1,3 +1,4 @@
+import { cardUrlFor, rebaseCardUrl } from '@/utils/cardUrl';
 import React, { useState } from 'react';
 import {
   ArrowLeft,
@@ -144,7 +145,8 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
     .replace(/^-+|-+$/g, '');
 
   // Digital card table: values from digitalCard, older fields until it loads
-  const cardLink = card?.cardLink || `https://digiwebcard.in/${businessSlug}`;
+  // Backend link rebuilt on our card domain (VITE_CARD_BASE_URL)
+  const cardLink = card?.cardLink ? rebaseCardUrl(card.cardLink) : cardUrlFor(businessSlug);
   const cardNumber = card?.cardNo || business.businessId || '-';
   const cardCreated = card?.createdAt ? formatDisplayDate(card.createdAt) : business.creationDate || '-';
   const cardMadeBy = card?.madeBy?.label || business.madeBy || '-';

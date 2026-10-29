@@ -1,3 +1,4 @@
+import { CARD_HOST_LABEL } from '@/utils/cardUrl';
 import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { 
@@ -101,6 +102,10 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
           if (data.theme) onChange('theme', data.theme);
           if (data.logoUrl) onChange('logoUrl', data.logoUrl);
           if (data.bannerUrl) onChange('bannerUrl', data.bannerUrl);
+          // Full saved banner list (bannerUrls); kept as is when banners are already loaded or being added
+          if (Array.isArray(data.bannerUrls) && data.bannerUrls.length > 0 && !(profile.banners?.length)) {
+            onChange('banners', data.bannerUrls);
+          }
           if (data.mapLink) onChange('mapLink', data.mapLink);
           if (data.hasLogoBorder !== undefined) onChange('hasGoldenBorder', Boolean(data.hasLogoBorder));
           if (data.showCategoryInCard !== undefined) onChange('showCategoryInCard', Boolean(data.showCategoryInCard));
@@ -147,8 +152,8 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
       setVanityResult(result);
       setVanityError('');
       if (showToast) {
-        if (result.available) toast.success(`digiwebcard.in/${result.vanityUrl} is available`);
-        else toast.error(`digiwebcard.in/${result.vanityUrl} is already taken`);
+        if (result.available) toast.success(`${CARD_HOST_LABEL}${result.vanityUrl} is available`);
+        else toast.error(`${CARD_HOST_LABEL}${result.vanityUrl} is already taken`);
       }
     } catch (error: any) {
       if (requestId !== vanityRequestRef.current) return;
@@ -513,7 +518,7 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
 
               <div className="flex">
                 <span className="h-9 px-2.5 text-[14px] font-mono text-gray-500 border border-r-0 border-[#C4C4C4] bg-gray-50 rounded-l flex items-center shrink-0">
-                  digiwebcard.in/
+                  {CARD_HOST_LABEL}
                 </span>
                 <input
                   type="text"
@@ -534,10 +539,10 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
               {/* Result of the vanity-check API */}
               {vanityResult && !checkingUrl && (
                 vanityResult.available ? (
-                  <p className="mt-1 text-[12px] text-emerald-600">✓ digiwebcard.in/{vanityResult.vanityUrl} is available</p>
+                  <p className="mt-1 text-[12px] text-emerald-600">✓ {CARD_HOST_LABEL}{vanityResult.vanityUrl} is available</p>
                 ) : (
                   <p className="mt-1 text-[12px] text-red-600">
-                    ✕ digiwebcard.in/{vanityResult.vanityUrl} is already taken
+                    ✕ {CARD_HOST_LABEL}{vanityResult.vanityUrl} is already taken
                     {vanityResult.suggestion && (
                       <>
                         {' · '}

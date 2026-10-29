@@ -1,3 +1,4 @@
+import { cardUrlFor } from '@/utils/cardUrl';
 import React, { useState, useEffect } from 'react';
 import { initialProfileData } from '@/data/initialProfile';
 import { ProfileData, CardSectionKey, DEFAULT_SECTION_ORDER } from '@/types/profile';
@@ -199,8 +200,10 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
               if (data.theme) updated.theme = data.theme;
               if (data.logoUrl) updated.logoUrl = data.logoUrl;
               if (data.bannerUrl) updated.bannerUrl = data.bannerUrl;
-              if (Array.isArray(data.banners) && data.banners.length > 0) {
-                updated.banners = data.banners;
+              // The info API returns the full banner list as bannerUrls (bannerUrl is only the first)
+              const savedBanners = Array.isArray(data.bannerUrls) && data.bannerUrls.length > 0 ? data.bannerUrls : data.banners;
+              if (Array.isArray(savedBanners) && savedBanners.length > 0) {
+                updated.banners = savedBanners;
               } else if (data.bannerUrl) {
                 updated.banners = [data.bannerUrl];
               }
@@ -477,12 +480,13 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
         <div className="text-xs sm:text-[13px] font-medium tracking-wide flex items-center gap-1.5 flex-wrap justify-center">
           <span className="text-[#0288d1] font-bold">Your Card:</span>
           <a
-            href={`https://digiwebcard.in/${profile.vanityUrl || 'assa-o-living'}`}
+            href={cardUrlFor(profile.vanityUrl || effectiveAdminId)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-white font-bold underline hover:text-blue-300 transition-colors"
           >
-            https://digiwebcard.in/{profile.vanityUrl || 'assa-o-living'}
+            {/* Without a display link the card opens by its admin id */}
+            {cardUrlFor(profile.vanityUrl || effectiveAdminId)}
           </a>
         </div>
 

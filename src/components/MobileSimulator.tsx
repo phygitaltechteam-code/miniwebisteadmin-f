@@ -1,8 +1,9 @@
+import { CARD_HOST_LABEL } from '@/utils/cardUrl';
 import React, { useState } from 'react';
 import { Smartphone, Tablet, Monitor, Maximize2 } from 'lucide-react';
 import { ProfileData } from '../types/profile';
 import { getPortalTheme, PortalThemeId } from '../types/theme';
-import { AdminWebsitePage } from './AdminWebsitePage';
+import { TemplateWebsitePreview } from './TemplateWebsitePreview';
 
 interface MobileSimulatorProps {
   profile: ProfileData;
@@ -107,7 +108,7 @@ export const MobileSimulator: React.FC<MobileSimulatorProps> = ({
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
               </div>
               <div className="bg-slate-950/80 px-2.5 py-0.5 rounded text-[10px] font-mono text-slate-300 truncate max-w-[280px]">
-                digiwebcard.in/{profile.vanityUrl || 'business'}
+                {CARD_HOST_LABEL}{profile.vanityUrl || 'business'}
               </div>
               <div className="w-8" />
             </div>
@@ -121,17 +122,14 @@ export const MobileSimulator: React.FC<MobileSimulatorProps> = ({
 
           {/* Digital Website Page Display inside Simulator Frame */}
           <div className="bg-white rounded-[24px] overflow-hidden flex flex-col h-[560px] custom-scroll overflow-y-auto relative">
-            <AdminWebsitePage
-              profile={profile}
-              viewMode={deviceMode}
-              isSimulatorView={true}
-            />
+            {/* Same website design as the public card page (/<display link>) */}
+            <TemplateWebsitePreview profile={profile} themeId={themeId} viewMode={deviceMode} />
           </div>
         </div>
 
         {/* Real-time sync caption */}
         <p className="text-[10px] font-bold text-gray-400 mt-2 text-center tracking-tight">
-          Live sync across all sections for digiwebcard.in/{profile.vanityUrl || 'business'}
+          Live sync across all sections for {CARD_HOST_LABEL}{profile.vanityUrl || 'business'}
         </p>
       </div>
     </div>

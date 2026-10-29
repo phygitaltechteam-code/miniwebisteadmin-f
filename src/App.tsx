@@ -38,6 +38,7 @@ import { Step7SettingsHeadings } from './components/steps/Step7SettingsHeadings'
 import { SuperAdminCardForge } from './pages/superadmin/SuperAdminCardForge';
 import { FranchiseMaster } from './pages/superadmin/FranchiseMaster';
 import { EnquiriesDropdown } from './components/EnquiriesDropdown';
+import { PublicCardPage } from './pages/PublicCardPage';
 
 // ─── Super Admin / Franchise Layout ───────────────────────────────────────────
 function SuperAdminPortal({
@@ -440,7 +441,17 @@ function AppContent() {
   );
 }
 
+/** Display link from a public card URL (/<vanityUrl>), or null for the app itself */
+const publicCardSlug = (): string | null => {
+  const match = window.location.pathname.match(/^\/([A-Za-z0-9-]+)\/?$/);
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
 export default function App() {
+  // /<display link> is a business's public website: no login, no admin panel
+  const slug = publicCardSlug();
+  if (slug) return <PublicCardPage vanityUrl={slug} />;
+
   return (
     <AuthContextProvider>
       <QueryProvider>

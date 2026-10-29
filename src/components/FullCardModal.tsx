@@ -1,3 +1,4 @@
+import { cardUrlFor } from '@/utils/cardUrl';
 import React, { useState, useEffect } from 'react';
 import { X, Copy, Smartphone, Monitor } from 'lucide-react';
 import { ProfileData } from '../types/profile';
@@ -52,7 +53,7 @@ export const FullCardModal: React.FC<FullCardModalProps> = ({
   const compact = viewMode === 'mobile';
 
   const handleCopy = () => {
-    const url = `https://digiwebcard.in/${profile.vanityUrl || 'business'}`;
+    const url = cardUrlFor(profile.vanityUrl);
     navigator.clipboard.writeText(url);
     onToast(`Copied portal link: ${url}`);
   };
