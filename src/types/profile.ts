@@ -111,10 +111,12 @@ export interface ProfileData {
   videoOrder?: string[];
   /** Link keys (e.g. whatsappLinks, customLink) in display order, saved via the settings API */
   linkOrder?: string[];
-  /** Link keys the customer unticked in Link Store (not shown on the card), saved via the settings API */
+  /** Link keys the customer unticked in Link Store (not shown on the card), saved via PATCH links/visibility */
   hiddenLinks?: string[];
-  /** Wallets unticked in Payment & QR ('paytm' | 'phonePe' | 'gPay'), saved via the settings API */
+  /** Wallets unticked in Payment & QR ('paytm' | 'phonePe' | 'gPay'), saved as the wallet's isVisible */
   hiddenPayments?: string[];
+  /** Saved wallet ids from the payment GET, for PATCH payment/wallets/:walletId/visibility */
+  walletIds?: Partial<Record<'paytm' | 'phonePe' | 'gPay', string>>;
 
   // Step 1: Basic Details & Theme & Location
   theme: PortalThemeId | 'clean-white' | 'white-orange' | 'white-minimal' | 'white-emerald' | 'white-royal' | 'dark-gold' | 'royal-blue' | 'emerald-luxe' | string;

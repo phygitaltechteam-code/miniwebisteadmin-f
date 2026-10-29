@@ -173,8 +173,7 @@ export const publicCardToProfile = (card: PublicCard): ProfileData => {
   }
   if (orders.aboutBlockOrder) p.aboutBlockOrder = orders.aboutBlockOrder;
   if (orders.linkOrder && !p.linkOrder?.length) p.linkOrder = orders.linkOrder;
-  if (orders.hiddenLinks) p.hiddenLinks = orders.hiddenLinks;
-  if (orders.hiddenPayments) p.hiddenPayments = orders.hiddenPayments;
+  // Hidden links and wallets are already left out by the public API (no settings fallback needed)
 
   return p;
 };

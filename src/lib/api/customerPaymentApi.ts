@@ -106,8 +106,10 @@ export const parseCustomerPaymentResponse = (res: any): Partial<ProfileData> => 
   // Wallets may come back as an array of { walletName, walletPhoneNo, walletQr }; map them onto
   // Paytm / PhonePe / Google Pay by name, falling back to their position (same order they are sent in)
   const walletList: any[] = Array.isArray(raw.wallets) ? raw.wallets : Array.isArray(raw.walletDetails) ? raw.walletDetails : [];
+  // Position is only a fallback for a wallet saved without a name (otherwise a lone PhonePe would also fill Paytm)
   const findWallet = (pattern: RegExp, idx: number) =>
-    walletList.find((w) => pattern.test(String(w?.walletName || w?.name || ''))) || walletList[idx];
+    walletList.find((w) => pattern.test(String(w?.walletName || w?.name || ''))) ||
+    (walletList[idx] && !String(walletList[idx]?.walletName || walletList[idx]?.name || '').trim() ? walletList[idx] : undefined);
   const [paytmW, phonePeW, gPayW] = [
     findWallet(/paytm/i, 0),
     findWallet(/phone\s*pe/i, 1),
@@ -115,7 +117,18 @@ export const parseCustomerPaymentResponse = (res: any): Partial<ProfileData> => 
   ];
   const wName = (w: any) => w?.walletName || w?.name || '';
   const wPhone = (w: any) => w?.walletPhoneNo || w?.phoneNo || w?.phone || '';
-  const wQr = (w: any) => w?.walletQr || w?.qr || w?.qrUrl || '';
+  const wQr = (w: any) => w?.walletQr || w?.qr || w?.qrUrl || w?.qrImage || '';
+
+  // Wallet ids (for the visibility toggle) and the ones saved with isVisible: false
+  const byId = { paytm: paytmW, phonePe: phonePeW, gPay: gPayW };
+  const walletIds: NonNullable<ProfileData['walletIds']> = {};
+  const hiddenPayments: string[] = [];
+  (Object.keys(byId) as Array<keyof typeof byId>).forEach((key) => {
+    const w = byId[key];
+    if (w?.id || w?._id) walletIds[key] = w.id || w._id;
+    if (w?.isVisible === false) hiddenPayments.push(key);
+  });
+  const hasVisibility = walletList.some((w) => w?.isVisible !== undefined);
 
   if (walletList.length > 0) {
     raw = {
@@ -133,10 +146,13 @@ export const parseCustomerPaymentResponse = (res: any): Partial<ProfileData> => 
   }
 
   return {
+    walletIds,
+    ...(hasVisibility ? { hiddenPayments } : {}),
     upiId,
     upiNumber: phone,
     paymentPhoneNo: phone,
-    paytmPhone: raw.paytmPhone || phone,
+    // Only a saved Paytm wallet fills Paytm (the payment phone is shown on its own)
+    paytmPhone: raw.paytmPhone || '',
     phonePePhone: raw.phonePePhone || '',
     gPayPhone: raw.gPayPhone || '',
     paytmQrUrl: raw.paytmQrUrl || '',
@@ -184,6 +200,12 @@ export const getCustomerPayment = async (adminId?: string): Promise<CustomerPaym
   }
 };
 
+/** Show / hide one saved wallet on the public card: PATCH {base}/payment/wallets/:walletId/visibility */
+export const setWalletVisibility = async (walletId: string, isVisible: boolean, adminId?: string) => {
+  const base = adminId ? `superAdmin/admin/${adminId}` : 'customers';
+  return api.patch(`${base}/payment/wallets/${walletId}/visibility`, { isVisible });
+};
+
 // Wallet-specific keys; these go out as repeated walletName / walletPhoneNo / walletQr entries instead
 const WALLET_KEYS = [
   'paytmPhone', 'phonePePhone', 'gPayPhone',
@@ -206,10 +228,11 @@ export const formatCustomerPaymentFormData = (profile: Partial<ProfileData>): Fo
     formData.append(key, String(val));
   });
 
+  const hidden = profile.hiddenPayments || [];
   const wallets = [
-    { name: payload.paytmQrProviderName || 'Paytm', phone: payload.paytmPhone, qr: payload.paytmQrUrl, file: 'paytm-qr' },
-    { name: payload.phonePeQrProviderName || 'PhonePe', phone: payload.phonePePhone, qr: payload.phonePeQrUrl, file: 'phonepe-qr' },
-    { name: payload.gPayQrProviderName || 'Google Pay', phone: payload.gPayPhone, qr: payload.gPayQrUrl, file: 'gpay-qr' },
+    { id: 'paytm', name: payload.paytmQrProviderName || 'Paytm', phone: payload.paytmPhone, qr: payload.paytmQrUrl, file: 'paytm-qr' },
+    { id: 'phonePe', name: payload.phonePeQrProviderName || 'PhonePe', phone: payload.phonePePhone, qr: payload.phonePeQrUrl, file: 'phonepe-qr' },
+    { id: 'gPay', name: payload.gPayQrProviderName || 'Google Pay', phone: payload.gPayPhone, qr: payload.gPayQrUrl, file: 'gpay-qr' },
   ];
 
   wallets
@@ -217,6 +240,8 @@ export const formatCustomerPaymentFormData = (profile: Partial<ProfileData>): Fo
     .forEach((w) => {
       formData.append('walletName', w.name);
       formData.append('walletPhoneNo', w.phone || '');
+      // "Show <wallet> on card" checkbox
+      formData.append('walletIsVisible', String(!hidden.includes(w.id)));
       const qr: string = w.qr || '';
       const qrFile = qr.startsWith('data:') ? base64ToFile(qr, w.file) : null;
       if (qrFile) {

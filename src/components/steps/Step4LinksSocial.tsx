@@ -13,14 +13,15 @@ import {
 import { ProfileData } from '../../types/profile';
 import GenericButton from '@/components/Forms/Buttons/GenericButton';
 import { AddLinkModal } from '@/components/AddLinkModal';
-import { saveSettingsOrder, sortByOrder } from '@/lib/api/customerSettingsApi';
+import { sortByOrder } from '@/lib/api/customerSettingsApi';
 import { useDragReorder, moveItem } from '@/hooks/useDragReorder';
 import {
   getCustomerLinks,
   saveOrUpdateCustomerLinks,
   parseCustomerLinksResponse,
   customLinkKeys,
-  toBackendLinkOrder
+  toBackendLinkOrder,
+  setLinkVisibility
 } from '@/lib/api/customerSocialApi';
 import { reorderLinks, reorderErrorText } from '@/lib/api/reorderApi';
 
@@ -263,14 +264,19 @@ export const Step4LinksSocial: React.FC<Step4Props> = ({
     item.key === 'customLink' ? [...savedCustomKeys, emptyCustomKey].map((key) => ({ ...item, key })) : [item]
   );
 
-  // Show / hide a link on the card, saved to the settings API as hiddenLinks
+  // Show / hide a saved link on the card: PATCH links/visibility (custom links as custom:<n>)
   const hiddenLinks = profile.hiddenLinks || [];
   const toggleLinkVisibility = async (key: string, name: string) => {
+    const backendKey = toBackendLinkOrder([key], profile)[0];
+    if (!backendKey) {
+      toast.error(`Save ${name} first, then choose whether to show it`);
+      return;
+    }
     const isHidden = hiddenLinks.includes(key);
     const next = isHidden ? hiddenLinks.filter((k) => k !== key) : [...hiddenLinks, key];
     onChange('hiddenLinks', next);
     try {
-      await saveSettingsOrder({ hiddenLinks: next }, adminId);
+      await setLinkVisibility(backendKey, isHidden, adminId);
       toast.success(`${name} ${isHidden ? 'shown on' : 'hidden from'} card`);
     } catch (error: any) {
       onChange('hiddenLinks', hiddenLinks);

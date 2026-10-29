@@ -880,7 +880,16 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
         {show.payment && (
           <section data-section="payment" style={{ order: sectionRank("payment") }}>
             <SectionTitle {...titleParts(headings.paymentHeading, 'Payment Details')} />
-            <div className="space-y-3">
+            {/* Desktop: UPI + wallets on the left, bank details on the right; mobile: stacked */}
+            <div
+              className={
+                !isMobile && bankRows.length > 0 && (wallets.length > 0 || profile.upiId || upiPhone)
+                  ? 'grid grid-cols-2 gap-4 items-start'
+                  : 'space-y-3'
+              }
+            >
+              {(profile.upiId || upiPhone || wallets.length > 0) && (
+              <div className="space-y-3 min-w-0">
               {(profile.upiId || upiPhone) && (
                 <div className="flex flex-wrap gap-2">
                   {profile.upiId && (
@@ -898,7 +907,7 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
               {wallets.length > 0 && (
                 <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${isMobile ? Math.min(wallets.length, 2) : 3}, minmax(0, 1fr))` }}>
                   {wallets.map((w) => (
-                    <div key={w.id} className="rounded-xl bg-white border border-slate-200 p-3 flex flex-col items-center text-center gap-1.5">
+                    <div key={w.id} className="rounded-xl bg-white border border-slate-200 shadow-sm p-3 flex flex-col items-center text-center gap-1.5">
                       <span className="text-[13px] font-bold text-[#0B1B33]">{w.name}</span>
                       {w.qr ? (
                         <img src={w.qr} alt={`${w.name} QR`} className="w-28 h-28 object-contain rounded-md border border-slate-100 bg-white p-1" />
@@ -912,17 +921,22 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                   ))}
                 </div>
               )}
+              </div>
+              )}
               {bankRows.length > 0 && (
-                <div className="rounded-xl bg-white border border-slate-200 p-3.5">
-                  <div className="flex items-center gap-2 mb-2 text-[13px] font-bold text-[#0B1B33]">
-                    <Landmark className="w-4 h-4 text-[var(--c)]" /> Bank Details
+                <div className={`rounded-xl bg-white border border-slate-200 border-t-4 border-t-[var(--c)] shadow-sm p-4 min-w-0 ${isMobile ? '' : 'max-w-2xl'}`}>
+                  <div className="flex items-center gap-2 mb-3 text-[14px] font-bold text-[#0B1B33]">
+                    <span className="w-8 h-8 rounded-full bg-[var(--cs)] flex items-center justify-center">
+                      <Landmark className="w-4 h-4 text-[var(--c)]" />
+                    </span>
+                    Bank Details
                   </div>
-                  <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[12.5px]">
+                  <dl className="divide-y divide-slate-100 text-[13px]">
                     {bankRows.map(([label, value]) => (
-                      <React.Fragment key={label}>
-                        <dt className="text-slate-500">{label}</dt>
-                        <dd className="font-semibold text-[#0B1B33] break-all">{value}</dd>
-                      </React.Fragment>
+                      <div key={label} className="flex items-baseline justify-between gap-4 py-2">
+                        <dt className="text-slate-500 shrink-0">{label}</dt>
+                        <dd className="font-semibold text-[#0B1B33] text-right break-all">{value}</dd>
+                      </div>
                     ))}
                   </dl>
                 </div>

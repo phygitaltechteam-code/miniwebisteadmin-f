@@ -285,6 +285,9 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
                 updated.ifscCode = ifsc;
               }
               if (parsed.accountType) updated.accountType = parsed.accountType;
+              // Wallet "Show on card" state now lives on each wallet (isVisible)
+              if (parsed.walletIds) updated.walletIds = parsed.walletIds;
+              if (parsed.hiddenPayments) updated.hiddenPayments = parsed.hiddenPayments;
             }
           }
 
@@ -322,8 +325,9 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
               // Products, gallery and videos now arrive in their saved order (reorder APIs), and the links
               // API returns its own linkOrder, so the older settings orders are only a fallback for links.
               if (orders.linkOrder && !updated.linkOrder?.length) updated.linkOrder = orders.linkOrder;
-              if (orders.hiddenLinks) updated.hiddenLinks = orders.hiddenLinks;
-              if (orders.hiddenPayments) updated.hiddenPayments = orders.hiddenPayments;
+              // Older cards kept these in settings; the links / payment APIs win when they return them
+              if (orders.hiddenLinks && !updated.hiddenLinks) updated.hiddenLinks = orders.hiddenLinks;
+              if (orders.hiddenPayments && !updated.hiddenPayments) updated.hiddenPayments = orders.hiddenPayments;
             }
           }
 

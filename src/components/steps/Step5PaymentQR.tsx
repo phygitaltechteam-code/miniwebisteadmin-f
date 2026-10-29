@@ -13,10 +13,10 @@ import { step5PaymentQRSchema } from '@/schemas/cardProfileSchema';
 import { 
   getCustomerPayment, 
   saveOrUpdateCustomerPayment,
-  parseCustomerPaymentResponse
+  parseCustomerPaymentResponse,
+  setWalletVisibility,
 } from '@/lib/api/customerPaymentApi';
 import { compressImage } from '@/utils/imageCompressor';
-import { saveSettingsOrder } from '@/lib/api/customerSettingsApi';
 
 interface Step5Props {
   profile: ProfileData;
@@ -85,6 +85,9 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
         if (parsed.paytmQrProviderName) onChange('paytmQrProviderName', parsed.paytmQrProviderName);
         if (parsed.phonePeQrProviderName) onChange('phonePeQrProviderName', parsed.phonePeQrProviderName);
         if (parsed.gPayQrProviderName) onChange('gPayQrProviderName', parsed.gPayQrProviderName);
+        // Saved wallet ids + "Show on card" state (wallet isVisible)
+        if (parsed.walletIds) onChange('walletIds', parsed.walletIds);
+        if (parsed.hiddenPayments) onChange('hiddenPayments', parsed.hiddenPayments);
       } catch (err) {
         // Normal if payment details are not yet configured
       }
@@ -155,15 +158,21 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
     </div>
   );
 
-  // Show / hide a wallet (Paytm, PhonePe, Google Pay) on the card, saved to the settings API as hiddenPayments
+  // Show / hide a wallet (Paytm, PhonePe, Google Pay) on the card. A saved wallet is toggled at once
+  // (PATCH payment/wallets/:walletId/visibility); a new one is sent as walletIsVisible on Save & Next.
   const hiddenPayments = profile.hiddenPayments || [];
   const renderShowCheckbox = (id: 'paytm' | 'phonePe' | 'gPay', label: string) => {
     const isShown = !hiddenPayments.includes(id);
     const toggle = async () => {
       const next = isShown ? [...hiddenPayments, id] : hiddenPayments.filter((p) => p !== id);
       onChange('hiddenPayments', next);
+      const walletId = profile.walletIds?.[id];
+      if (!walletId) {
+        toast.success(`${label} will be ${isShown ? 'hidden from' : 'shown on'} the card when you save`);
+        return;
+      }
       try {
-        await saveSettingsOrder({ hiddenPayments: next }, adminId);
+        await setWalletVisibility(walletId, !isShown, adminId);
         toast.success(`${label} ${isShown ? 'hidden from' : 'shown on'} card`);
       } catch (error: any) {
         onChange('hiddenPayments', hiddenPayments);
@@ -228,6 +237,9 @@ export const Step5PaymentQR: React.FC<Step5Props> = ({
 
     try {
       const res = await saveOrUpdateCustomerPayment(profile, adminId);
+      // Saving recreates the wallets, so keep the new ids for the Show-on-card toggle
+      const savedWalletIds = parseCustomerPaymentResponse(res).walletIds;
+      if (savedWalletIds && Object.keys(savedWalletIds).length > 0) onChange('walletIds', savedWalletIds);
       const serverMsg = res?.message || 'Step 5: Payment details saved successfully!';
       const displayMsg = `${serverMsg} (customers/payment)`;
 

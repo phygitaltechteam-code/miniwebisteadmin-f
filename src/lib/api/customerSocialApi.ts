@@ -9,6 +9,8 @@ export interface CustomLinkItem {
   name: string;
   url: string;
   logo?: string | null;
+  /** Shown on the public card (false = ticked off on the Links page) */
+  isVisible?: boolean;
 }
 
 export interface CustomerLinksPayload {
@@ -126,7 +128,9 @@ export const formatCustomerLinksPayload = (
     .map((key): CustomLinkItem | null => {
       const detail = profile.linksDetails?.[key];
       const url = key === 'customLink' ? customUrl : v((profile as any)[key]) || v(detail?.url);
-      return url ? { name: v(detail?.name) || 'Custom Link', url, logo: v(detail?.icon) } : null;
+      return url
+        ? { name: v(detail?.name) || 'Custom Link', url, logo: v(detail?.icon), isVisible: !(profile.hiddenLinks || []).includes(key) }
+        : null;
     })
     .filter((link): link is CustomLinkItem => link !== null);
 
@@ -217,6 +221,8 @@ export const formatCustomerLinksFormData = (profile: Partial<ProfileData>): Form
     } else {
       formData.append('customLinkLogo', logo);
     }
+    // Saving recreates the custom links, so each one carries its show-on-card checkbox
+    formData.append('customLinkIsVisible', String(link.isVisible !== false));
   });
 
   return formData;
@@ -272,10 +278,20 @@ export const parseCustomerLinksResponse = (data: any): Partial<ProfileData> => {
 
   // Every saved custom link becomes customLink, customLink2, customLink3, …
   const customs = (Array.isArray(data.customLinks) ? data.customLinks : []).filter((c: any) => c?.url);
+  const customKey = (idx: number) => (idx === 0 ? 'customLink' : `customLink${idx + 1}`);
+
+  // Links ticked off on the card: hiddenLinks for normal links, isVisible: false on custom links
+  if (Array.isArray(data.hiddenLinks) || customs.some((c: any) => c.isVisible !== undefined)) {
+    parsed.hiddenLinks = [
+      ...(Array.isArray(data.hiddenLinks) ? data.hiddenLinks.filter((k: any) => typeof k === 'string') : []),
+      ...customs.flatMap((c: any, idx: number) => (c.isVisible === false ? [customKey(idx)] : [])),
+    ];
+  }
+
   if (customs.length > 0) {
     const details: NonNullable<ProfileData['linksDetails']> = {};
     customs.forEach((c: any, idx: number) => {
-      const key = idx === 0 ? 'customLink' : `customLink${idx + 1}`;
+      const key = customKey(idx);
       (parsed as any)[key] = c.url;
       details[key] = {
         id: key,
@@ -321,6 +337,15 @@ export const getCustomerLinks = async (adminId?: string): Promise<CustomerLinksR
 };
 
 export const getCustomerSocial = getCustomerLinks;
+
+/**
+ * Show / hide one saved link on the public card: PATCH {base}/links/visibility { key, isVisible }.
+ * key is the link-order key (instagramLink, custom:0, …), see toBackendLinkOrder.
+ */
+export const setLinkVisibility = async (key: string, isVisible: boolean, adminId?: string) => {
+  const endpoint = adminId ? `superAdmin/admin/${adminId}/links/visibility` : 'customers/links/visibility';
+  return api.patch(endpoint, { key, isVisible });
+};
 
 // ─── POST / PATCH ─────────────────────────────────────────────────────────────
 
