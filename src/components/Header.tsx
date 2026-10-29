@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, ChevronDown, LogOut, ArrowRight, User } from 'lucide-react';
 import { ProfileData } from '../types/profile';
 import { EnquiriesDropdown } from './EnquiriesDropdown';
+import { LogoutConfirmModal } from './superadmin/SuperAdminSidebar';
 
 interface HeaderProps {
   profile: ProfileData;
@@ -20,6 +21,17 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const signOut = () => {
+    if (onSignOut) {
+      onSignOut();
+    } else {
+      localStorage.removeItem('token');
+      localStorage.removeItem('token_key');
+      window.location.reload();
+    }
+  };
 
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -135,6 +147,26 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Customer Enquiries Dropdown (Notification Style) */}
         <EnquiriesDropdown />
 
+        {/* Logout (asks for confirmation, same popup as the super admin panel) */}
+        <button
+          type="button"
+          onClick={() => setShowLogoutConfirm(true)}
+          className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 text-[13px] font-semibold transition-colors"
+          title="Logout"
+        >
+          <LogOut className="w-4 h-4" />
+          <span className="hidden sm:inline">Logout</span>
+        </button>
+        {showLogoutConfirm && (
+          <LogoutConfirmModal
+            onConfirm={() => {
+              setShowLogoutConfirm(false);
+              signOut();
+            }}
+            onCancel={() => setShowLogoutConfirm(false)}
+          />
+        )}
+
         {/* Profile Avatar & Interactive Menu */}
         <div className="relative ml-1" ref={profileRef}>
           <button
@@ -172,13 +204,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     onClick={() => {
                       setShowProfileMenu(false);
-                      if (onSignOut) {
-                        onSignOut();
-                      } else {
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('token_key');
-                        window.location.reload();
-                      }
+                      setShowLogoutConfirm(true);
                     }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors"
                   >

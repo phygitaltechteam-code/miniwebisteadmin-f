@@ -39,6 +39,7 @@ import { SuperAdminCardForge } from './pages/superadmin/SuperAdminCardForge';
 import { FranchiseMaster } from './pages/superadmin/FranchiseMaster';
 import { EnquiriesDropdown } from './components/EnquiriesDropdown';
 import { PublicCardPage } from './pages/PublicCardPage';
+import { PlanExpiryAlert } from './components/PlanExpiryAlert';
 
 // ─── Super Admin / Franchise Layout ───────────────────────────────────────────
 function SuperAdminPortal({
@@ -310,15 +311,19 @@ function AdminCardBuilder({
     <div className={`text-[#0b1c30] flex flex-col font-sans overflow-x-hidden w-full max-w-full ${
       isInsideSuperAdmin ? 'bg-transparent' : 'min-h-screen bg-[#f8f9ff]'
     }`}>
-      {/* {!isInsideSuperAdmin && (
-        <Header
-          profile={profile}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onSelectStep={handleSelectStep}
-          onSignOut={onSignOut}
-        />
-      )} */}
+      {/* Admin login: header with enquiries + logout, and the plan expiry alert */}
+      {!isInsideSuperAdmin && (
+        <>
+          <Header
+            profile={profile}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onSelectStep={handleSelectStep}
+            onSignOut={onSignOut}
+          />
+          <PlanExpiryAlert />
+        </>
+      )}
 
       <main className="flex-1 w-full max-w-[1520px] mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-3.5 flex flex-col gap-2.5 sm:gap-4 pb-24 sm:pb-14 overflow-x-hidden">
         <TabStepper
