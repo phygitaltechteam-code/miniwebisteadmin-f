@@ -13,6 +13,8 @@ import CategoryMaster from './pages/superadmin/CategoryMaster';
 import CreateAdmin from './pages/superadmin/CreateAdmin';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import BillingManagement from './pages/superadmin/BillingManagement';
+import { EnquiryNotificationBell } from './components/superadmin/EnquiryNotificationBell';
+import { ExpiryAlertsPopup } from './components/superadmin/ExpiryAlertsPopup';
 import CustomerPricingManagement from './pages/superadmin/CustomerPricingManagement';
 import ReportsAnalytics from './pages/superadmin/ReportsAnalytics';
 import GreetingsManagement from './pages/superadmin/GreetingsManagement';
@@ -39,7 +41,7 @@ import { SuperAdminCardForge } from './pages/superadmin/SuperAdminCardForge';
 import { FranchiseMaster } from './pages/superadmin/FranchiseMaster';
 import { EnquiriesDropdown } from './components/EnquiriesDropdown';
 import { PublicCardPage } from './pages/PublicCardPage';
-import { PlanExpiryAlert } from './components/PlanExpiryAlert';
+import { PlanExpiryAlert, PlanExpiredGate } from './components/PlanExpiryAlert';
 import { loadCardSections, applyCardSections } from './lib/api/cardLoader';
 
 // ─── Super Admin / Franchise Layout ───────────────────────────────────────────
@@ -90,6 +92,14 @@ function SuperAdminPortal({
       } catch {}
     }
   };
+
+  // Business open in the card builder (its own enquiries show next to the bell)
+  const cardAdminId =
+    activeView === 'card-builder'
+      ? selectedAdminForCard?.id || selectedAdminForCard?._id || new URLSearchParams(window.location.search).get('adminId') || ''
+      : '';
+  const openBusinessFromEnquiry = (adminId: string, businessName?: string) =>
+    handleOpenCardForge({ id: adminId, fullname: businessName });
 
   const handleSelectView = (view: SuperAdminView) => {
     if (isFranchise && (view === 'categories' || view === 'franchise')) {
@@ -186,6 +196,7 @@ function SuperAdminPortal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <EnquiryNotificationBell onOpenBusiness={openBusinessFromEnquiry} />
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#2196F3] border border-blue-200 uppercase">
               {userRole}
             </span>
@@ -199,6 +210,19 @@ function SuperAdminPortal({
             </button>
           </div>
         </header>
+
+        {/* Plan expiry alerts for the admins (once per session) */}
+        <ExpiryAlertsPopup onOpenBusiness={openBusinessFromEnquiry} />
+
+        {/* Desktop top bar: enquiry notifications from every business (outside the page tables) */}
+        <div className="hidden md:flex items-center justify-end gap-3 px-6 pt-3">
+          {/* Opened business: only its enquiries */}
+          {cardAdminId ? (
+            <EnquiriesDropdown key={cardAdminId} adminId={cardAdminId} />
+          ) : (
+            <EnquiryNotificationBell onOpenBusiness={openBusinessFromEnquiry} />
+          )}
+        </div>
 
         {activeView === 'home' && (
           <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
@@ -248,6 +272,7 @@ function SuperAdminPortal({
         {activeView === 'card-builder' && (
           <div className="w-full flex-1">
             <SuperAdminCardForge
+              key={cardAdminId || 'card-builder'}
               selectedAdmin={selectedAdminForCard}
               onBackToAdmins={() => setActiveView('admins')}
               onSignOut={onSignOut}
@@ -430,6 +455,10 @@ function AppContent() {
   const handleSignOut = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('token_key');
+    try {
+      sessionStorage.removeItem('plan-expiry-alert-dismissed');
+      sessionStorage.removeItem('expiry-alerts-seen');
+    } catch {}
     setIsAuthenticated(false);
     setUserRole('');
     toast.success('Signed out successfully');
@@ -439,6 +468,7 @@ function AppContent() {
     return (
       <>
         <Toaster position="top-right" />
+        <PlanExpiredGate isAuthenticated={false} onSignOut={handleSignOut} />
         <Signin onSuccess={(role) => { setIsAuthenticated(true); setUserRole(role || ''); }} />
       </>
     );
@@ -451,6 +481,7 @@ function AppContent() {
   return (
     <>
       <Toaster position="top-right" />
+      <PlanExpiredGate isAuthenticated onSignOut={handleSignOut} />
       {isSuperAdmin || isFranchise ? (
         <SuperAdminPortal onSignOut={handleSignOut} userRole={normalizedRole} />
       ) : (

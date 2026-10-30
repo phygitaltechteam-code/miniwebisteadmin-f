@@ -26,6 +26,7 @@ import {
 
 } from '@/lib/api/customerProductsApi';
 import { reorderList, reorderErrorText } from '@/lib/api/reorderApi';
+import { htmlToText } from '@/utils/richText';
 import { useDragReorder, moveItem } from '@/hooks/useDragReorder';
 
 interface Step3Props {
@@ -419,7 +420,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
 
                     {product.description && (
                       <p className="text-xs text-[#5a5c61] line-clamp-2 mt-1 leading-relaxed">
-                        {product.description}
+                        {htmlToText(product.description)}
                       </p>
                     )}
 

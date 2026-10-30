@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Loader2, SearchX } from 'lucide-react';
 import { TemplateWebsitePreview } from '@/components/TemplateWebsitePreview';
 import { getPublicCard, publicCardToProfile } from '@/lib/api/publicCardApi';
+import { feedbacksFromCard, PublicFeedback } from '@/lib/api/publicFeedbackApi';
 import { ProfileData } from '@/types/profile';
 
 /** Phone layout below this width, desktop layout above */
@@ -25,7 +26,10 @@ const useViewMode = () => {
 export const PublicCardPage: React.FC<{ vanityUrl: string }> = ({ vanityUrl }) => {
   const viewMode = useViewMode();
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
+  const [feedbacks, setFeedbacks] = useState<PublicFeedback[]>([]);
+  // Enquiry / feedback forms save to this card (admin id, else the display link)
+  const [cardId, setCardId] = useState('');
+  const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'expired' | 'error'>('loading');
 
   useEffect(() => {
     let alive = true;
@@ -35,12 +39,16 @@ export const PublicCardPage: React.FC<{ vanityUrl: string }> = ({ vanityUrl }) =
         if (!alive) return;
         const data = publicCardToProfile(card);
         setProfile(data);
+        setFeedbacks(feedbacksFromCard(card));
+        setCardId(String((card as any)?.id || (card as any)?.adminId || ''));
         setState('ready');
         if (data.businessName) document.title = data.businessName;
       })
       .catch((error) => {
         if (!alive) return;
-        setState(error?.response?.status === 404 ? 'missing' : 'error');
+        const status = error?.response?.status;
+        // 403 CARD_EXPIRED: the business plan has expired
+        setState(status === 404 ? 'missing' : status === 403 && error?.response?.data?.data?.code === 'CARD_EXPIRED' ? 'expired' : 'error');
       });
     return () => {
       alive = false;
@@ -60,12 +68,14 @@ export const PublicCardPage: React.FC<{ vanityUrl: string }> = ({ vanityUrl }) =
       <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-[#F4F7FB] px-6 text-center font-['Roboto',Helvetica,Arial,sans-serif]">
         <SearchX className="w-12 h-12 text-slate-400" />
         <h1 className="text-[20px] font-bold text-[#0B1B33]">
-          {state === 'missing' ? 'Card not available' : 'Something went wrong'}
+          {state === 'missing' ? 'Card not available' : state === 'expired' ? 'This digital card has expired' : 'Something went wrong'}
         </h1>
         <p className="max-w-sm text-[14px] text-slate-500">
           {state === 'missing'
             ? 'This digital card does not exist or is no longer active.'
-            : 'The card could not be loaded. Please check your connection and try again.'}
+            : state === 'expired'
+              ? 'This business card is not active right now. Please contact the business directly.'
+              : 'The card could not be loaded. Please check your connection and try again.'}
         </p>
         {state === 'error' && (
           <button
@@ -82,7 +92,7 @@ export const PublicCardPage: React.FC<{ vanityUrl: string }> = ({ vanityUrl }) =
 
   return (
     <div className="min-h-screen bg-[#F4F7FB]">
-      <TemplateWebsitePreview profile={profile} themeId={profile.theme} viewMode={viewMode} />
+      <TemplateWebsitePreview profile={profile} themeId={profile.theme} viewMode={viewMode} feedbackTarget={cardId || vanityUrl} initialFeedbacks={feedbacks} />
     </div>
   );
 };

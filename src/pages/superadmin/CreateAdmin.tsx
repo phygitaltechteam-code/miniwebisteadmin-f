@@ -1,5 +1,4 @@
 import GenericButton from '@/components/Forms/Buttons/GenericButton';
-import { EnquiryNotificationBell } from '@/components/superadmin/EnquiryNotificationBell';
 import GenericDropdown from '@/components/Forms/DropDown/GenericDropDown';
 import GenericInputField from '@/components/Forms/Input/GenericInputField';
 import GenericTable, { Column } from '@/components/Forms/Table/GenericTable';
@@ -813,7 +812,6 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
           title="All Businesses"
           headerAction={
             <div className="flex items-center gap-2">
-              <EnquiryNotificationBell />
             
               <GenericButton
                 onClick={() => {

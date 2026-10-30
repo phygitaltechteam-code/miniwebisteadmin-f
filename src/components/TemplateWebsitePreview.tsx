@@ -1,5 +1,7 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { cardUrlFor } from '@/utils/cardUrl';
+import { htmlToText, cleanRichHtml, RICH_TEXT_CLASS } from '@/utils/richText';
+import { submitPublicFeedback, submitPublicEnquiry, feedbackErrorText, PublicFeedback } from '@/lib/api/publicFeedbackApi';
 import {
   Phone, MessageCircle, Send, ArrowRight, ChevronLeft, ChevronRight, Mail, MapPin, Menu, Star,
   Home, Building2, Factory, Briefcase, Camera, Fingerprint, Zap, Settings, ShieldCheck, Lightbulb,
@@ -51,8 +53,7 @@ const TEMPLATE_KEYFRAMES = `
 `;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
-const stripHtml = (html?: string) =>
-  (html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+const stripHtml = (html?: string) => htmlToText(html);
 
 const firstSentences = (text: string, max = 160) => {
   if (text.length <= max) return text;
@@ -206,14 +207,21 @@ const useAutoSlide = (count: number, visible: number, intervalMs = 3500, pauseOn
 };
 
 // ─── Component ──────────────────────────────────────────────────────────────────
+/** Stable default so the reviews list is not reset on every render */
+const NO_FEEDBACKS: PublicFeedback[] = [];
+
 interface TemplateWebsitePreviewProps {
   profile: ProfileData;
   /** Card theme id; mapped to the orange / violet / blue / green palette */
   themeId?: string;
   viewMode?: 'mobile' | 'tablet' | 'desktop';
+  /** Public page only: admin id / vanity URL the feedback form saves to (builder previews leave it out and send nothing) */
+  feedbackTarget?: string;
+  /** Saved reviews shown under the feedback form */
+  initialFeedbacks?: PublicFeedback[];
 }
 
-export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ profile, themeId, viewMode = 'desktop' }) => {
+export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ profile, themeId, viewMode = 'desktop', feedbackTarget, initialFeedbacks = NO_FEEDBACKS }) => {
   const palette = TEMPLATE_PALETTES[paletteForTheme(themeId || profile.theme)];
   const isMobile = viewMode === 'mobile';
   const isTablet = viewMode === 'tablet';
@@ -304,6 +312,8 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
   const [lightbox, setLightbox] = useState<number | null>(null);
   // Single image popup (product photos)
   const [imagePopup, setImagePopup] = useState<{ src: string; title?: string } | null>(null);
+  // Product details popup (image, price, full formatted description, Enquire / Download)
+  const [productPopup, setProductPopup] = useState<ProfileData['products'][number] | null>(null);
   const stepLightbox = (dir: 1 | -1) =>
     setLightbox((i) => (i === null || gallery.length === 0 ? null : (i + dir + gallery.length) % gallery.length));
   const touchX = useRef<number | null>(null);
@@ -340,18 +350,62 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
   // Enquiry + feedback forms
   const [enquiry, setEnquiry] = useState({ name: '', phone: '', email: '', message: '' });
   const [feedback, setFeedback] = useState({ rating: 0, hover: 0, name: '', message: '', sent: false });
-  const sendEnquiry = (e: React.FormEvent) => {
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
+  // Reviews shown on the card: saved ones plus the one just sent (newest first)
+  const [reviews, setReviews] = useState<PublicFeedback[]>(initialFeedbacks);
+  useEffect(() => setReviews(initialFeedbacks), [initialFeedbacks]);
+  const sendFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
-    const text = [
-      `Hi ${businessName}, I have an enquiry.`,
-      `Name: ${enquiry.name}`,
-      `Phone: ${enquiry.phone}`,
-      enquiry.email && `Email: ${enquiry.email}`,
-      enquiry.message && `Message: ${enquiry.message}`,
-    ].filter(Boolean).join('\n');
-    if (whatsapp) window.open(`${whatsappUrl}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
-    else if (profile.email) window.location.href = `mailto:${profile.email}?subject=${encodeURIComponent('Enquiry')}&body=${encodeURIComponent(text)}`;
-    setEnquiry({ name: '', phone: '', email: '', message: '' });
+    if (!feedback.rating) return;
+    const body = { rating: feedback.rating, fullName: feedback.name.trim(), message: feedback.message.trim() };
+    setFeedbackError('');
+    if (!feedbackTarget) {
+      // Builder preview: nothing is saved
+      setFeedback({ rating: 0, hover: 0, name: '', message: '', sent: true });
+      return;
+    }
+    setFeedbackBusy(true);
+    try {
+      const saved = await submitPublicFeedback(feedbackTarget, body);
+      setReviews((prev) => [saved, ...prev]);
+      setFeedback({ rating: 0, hover: 0, name: '', message: '', sent: true });
+    } catch (err) {
+      setFeedbackError(feedbackErrorText(err));
+    } finally {
+      setFeedbackBusy(false);
+    }
+  };
+  // Thank-you lines under the forms disappear after a few seconds (the forms stay open for the next one)
+  useEffect(() => {
+    if (!feedback.sent) return;
+    const t = setTimeout(() => setFeedback((f) => ({ ...f, sent: false })), 4000);
+    return () => clearTimeout(t);
+  }, [feedback.sent]);
+
+  // Enquiry form saves to the business (its Enquiries list); it does not open WhatsApp
+  const [enquiryState, setEnquiryState] = useState<{ busy: boolean; sent: boolean; error: string }>({ busy: false, sent: false, error: '' });
+  useEffect(() => {
+    if (!enquiryState.sent) return;
+    const t = setTimeout(() => setEnquiryState((st) => ({ ...st, sent: false })), 4000);
+    return () => clearTimeout(t);
+  }, [enquiryState.sent]);
+  const sendEnquiry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackTarget) {
+      // Builder preview: nothing is saved
+      setEnquiry({ name: '', phone: '', email: '', message: '' });
+      setEnquiryState({ busy: false, sent: true, error: '' });
+      return;
+    }
+    setEnquiryState({ busy: true, sent: false, error: '' });
+    try {
+      await submitPublicEnquiry(feedbackTarget, { fullName: enquiry.name, phone: enquiry.phone, email: enquiry.email, message: enquiry.message });
+      setEnquiry({ name: '', phone: '', email: '', message: '' });
+      setEnquiryState({ busy: false, sent: true, error: '' });
+    } catch (err) {
+      setEnquiryState({ busy: false, sent: false, error: feedbackErrorText(err) });
+    }
   };
   const inputClass = 'w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-[#0B1B33] placeholder:text-slate-400 transition-colors focus:outline-none focus:bg-white focus:border-[var(--c)] focus:ring-2 focus:ring-[var(--cs)]';
 
@@ -756,8 +810,8 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
             )}
             {about && (
               <div
-                className="rounded-xl bg-white border border-slate-200 p-3.5 text-[13px] leading-relaxed text-slate-700 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
-                dangerouslySetInnerHTML={{ __html: aboutHtml }}
+                className={`rounded-xl bg-white border border-slate-200 p-3.5 text-[13px] leading-relaxed text-slate-700 ${RICH_TEXT_CLASS}`}
+                dangerouslySetInnerHTML={{ __html: cleanRichHtml(aboutHtml) }}
               />
             )}
           </section>
@@ -814,11 +868,14 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                   return (
                     <div key={`${p.id}-${idx}`} className={`group rounded-xl bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-[var(--c)] transition-all overflow-hidden flex ${isMobile ? 'flex-row' : 'flex-col'}`}>
                       <div className={`${isMobile ? 'w-32 shrink-0' : 'aspect-[4/3]'} bg-[var(--cs)] flex items-center justify-center overflow-hidden`}>
-                        {img ? <img src={img} alt={name} onClick={() => setImagePopup({ src: img, title: name })} className="w-full h-full object-contain cursor-zoom-in" /> : <Package className="w-8 h-8 text-[var(--c)] opacity-60" />}
+                        {img ? <img src={img} alt={name} onClick={() => setProductPopup(p)} className="w-full h-full object-contain cursor-pointer" /> : <Package className="w-8 h-8 text-[var(--c)] opacity-60" />}
                       </div>
                       <div className="p-2.5 flex-1 flex flex-col min-w-0">
-                        <h3 className="text-[12.5px] font-bold text-[#0B1B33] leading-tight line-clamp-1">{name}</h3>
-                        {p.description && <p className="mt-0.5 text-[10.5px] text-slate-500 leading-snug line-clamp-2">{stripHtml(p.description)}</p>}
+                        <button type="button" onClick={() => setProductPopup(p)} className="text-left min-w-0">
+                          <h3 className="text-[12.5px] font-bold text-[#0B1B33] leading-tight line-clamp-1 hover:text-[var(--c)]">{name}</h3>
+                          {p.description && <p className="mt-0.5 text-[10.5px] text-slate-500 leading-snug line-clamp-2">{stripHtml(p.description)}</p>}
+                          {p.description && <span className="mt-0.5 inline-block text-[10.5px] font-semibold text-[var(--c)]">View details</span>}
+                        </button>
                         <div className="mt-auto pt-2 flex items-center justify-between gap-1.5">
                           {price && <span className="text-[13px] font-extrabold text-[#0B1B33]">{price}</span>}
                           <div className="ml-auto flex items-center gap-1.5">
@@ -984,9 +1041,11 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                   <input required value={enquiry.name} onChange={(e) => setEnquiry({ ...enquiry, name: e.target.value })} placeholder="Enter Full Name" className={inputClass} />
                   <input required type="tel" value={enquiry.phone} onChange={(e) => setEnquiry({ ...enquiry, phone: e.target.value })} placeholder="Enter Mobile Number" className={inputClass} />
                   <input type="email" value={enquiry.email} onChange={(e) => setEnquiry({ ...enquiry, email: e.target.value })} placeholder="Enter Email" className={inputClass} />
-                  <textarea value={enquiry.message} onChange={(e) => setEnquiry({ ...enquiry, message: e.target.value })} placeholder="Enter your comment" rows={3} className={inputClass} />
-                  <button type="submit" className="w-full rounded-lg bg-[var(--c)] hover:bg-[var(--cd)] px-5 py-3 shadow-sm transition-colors text-[13px] font-semibold text-white">
-                    Send Enquiry
+                  <textarea required value={enquiry.message} onChange={(e) => setEnquiry({ ...enquiry, message: e.target.value })} placeholder="Enter your comment" rows={3} className={inputClass} />
+                  {enquiryState.error && <p className="text-[12px] text-red-600">{enquiryState.error}</p>}
+                  {enquiryState.sent && <p className="text-[12.5px] font-semibold text-emerald-600 tpl-fade-in">Thank you! Your enquiry has been sent.</p>}
+                  <button type="submit" disabled={enquiryState.busy} className="w-full rounded-lg bg-[var(--c)] hover:bg-[var(--cd)] px-5 py-3 shadow-sm transition-colors text-[13px] font-semibold text-white disabled:opacity-60">
+                    {enquiryState.busy ? 'Sending…' : 'Send Enquiry'}
                   </button>
                 </form>
               </section>
@@ -996,16 +1055,7 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
               <section data-section="feedback" className="order-1">
                 <SectionTitle {...titleParts(headings.feedbackHeading, 'Give Feedback')} />
                 <div className="rounded-2xl border border-slate-200 border-t-4 border-t-[var(--c)] bg-white p-5 shadow-sm">
-                  {feedback.sent ? (
-                    <p className="py-6 text-center text-[13px] font-semibold text-[var(--c)]">Thank you for your feedback!</p>
-                  ) : (
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        setFeedback({ rating: 0, hover: 0, name: '', message: '', sent: true });
-                      }}
-                      className="space-y-3"
-                    >
+                    <form onSubmit={sendFeedback} className="space-y-3">
                       <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                         <div className="flex" onMouseLeave={() => setFeedback({ ...feedback, hover: 0 })}>
                           {[1, 2, 3, 4, 5].map((n) => (
@@ -1026,16 +1076,46 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                       </div>
                       <input required value={feedback.name} onChange={(e) => setFeedback({ ...feedback, name: e.target.value })} placeholder="Enter Full Name" className={inputClass} />
                       <textarea required value={feedback.message} onChange={(e) => setFeedback({ ...feedback, message: e.target.value })} placeholder="Enter your feedback" rows={3} className={inputClass} />
+                      {feedbackError && <p className="text-[12px] text-red-600">{feedbackError}</p>}
+                      {feedback.sent && <p className="text-[12.5px] font-semibold text-emerald-600 tpl-fade-in">Thank you for your feedback!</p>}
                       <button
                         type="submit"
-                        disabled={!feedback.rating}
+                        disabled={!feedback.rating || feedbackBusy}
                         className="w-full rounded-lg bg-[var(--c)] hover:bg-[var(--cd)] px-5 py-3 shadow-sm transition-colors text-[13px] font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Give Feedback
+                        {feedbackBusy ? 'Sending…' : 'Give Feedback'}
                       </button>
                     </form>
-                  )}
                 </div>
+
+                {/* Customer reviews (saved + just sent) */}
+                {reviews.length > 0 && (
+                  <div className="mt-4 space-y-2.5">
+                    {reviews.map((r) => (
+                      <div key={r.id} className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm tpl-fade-in">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex items-center gap-2 min-w-0">
+                            <span className="w-8 h-8 shrink-0 rounded-full bg-[var(--cs)] text-[var(--c)] flex items-center justify-center text-[13px] font-bold">
+                              {(r.fullName || 'C').charAt(0).toUpperCase()}
+                            </span>
+                            <span className="text-[13px] font-semibold text-[#0B1B33] truncate">{r.fullName}</span>
+                          </span>
+                          <span className="flex shrink-0">
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <Star key={n} className={`w-3.5 h-3.5 text-amber-400 ${n <= r.rating ? 'fill-amber-400' : ''}`} />
+                            ))}
+                          </span>
+                        </div>
+                        {r.message && <p className="mt-2 text-[12.5px] text-slate-600 leading-relaxed break-words">{r.message}</p>}
+                        {r.createdAt && (
+                          <p className="mt-1 text-[10.5px] text-slate-400">
+                            {new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
             )}
           </div>
@@ -1243,6 +1323,56 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
           </div>
         </div>
       )}
+
+      {/* ─── Product details popup ─── */}
+      {productPopup && (() => {
+        const p = productPopup;
+        const name = p.name || p.title;
+        const img = p.image || p.images?.[0];
+        const price = formatPrice(p.price, p.currency);
+        const descHtml = cleanRichHtml(p.description);
+        return (
+          <div role="dialog" aria-modal="true" aria-label={name} onClick={() => setProductPopup(null)} className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4 tpl-fade-in">
+            <div onClick={(e) => e.stopPropagation()} className="w-full sm:max-w-lg max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200">
+                <h3 className="text-[15px] font-bold text-[#0B1B33] min-w-0">{name}</h3>
+                <button type="button" onClick={() => setProductPopup(null)} className="w-8 h-8 shrink-0 rounded-full hover:bg-slate-100 flex items-center justify-center" aria-label="Close">
+                  <X className="w-5 h-5 text-slate-600" />
+                </button>
+              </div>
+              <div className="overflow-y-auto">
+                {img && (
+                  <button type="button" onClick={() => setImagePopup({ src: img, title: name })} className="block w-full bg-[var(--cs)] cursor-zoom-in">
+                    <img src={img} alt={name} className="w-full max-h-[40vh] object-contain" />
+                  </button>
+                )}
+                <div className="p-4">
+                  {price && <p className="mb-2 text-[16px] font-extrabold text-[#0B1B33]">{price}</p>}
+                  {descHtml ? (
+                    <div className={`text-[13px] leading-relaxed text-slate-700 ${RICH_TEXT_CLASS}`} dangerouslySetInnerHTML={{ __html: descHtml }} />
+                  ) : (
+                    <p className="text-[13px] text-slate-500">No description.</p>
+                  )}
+                </div>
+              </div>
+              {(!(p.isHideEnquiry ?? p.hideEnquiry) || (img && !(p.isHideDownloadProductCart ?? p.hideDownload))) && (
+                <div className="flex items-center gap-2 px-4 py-3 border-t border-slate-200">
+                  {img && !(p.isHideDownloadProductCart ?? p.hideDownload) && (
+                    <button type="button" onClick={() => downloadImage(img, name)} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--c)] text-[var(--c)] py-2.5 text-[13px] font-semibold hover:bg-[var(--cs)]">
+                      <Download className="w-4 h-4" /> Download
+                    </button>
+                  )}
+                  {!(p.isHideEnquiry ?? p.hideEnquiry) && (
+                    <a href={productEnquiryUrl(p.customEnquiryMessage)} target="_blank" rel="noopener noreferrer" className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--c)] hover:bg-[var(--cd)] py-2.5 text-[13px] font-semibold text-white">
+                      <Mail className="w-4 h-4" /> Enquire
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ─── Product image popup ─── */}
       {imagePopup && (

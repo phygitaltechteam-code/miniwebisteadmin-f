@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, ChevronDown, LogOut, ArrowRight, User } from 'lucide-react';
 import { ProfileData } from '../types/profile';
-import { EnquiriesDropdown } from './EnquiriesDropdown';
+import { AdminNotificationBell } from './AdminNotificationBell';
 import { LogoutConfirmModal } from './superadmin/SuperAdminSidebar';
 
 interface HeaderProps {
@@ -144,8 +144,8 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Enquiries, Notifications, User Profile */}
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
-        {/* Customer Enquiries Dropdown (Notification Style) */}
-        <EnquiriesDropdown />
+        {/* Notifications: own enquiries + plan expiry (same bell as the super admin panel) */}
+        <AdminNotificationBell />
 
         {/* Logout (asks for confirmation, same popup as the super admin panel) */}
         <button

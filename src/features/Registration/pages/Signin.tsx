@@ -43,6 +43,8 @@ const Signin: React.FC<SigninProps> = ({ onSuccess: onLoginSuccess }) => {
       if (onLoginSuccess) onLoginSuccess(role);
     },
     onError: (error: AxiosError<any>) => {
+      // Expired plan: the Plan expired popup shows instead of a toast
+      if (error.response?.data?.data?.code === 'PLAN_EXPIRED') return;
       const message = error.response?.data?.message || 'Login failed';
       toast.error(message === 'Validation failed' ? 'Invalid credentials. Please check your details.' : message);
     },

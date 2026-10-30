@@ -19,7 +19,7 @@ const enquiriesQueryKey = (adminId?: string) =>
 /**
  * Hook to fetch customer enquiries
  */
-export const useCustomerEnquiries = (adminId?: string, options?: { enabled?: boolean }) => {
+export const useCustomerEnquiries = (adminId?: string, options?: { enabled?: boolean; refetchInterval?: number }) => {
   return useQuery<CustomerEnquiry[]>({
     queryKey: enquiriesQueryKey(adminId),
     // Wrap the call: react-query passes its own context object as the first argument

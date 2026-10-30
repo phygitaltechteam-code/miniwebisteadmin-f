@@ -268,6 +268,11 @@ api.interceptors.response.use(
       console.error('Unauthorized:', error.response.data);
     } else if (error.response?.status === 403) {
       console.error('Forbidden:', error.response.data);
+      // Admin plan expired (login or any page): show the blocking popup (PlanExpiredGate)
+      const body: any = error.response.data;
+      if (body?.data?.code === 'PLAN_EXPIRED') {
+        window.dispatchEvent(new CustomEvent('plan-expired', { detail: { message: body?.data?.message || body?.message } }));
+      }
     } else if (error.response?.status === 404) {
       console.error('Not found:', error.response.data);
     } else if (error.response?.status === 500) {
