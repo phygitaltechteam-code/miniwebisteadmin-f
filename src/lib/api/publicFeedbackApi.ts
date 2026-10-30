@@ -35,9 +35,10 @@ export const submitPublicEnquiry = async (
   await unAuthenticatedApi.post(`client/admins/enquiry/${encodeURIComponent(target)}`, clean);
 };
 
-/** Saved reviews when the public card response includes them (feedbacks / feedback.items) */
+/** Saved reviews from the public card response: feedbacks.latest (or an older plain list) */
 export const feedbacksFromCard = (card: any): PublicFeedback[] => {
-  const raw = card?.feedbacks || card?.feedback?.items || card?.feedback?.feedbacks || [];
+  const fb = card?.feedbacks;
+  const raw = Array.isArray(fb) ? fb : fb?.latest || fb?.items || card?.feedback?.items || card?.feedback?.feedbacks || [];
   return (Array.isArray(raw) ? raw : []).map((f: any, i: number) => ({
     id: String(f?.id || `fb_${i}`),
     rating: Number(f?.rating ?? f?.stars) || 0,
@@ -45,6 +46,18 @@ export const feedbacksFromCard = (card: any): PublicFeedback[] => {
     message: String(f?.message || f?.feedback || ''),
     createdAt: f?.createdAt,
   }));
+};
+
+export interface FeedbackSummary {
+  totalRatings: number;
+  averageRating: number;
+}
+
+/** Average rating and count over all of the card's feedback (feedbacks.summary) */
+export const feedbackSummaryFromCard = (card: any): FeedbackSummary | null => {
+  const s = card?.feedbacks?.summary;
+  if (!s) return null;
+  return { totalRatings: Number(s.totalRatings) || 0, averageRating: Number(s.averageRating) || 0 };
 };
 
 export const feedbackErrorText = (error: any) => {

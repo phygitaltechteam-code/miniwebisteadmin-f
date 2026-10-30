@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Loader2, SearchX } from 'lucide-react';
 import { TemplateWebsitePreview } from '@/components/TemplateWebsitePreview';
 import { getPublicCard, publicCardToProfile } from '@/lib/api/publicCardApi';
-import { feedbacksFromCard, PublicFeedback } from '@/lib/api/publicFeedbackApi';
+import { feedbacksFromCard, feedbackSummaryFromCard, FeedbackSummary, PublicFeedback } from '@/lib/api/publicFeedbackApi';
 import { ProfileData } from '@/types/profile';
 
 /** Phone layout below this width, desktop layout above */
@@ -27,6 +27,7 @@ export const PublicCardPage: React.FC<{ vanityUrl: string }> = ({ vanityUrl }) =
   const viewMode = useViewMode();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [feedbacks, setFeedbacks] = useState<PublicFeedback[]>([]);
+  const [feedbackSummary, setFeedbackSummary] = useState<FeedbackSummary | null>(null);
   // Enquiry / feedback forms save to this card (admin id, else the display link)
   const [cardId, setCardId] = useState('');
   const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'expired' | 'error'>('loading');
@@ -40,6 +41,7 @@ export const PublicCardPage: React.FC<{ vanityUrl: string }> = ({ vanityUrl }) =
         const data = publicCardToProfile(card);
         setProfile(data);
         setFeedbacks(feedbacksFromCard(card));
+        setFeedbackSummary(feedbackSummaryFromCard(card));
         setCardId(String((card as any)?.id || (card as any)?.adminId || ''));
         setState('ready');
         if (data.businessName) document.title = data.businessName;
@@ -92,7 +94,7 @@ export const PublicCardPage: React.FC<{ vanityUrl: string }> = ({ vanityUrl }) =
 
   return (
     <div className="min-h-screen bg-[#F4F7FB]">
-      <TemplateWebsitePreview profile={profile} themeId={profile.theme} viewMode={viewMode} feedbackTarget={cardId || vanityUrl} initialFeedbacks={feedbacks} />
+      <TemplateWebsitePreview profile={profile} themeId={profile.theme} viewMode={viewMode} feedbackTarget={cardId || vanityUrl} initialFeedbacks={feedbacks} feedbackSummary={feedbackSummary} />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { cardUrlFor } from '@/utils/cardUrl';
 import { htmlToText, cleanRichHtml, RICH_TEXT_CLASS } from '@/utils/richText';
-import { submitPublicFeedback, submitPublicEnquiry, feedbackErrorText, PublicFeedback } from '@/lib/api/publicFeedbackApi';
+import { submitPublicFeedback, submitPublicEnquiry, feedbackErrorText, PublicFeedback, FeedbackSummary } from '@/lib/api/publicFeedbackApi';
 import {
   Phone, MessageCircle, Send, ArrowRight, ChevronLeft, ChevronRight, Mail, MapPin, Menu, Star,
   Home, Building2, Factory, Briefcase, Camera, Fingerprint, Zap, Settings, ShieldCheck, Lightbulb,
@@ -217,8 +217,10 @@ interface TemplateWebsitePreviewProps {
   viewMode?: 'mobile' | 'tablet' | 'desktop';
   /** Public page only: admin id / vanity URL the feedback form saves to (builder previews leave it out and send nothing) */
   feedbackTarget?: string;
-  /** Saved reviews shown under the feedback form */
+  /** Saved reviews shown above the feedback form */
   initialFeedbacks?: PublicFeedback[];
+  /** Average rating / count over all saved feedback */
+  feedbackSummary?: FeedbackSummary | null;
 }
 
 export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ profile, themeId, viewMode = 'desktop', feedbackTarget, initialFeedbacks = NO_FEEDBACKS }) => {
@@ -1054,6 +1056,36 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
             {show.feedback && (
               <section data-section="feedback" className="order-1">
                 <SectionTitle {...titleParts(headings.feedbackHeading, 'Give Feedback')} />
+
+                {/* Saved reviews first (newest on top), then the form */}
+                {reviews.length > 0 && (
+                  <div className="mb-4 space-y-2.5">
+                    {reviews.map((r) => (
+                      <div key={r.id} className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm tpl-fade-in">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex items-center gap-2 min-w-0">
+                            <span className="w-8 h-8 shrink-0 rounded-full bg-[var(--cs)] text-[var(--c)] flex items-center justify-center text-[13px] font-bold">
+                              {(r.fullName || 'C').charAt(0).toUpperCase()}
+                            </span>
+                            <span className="text-[13px] font-semibold text-[#0B1B33] truncate">{r.fullName}</span>
+                          </span>
+                          <span className="flex shrink-0">
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <Star key={n} className={`w-3.5 h-3.5 text-amber-400 ${n <= r.rating ? 'fill-amber-400' : ''}`} />
+                            ))}
+                          </span>
+                        </div>
+                        {r.message && <p className="mt-2 text-[12.5px] text-slate-600 leading-relaxed break-words">{r.message}</p>}
+                        {r.createdAt && (
+                          <p className="mt-1 text-[10.5px] text-slate-400">
+                            {new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="rounded-2xl border border-slate-200 border-t-4 border-t-[var(--c)] bg-white p-5 shadow-sm">
                     <form onSubmit={sendFeedback} className="space-y-3">
                       <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
@@ -1088,34 +1120,6 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                     </form>
                 </div>
 
-                {/* Customer reviews (saved + just sent) */}
-                {reviews.length > 0 && (
-                  <div className="mt-4 space-y-2.5">
-                    {reviews.map((r) => (
-                      <div key={r.id} className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm tpl-fade-in">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="flex items-center gap-2 min-w-0">
-                            <span className="w-8 h-8 shrink-0 rounded-full bg-[var(--cs)] text-[var(--c)] flex items-center justify-center text-[13px] font-bold">
-                              {(r.fullName || 'C').charAt(0).toUpperCase()}
-                            </span>
-                            <span className="text-[13px] font-semibold text-[#0B1B33] truncate">{r.fullName}</span>
-                          </span>
-                          <span className="flex shrink-0">
-                            {[1, 2, 3, 4, 5].map((n) => (
-                              <Star key={n} className={`w-3.5 h-3.5 text-amber-400 ${n <= r.rating ? 'fill-amber-400' : ''}`} />
-                            ))}
-                          </span>
-                        </div>
-                        {r.message && <p className="mt-2 text-[12.5px] text-slate-600 leading-relaxed break-words">{r.message}</p>}
-                        {r.createdAt && (
-                          <p className="mt-1 text-[10.5px] text-slate-400">
-                            {new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </section>
             )}
           </div>
