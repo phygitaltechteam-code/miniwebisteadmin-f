@@ -1,7 +1,7 @@
 import { cardUrlFor } from '@/utils/cardUrl';
 import React, { useState, useEffect } from 'react';
 import { initialProfileData } from '@/data/initialProfile';
-import { ProfileData, CardSectionKey, DEFAULT_SECTION_ORDER } from '@/types/profile';
+import { ProfileData, CardSectionKey } from '@/types/profile';
 import { TabStepper, getOrderedSteps } from '@/components/TabStepper';
 import { FullCardModal } from '@/components/FullCardModal';
 import { SelectThemeModal } from '@/components/SelectThemeModal';
@@ -16,14 +16,9 @@ import { Step6GalleryMedia } from '@/components/steps/Step6GalleryMedia';
 import { Step7YoutubeVideos } from '@/components/steps/Step7YoutubeVideos';
 import { Step7SettingsHeadings } from '@/components/steps/Step7SettingsHeadings';
 import { useGetAdmin } from '@/lib/react-query/superadmin/admin';
-import { getCustomerInfo, updateCustomerInfo, formatAdminInfoPayload } from '@/lib/api/customerInfoApi';
-import { getCustomerAbout } from '@/lib/api/customerAboutApi';
-import { getCustomerProducts, normalizeBackendProduct } from '@/lib/api/customerProductsApi';
-import { getCustomerLinks, parseCustomerLinksResponse } from '@/lib/api/customerSocialApi';
-import { getCustomerPayment, parseCustomerPaymentResponse } from '@/lib/api/customerPaymentApi';
-import { getCustomerGallery, parseCustomerGalleryResponse } from '@/lib/api/customerGalleryApi';
-import { getCustomerVideos, parseCustomerVideosResponse } from '@/lib/api/customerVideosApi';
-import { getCustomerSettings, saveSectionOrder, parseSettingsOrder } from '@/lib/api/customerSettingsApi';
+import { updateCustomerInfo, formatAdminInfoPayload } from '@/lib/api/customerInfoApi';
+import { saveSectionOrder } from '@/lib/api/customerSettingsApi';
+import { loadCardSections, applyCardSections } from '@/lib/api/cardLoader';
 
 export interface SuperAdminCardForgeProps {
   selectedAdmin?: any;
@@ -158,187 +153,9 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
   useEffect(() => {
     if (!effectiveAdminId) return;
     let isMounted = true;
-
-    const loadBackendCardData = async () => {
-      try {
-        const [infoRes, aboutRes, prodRes, linksRes, payRes, galRes, vidRes, settRes] = await Promise.allSettled([
-          getCustomerInfo(effectiveAdminId),
-          getCustomerAbout(effectiveAdminId),
-          getCustomerProducts({ page: 1, limit: 100 }, effectiveAdminId),
-          getCustomerLinks(effectiveAdminId),
-          getCustomerPayment(effectiveAdminId),
-          getCustomerGallery(effectiveAdminId),
-          getCustomerVideos(effectiveAdminId),
-          getCustomerSettings(effectiveAdminId),
-        ]);
-
-        if (!isMounted) return;
-
-        setProfile((prev) => {
-          const updated = { ...prev };
-
-          // 1. Info
-          if (infoRes.status === 'fulfilled' && infoRes.value) {
-            const data = (infoRes.value as any)?.data || (infoRes.value as any)?.customer || (infoRes.value as any)?.info || infoRes.value;
-            if (data && typeof data === 'object') {
-              if (data.businessName) updated.businessName = data.businessName;
-              if (data.contactName) updated.contactName = data.contactName;
-              else if (prev.contactName) updated.contactName = prev.contactName;
-              if (data.prefix) updated.prefix = data.prefix;
-              if (data.designation) updated.designation = data.designation;
-              if (data.primaryPhone) updated.primaryPhone = data.primaryPhone;
-              if (data.whatsappNumber || data.whatsappPhone) {
-                updated.whatsappPhone = data.whatsappNumber || data.whatsappPhone;
-                updated.whatsappNumber = data.whatsappNumber || data.whatsappPhone;
-              }
-              if (data.email) updated.email = data.email;
-              if (data.address) updated.address = data.address;
-              if (data.city) updated.city = data.city;
-              if (data.state) updated.state = data.state;
-              if (data.district) updated.district = data.district;
-              if (data.pincode) updated.pincode = data.pincode;
-              if (data.theme) updated.theme = data.theme;
-              if (data.logoUrl) updated.logoUrl = data.logoUrl;
-              if (data.bannerUrl) updated.bannerUrl = data.bannerUrl;
-              // The info API returns the full banner list as bannerUrls (bannerUrl is only the first)
-              const savedBanners = Array.isArray(data.bannerUrls) && data.bannerUrls.length > 0 ? data.bannerUrls : data.banners;
-              if (Array.isArray(savedBanners) && savedBanners.length > 0) {
-                updated.banners = savedBanners;
-              } else if (data.bannerUrl) {
-                updated.banners = [data.bannerUrl];
-              }
-              if (data.vanityUrl) updated.vanityUrl = data.vanityUrl;
-              if (data.mapLink) updated.mapLink = data.mapLink;
-              if (data.hasLogoBorder !== undefined) updated.hasGoldenBorder = Boolean(data.hasLogoBorder);
-              if (data.showCategoryInCard !== undefined) updated.showCategoryInCard = Boolean(data.showCategoryInCard);
-            }
-          }
-
-          // 2. About
-          if (aboutRes.status === 'fulfilled' && aboutRes.value) {
-            const raw = (aboutRes.value as any)?.data || (aboutRes.value as any)?.about || aboutRes.value;
-            const about = raw?.aboutUs || raw?.about || (raw && !raw.basicDetailsServices ? raw : null);
-            if (about && typeof about === 'object') {
-              if (about.establishmentYear) updated.establishmentYear = String(about.establishmentYear);
-              if (about.gstNumber) updated.gstNumber = about.gstNumber;
-              const narrative = about.aboutUsText || about.aboutNarrative;
-              if (narrative) updated.aboutNarrative = narrative;
-              if (Array.isArray(about.specialities) && about.specialities.length > 0) {
-                updated.specialities = about.specialities.map((s: any) => typeof s === 'string' ? s : s.specialities || s.name || s.title).filter(Boolean);
-              }
-              const rawDocs = about.officialDocuments || about.documents;
-              if (Array.isArray(rawDocs) && rawDocs.length > 0) {
-                updated.documents = rawDocs.map((d: any, idx: number) => ({
-                  id: d.id || d._id || `doc_${idx}`,
-                  name: d.fileName || d.name || `Document_${idx + 1}`,
-                  fileName: d.fileName || d.name || `Document_${idx + 1}`,
-                  url: d.fileUrl || d.url || '',
-                  size: d.size || '',
-                  uploadedAt: d.createdAt ? new Date(d.createdAt).toLocaleDateString() : d.uploadedAt || '',
-                  type: d.type || (String(d.fileUrl || '').match(/\.(jpeg|jpg|png|webp)/i) ? 'IMAGE' : String(d.fileUrl || '').toLowerCase().endsWith('.pdf') ? 'PDF' : 'DOC'),
-                }));
-              }
-            }
-          }
-
-          // 3. Products
-          if (prodRes.status === 'fulfilled' && prodRes.value) {
-            const rawProds = (prodRes.value as any)?.data?.products || (prodRes.value as any)?.data || (prodRes.value as any)?.products || (Array.isArray(prodRes.value) ? prodRes.value : []);
-            if (Array.isArray(rawProds) && rawProds.length > 0) {
-              updated.products = rawProds.map(normalizeBackendProduct);
-            }
-          }
-
-          // 4. Links
-          if (linksRes.status === 'fulfilled' && linksRes.value) {
-            const rawLinks = (linksRes.value as any)?.data || linksRes.value;
-            if (rawLinks && typeof rawLinks === 'object') {
-              const parsed = parseCustomerLinksResponse(rawLinks);
-              Object.assign(updated, parsed);
-            }
-          }
-
-          // 5. Payment
-          if (payRes.status === 'fulfilled' && payRes.value) {
-            const parsed = parseCustomerPaymentResponse(payRes.value);
-            if (parsed && typeof parsed === 'object') {
-              if (parsed.upiId) updated.upiId = parsed.upiId;
-              if (parsed.paymentPhoneNo || parsed.upiNumber) {
-                const phone = parsed.paymentPhoneNo || parsed.upiNumber || '';
-                updated.paymentPhoneNo = phone;
-                updated.upiNumber = phone;
-              }
-              if (parsed.bankName) updated.bankName = parsed.bankName;
-              if (parsed.bankHolderName || parsed.accountHolderName) {
-                const holder = parsed.bankHolderName || parsed.accountHolderName || '';
-                updated.bankHolderName = holder;
-                updated.accountHolderName = holder;
-              }
-              if (parsed.bankAccountNumber || parsed.accountNumber) {
-                const acc = parsed.bankAccountNumber || parsed.accountNumber || '';
-                updated.bankAccountNumber = acc;
-                updated.accountNumber = acc;
-              }
-              if (parsed.bankIfscCode || parsed.ifscCode) {
-                const ifsc = parsed.bankIfscCode || parsed.ifscCode || '';
-                updated.bankIfscCode = ifsc;
-                updated.ifscCode = ifsc;
-              }
-              if (parsed.accountType) updated.accountType = parsed.accountType;
-              // Wallet "Show on card" state now lives on each wallet (isVisible)
-              if (parsed.walletIds) updated.walletIds = parsed.walletIds;
-              if (parsed.hiddenPayments) updated.hiddenPayments = parsed.hiddenPayments;
-            }
-          }
-
-          // 6. Gallery
-          if (galRes.status === 'fulfilled' && galRes.value) {
-            const normalized = parseCustomerGalleryResponse(galRes.value);
-            if (Array.isArray(normalized) && normalized.length > 0) {
-              updated.galleryImages = normalized;
-            }
-          }
-
-          // 7. Videos
-          if (vidRes.status === 'fulfilled' && vidRes.value) {
-            const normalized = parseCustomerVideosResponse(vidRes.value);
-            if (Array.isArray(normalized) && normalized.length > 0) {
-              updated.youtubeVideos = normalized;
-            }
-          }
-
-          // 8. Settings
-          if (settRes.status === 'fulfilled' && settRes.value) {
-            const rawSett = (settRes.value as any)?.data || (settRes.value as any)?.settings || settRes.value;
-            if (rawSett && typeof rawSett === 'object') {
-              if (rawSett.headings) updated.headings = { ...updated.headings, ...rawSett.headings };
-              if (rawSett.navLabels) updated.navLabels = { ...updated.navLabels, ...rawSett.navLabels };
-              if (rawSett.visibility) updated.visibility = { ...updated.visibility, ...rawSett.visibility };
-              if (rawSett.amount !== undefined) updated.amount = rawSett.amount;
-              if (rawSett.renewalAmount !== undefined) updated.renewalAmount = rawSett.renewalAmount;
-              const orders = parseSettingsOrder(rawSett);
-              if (orders.sectionOrder) {
-                const valid = orders.sectionOrder.filter((k) => DEFAULT_SECTION_ORDER.includes(k as CardSectionKey));
-                if (valid.length > 0) updated.sectionOrder = valid;
-              }
-              if (orders.aboutBlockOrder) updated.aboutBlockOrder = orders.aboutBlockOrder;
-              // Products, gallery and videos now arrive in their saved order (reorder APIs), and the links
-              // API returns its own linkOrder, so the older settings orders are only a fallback for links.
-              if (orders.linkOrder && !updated.linkOrder?.length) updated.linkOrder = orders.linkOrder;
-              // Older cards kept these in settings; the links / payment APIs win when they return them
-              if (orders.hiddenLinks && !updated.hiddenLinks) updated.hiddenLinks = orders.hiddenLinks;
-              if (orders.hiddenPayments && !updated.hiddenPayments) updated.hiddenPayments = orders.hiddenPayments;
-            }
-          }
-
-          return updated;
-        });
-      } catch {
-        // Silent
-      }
-    };
-
-    loadBackendCardData();
+    loadCardSections(effectiveAdminId).then((sections) => {
+      if (isMounted) setProfile((prev) => applyCardSections(prev, sections));
+    });
     return () => { isMounted = false; };
   }, [effectiveAdminId]);
 

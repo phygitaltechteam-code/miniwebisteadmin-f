@@ -64,7 +64,7 @@ const navItems: NavItemConfig[] = [
   },
   {
     id: 'billing',
-    label: 'Billing',
+    label: 'Billing Report',
     icon: Receipt,
   },
   {
@@ -79,6 +79,8 @@ const navItems: NavItemConfig[] = [
 const franchiseNavItems: NavItemConfig[] = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'admins', label: 'All Businesses', icon: Briefcase },
+  // Its own monthly bill to SuperAdmin (view only)
+  { id: 'billing', label: 'Billing Report', icon: Receipt },
   // Same subscription plans page as the super admin, for the franchise's own businesses
   { id: 'pricing', label: 'Customer plans & pricing management', icon: DollarSign },
 ];

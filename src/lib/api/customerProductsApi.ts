@@ -104,8 +104,11 @@ export const formatProductFormData = (item: Partial<ProductItem>, files?: File |
   formData.append('isHideEnquiry', String(payload.isHideEnquiry));
   formData.append('isHideDownloadProductCart', String(payload.isHideDownloadProductCart));
 
-  if (item.customiseMessage && item.customEnquiryMessage) {
-    formData.append('enquiryMessage', item.customEnquiryMessage);
+  // Only the message the user saved; unticked / emptied → '' clears the old one (Enquire then opens a blank chat)
+  if (item.customiseMessage && item.customEnquiryMessage?.trim()) {
+    formData.append('enquiryMessage', item.customEnquiryMessage.trim());
+  } else if (item.customiseMessage !== undefined) {
+    formData.append('enquiryMessage', '');
   }
 
   // Keep images that are already on the server (skip local blob:/data: previews of new files)

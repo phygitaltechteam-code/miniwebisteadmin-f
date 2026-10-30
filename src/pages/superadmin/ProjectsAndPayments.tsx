@@ -16,9 +16,16 @@ import {
 } from '@/pages/superadmin/CustomerPricingManagement';
 import { getPlans, isPlanLive, pickPlanTerms, planErrorText, selectPlan, SelectedPlanTerms } from '@/lib/api/superadmin/plan';
 import { getAdminById, DigitalCardInfo } from '@/lib/api/superadmin/admin';
+import { getTransactions } from '@/lib/api/superadmin/transaction';
 import { SUPERADMIN_FRANCHISE_KEYS } from '@/lib/react-query/queryKeys';
 
 const formatDisplayDate = formatDisplayDateTime;
+
+const billDate = (iso?: string | null) => {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
 
 interface ProjectsAndPaymentsProps {
   business: {
@@ -76,7 +83,23 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [showPrice, setShowPrice] = useState(false);
   const [price, setPrice] = useState('');
+  // After Save plan: "Payment received?" → Yes sends DONE, No keeps it PENDING
+  const [confirmPayment, setConfirmPayment] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
+
+  // Payments tab: this business / franchise's bills, exactly as the transactions API returns them
+  const {
+    data: billsPage,
+    isLoading: billsLoading,
+    isError: billsError,
+    error: billsErr,
+  } = useQuery({
+    queryKey: ['transactions-record', planTarget, business.id],
+    queryFn: () =>
+      getTransactions(planTarget === 'franchise' ? { franchiseId: business.id, type: 'FRANCHISE', limit: 100 } : { adminId: business.id, type: 'ADMIN', limit: 100 }),
+    enabled: activeTab === 'payments' && Boolean(business.id),
+  });
+  const bills = billsPage?.rows || [];
 
   const audience = planTarget === 'franchise' ? 'FRANCHISE' : 'ADMIN';
   const { data: plans = [], isLoading: plansLoading, isError: plansError, error: plansErr } = useQuery({
@@ -91,11 +114,13 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
     const plan = plans.find((p) => p.id === planId);
     setSelectedPlanId(planId);
     setPrice(String(plan ? (plan.isFreeTrial ? 0 : plan.price) : ''));
+    setConfirmPayment(false);
     setShowPrice(true);
   };
 
   const closePrice = () => {
     setShowPrice(false);
+    setConfirmPayment(false);
     setSelectedPlanId('');
   };
 
@@ -114,10 +139,15 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
       toast.error('Please enter the price');
       return;
     }
+    setConfirmPayment(true);
+  };
+
+  const savePlan = async (paymentStatus: 'DONE' | 'PENDING') => {
+    if (!selectedPlan) return;
     setIsUpgrading(true);
     try {
       // Plan + edited price; the backend starts it today and sets expiry from the plan's validity
-      const saved = await selectPlan(planTarget, business.id, { planId: selectedPlan.id, price: Number(price) });
+      const saved = await selectPlan(planTarget, business.id, { planId: selectedPlan.id, price: Number(price), paymentStatus });
       setCurrentPlan({
         planId: saved?.planId || selectedPlan.id,
         planName: saved?.planName || selectedPlan.name,
@@ -133,6 +163,7 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
       // A new bill was added: refresh Billing and Report
       queryClient.invalidateQueries({ queryKey: ['transactions-recent'] });
       queryClient.invalidateQueries({ queryKey: ['transactions-report'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-record'] });
       toast.success(saved?.expiryDate ? `${selectedPlan.name} active till ${formatDisplayDate(saved.expiryDate)}` : `${selectedPlan.name} selected`);
       closeUpgrade();
     } catch (error) {
@@ -302,42 +333,51 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
         </div>
       )}
 
-      {/* Tab 2: Payments Content */}
+      {/* Tab 2: Payments: this record's bills from the transactions API */}
       {activeTab === 'payments' && (
         <div className="space-y-4 pt-2">
-          <h3 className="text-[15px] font-bold text-[#212121]">Current Plan</h3>
           <div className="overflow-x-auto rounded border border-[#E0E0E0] bg-white">
             <table className="w-full text-left font-['Roboto',Helvetica,Arial,sans-serif]">
               <thead>
                 <tr className="bg-[#2196F3] text-white">
-                  <th className="px-3 py-2.5 text-[14px] font-medium">Plan</th>
-                  <th className="px-3 py-2.5 text-[14px] font-medium">Validity</th>
-                  <th className="px-3 py-2.5 text-[14px] font-medium">From</th>
-                  <th className="px-3 py-2.5 text-[14px] font-medium">To</th>
-                  <th className="px-3 py-2.5 text-[14px] font-medium">Amount</th>
+                  {['Bill no', 'Added By (Role)', 'Payment Status', 'Payment date', 'Valid from - Valid to', 'Plan', 'Payment Through', 'Amount'].map((h) => (
+                    <th key={h} className="px-3 py-2.5 text-[14px] font-medium whitespace-nowrap">{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="bg-white">
-                {/* The backend keeps only the current plan (no history yet) */}
-                {!currentPlan?.planId ? (
+                {billsLoading ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-6 text-center text-[13px] text-gray-500">
-                      No plan yet. Use Upgrade to select a subscription plan.
+                    <td colSpan={8} className="px-3 py-6 text-center text-[13px] text-gray-500">
+                      <Loader2 className="w-4 h-4 animate-spin inline mr-1.5" /> Loading payments…
                     </td>
+                  </tr>
+                ) : billsError ? (
+                  <tr>
+                    <td colSpan={8} className="px-3 py-6 text-center text-[13px] text-red-600">
+                      {(billsErr as any)?.response?.data?.message || (billsErr as any)?.message || 'Failed to load payments'}
+                    </td>
+                  </tr>
+                ) : bills.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-3 py-6 text-center text-[13px] text-gray-500">No payments yet.</td>
                   </tr>
                 ) : (
-                  <tr className="hover:bg-gray-50 border-b border-[#E0E0E0]">
-                    <td className="px-3 py-2.5 text-[14px] font-medium text-[#212121]">
-                      {currentPlan.planName}
-                      {currentPlan.isFreeTrial && <span className="ml-2 text-[11px] font-medium text-emerald-700">Free trial</span>}
-                    </td>
-                    <td className="px-3 py-2.5 text-[14px] text-[#212121]">{planLength}</td>
-                    <td className="px-3 py-2.5 text-[14px] text-[#212121]">{formatDisplayDate(currentPlan.startDate) || '-'}</td>
-                    <td className={`px-3 py-2.5 text-[14px] ${isSubscribed ? 'text-[#212121]' : 'text-red-600 font-medium'}`}>
-                      {formatDisplayDate(currentPlan.expiryDate) || '-'}
-                    </td>
-                    <td className="px-3 py-2.5 text-[14px] font-bold text-[#212121]">₹{(currentPlan.amount ?? 0).toLocaleString('en-IN')}</td>
-                  </tr>
+                  bills.map((row) => {
+                    const paid = String(row.paymentStatus).toUpperCase() === 'DONE';
+                    return (
+                      <tr key={row.id || row.billNo} className="hover:bg-gray-50 border-b border-[#E0E0E0] text-[14px] text-[#212121]">
+                        <td className="px-3 py-2.5 font-medium text-[#2196F3] whitespace-nowrap">{row.billNo}</td>
+                        <td className="px-3 py-2.5">{row.addedBy?.label || row.addedBy?.fullname || '-'}</td>
+                        <td className={`px-3 py-2.5 font-medium ${paid ? 'text-[#4CAF50]' : 'text-[#F44336]'}`}>{paid ? 'PAID' : 'PENDING'}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">{billDate(row.paymentDate)}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">{billDate(row.validFrom)} - {billDate(row.validTo)}</td>
+                        <td className="px-3 py-2.5">{row.planLabel || '-'}</td>
+                        <td className="px-3 py-2.5">{row.paymentMethod || '-'}</td>
+                        <td className="px-3 py-2.5 font-bold whitespace-nowrap">₹{(Number(row.amount) || 0).toLocaleString('en-IN')}</td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -451,6 +491,39 @@ export const ProjectsAndPayments: React.FC<ProjectsAndPaymentsProps> = ({
                   </button>
                 </div>
               </form>
+
+              {/* ─── Payment confirmation ─── */}
+              {confirmPayment && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4" onClick={(e) => { e.stopPropagation(); if (!isUpgrading) setConfirmPayment(false); }}>
+                  <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl space-y-4 text-center">
+                    <div>
+                      <h3 className="text-[17px] font-bold text-[#212121]">Payment received?</h3>
+                      <p className="mt-1 text-[13px] text-gray-500">
+                        {selectedPlan.name} · ₹{(Number(price) || 0).toLocaleString('en-IN')} for {business.fullname}.
+                        <br />Has this payment been done?
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        disabled={isUpgrading}
+                        onClick={() => savePlan('PENDING')}
+                        className="flex-1 rounded border border-gray-300 py-2 text-[13px] font-bold text-gray-700 hover:bg-gray-50 uppercase tracking-wide disabled:opacity-60"
+                      >
+                        No, pending
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isUpgrading}
+                        onClick={() => savePlan('DONE')}
+                        className="flex-1 rounded bg-[#2196F3] hover:bg-[#1E88E5] py-2 text-[13px] font-bold text-white uppercase tracking-wide disabled:opacity-60"
+                      >
+                        {isUpgrading ? 'Saving…' : 'Yes, done'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

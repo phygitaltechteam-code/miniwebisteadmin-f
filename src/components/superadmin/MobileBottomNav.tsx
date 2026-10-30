@@ -16,7 +16,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   isFranchise = false,
 }) => {
   const secondaryView: SuperAdminView = isFranchise ? 'billing' : 'categories';
-  const secondaryLabel = isFranchise ? 'Billing' : 'Categories';
+  const secondaryLabel = isFranchise ? 'Billing Report' : 'Categories';
   const SecondaryIcon = isFranchise ? Receipt : Tag;
 
   return (

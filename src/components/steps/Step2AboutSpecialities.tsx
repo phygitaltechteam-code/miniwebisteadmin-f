@@ -1032,7 +1032,7 @@ export const Step2AboutSpecialities: React.FC<Step2Props> = ({
         <div className="flex items-center justify-between gap-1.5 mb-1.5">
           <label className="text-xs font-bold text-[#091426] flex items-center gap-1">
             {aboutBlockHandle('services')}
-            Key Services Offered
+            Nature of business
           </label>
 
           <button

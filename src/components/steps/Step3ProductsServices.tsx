@@ -76,7 +76,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
   const [price, setPrice] = useState('');
   const [hideEnquiry, setHideEnquiry] = useState(false);
   const [customiseMessage, setCustomiseMessage] = useState(false);
-  const [customMessageText, setCustomMessageText] = useState('आम्हाला आपल्या सेव्हेसेस मध्ये इंटरेस्ट आहे. कृपया लवकरात लवकर संपर्क साधावा.');
+  const [customMessageText, setCustomMessageText] = useState('');
   const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
   const [hideDownload, setHideDownload] = useState(false);
   const [image, setImage] = useState('');
@@ -102,7 +102,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
     setPrice('');
     setHideEnquiry(false);
     setCustomiseMessage(false);
-    setCustomMessageText('आम्हाला आपल्या सेव्हेसेस मध्ये इंटरेस्ट आहे. कृपया लवकरात लवकर संपर्क साधावा.');
+    setCustomMessageText('');
     setHideDownload(false);
     setImage('');
     setImages([]);
@@ -119,7 +119,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
     setPrice(prod.price !== undefined && prod.price !== null ? String(prod.price) : '');
     setHideEnquiry(Boolean(prod.isHideEnquiry ?? prod.hideEnquiry));
     setCustomiseMessage(!!prod.customiseMessage);
-    setCustomMessageText(prod.customEnquiryMessage || 'आम्हाला आपल्या सेव्हेसेस मध्ये इंटरेस्ट आहे. कृपया लवकरात लवकर संपर्क साधावा.');
+    setCustomMessageText(prod.customEnquiryMessage || '');
     setHideDownload(Boolean(prod.isHideDownloadProductCart ?? prod.hideDownload));
     const prodImages = prod.images && prod.images.length > 0 ? prod.images : prod.image ? [prod.image] : [];
     setImages(prodImages);

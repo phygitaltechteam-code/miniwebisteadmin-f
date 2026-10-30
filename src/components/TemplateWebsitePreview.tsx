@@ -297,21 +297,13 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
   const gallery = (profile.galleryImages || []).filter((g) => g.url || g.image);
   const videos = (profile.youtubeVideos || []).filter((v) => v.url || v.videoUrl || v.embedUrl || v.videoId);
 
-  // Bullet points under each service: specialities that mention a word of the service, else the next few
-  const serviceBullets = useMemo(() => {
-    return services.map((srv, i) => {
-      const words = srv.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
-      const matched = specialities.filter((sp) => words.some((w) => sp.toLowerCase().includes(w)));
-      const pool = matched.length >= 2 ? matched : specialities.slice((i * 3) % Math.max(specialities.length, 1)).concat(specialities);
-      return Array.from(new Set(pool)).slice(0, 4);
-    });
-  }, [services.join('|'), specialities.join('|')]);
-
   const hiddenLinks = profile.hiddenLinks || [];
 
   // ── Gallery: View All toggles the full grid; clicking a photo opens the lightbox ──
   const bannerTouchX = useRef<number | null>(null);
   const [lightbox, setLightbox] = useState<number | null>(null);
+  // Single image popup (product photos)
+  const [imagePopup, setImagePopup] = useState<{ src: string; title?: string } | null>(null);
   const stepLightbox = (dir: 1 | -1) =>
     setLightbox((i) => (i === null || gallery.length === 0 ? null : (i + dir + gallery.length) % gallery.length));
   const touchX = useRef<number | null>(null);
@@ -330,8 +322,9 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
     return () => window.removeEventListener('keydown', onKey, true);
   }, [lightbox, gallery.length]);
 
-  // Mobile: the header stays hidden while the profile card is on screen and slides in once it is scrolled past
-  const cardRef = useRef<HTMLElement | null>(null);
+  // Mobile: the header stays hidden while the top of the profile card (logo + name) is on screen
+  // and slides in as soon as that part is scrolled past (not only after the whole contact list)
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const [cardInView, setCardInView] = useState(true);
   useEffect(() => {
     if (!isMobile || !cardRef.current) {
@@ -363,7 +356,6 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
   const inputClass = 'w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-[#0B1B33] placeholder:text-slate-400 transition-colors focus:outline-none focus:bg-white focus:border-[var(--c)] focus:ring-2 focus:ring-[var(--cs)]';
 
   // ── Carousels (visible count depends on the preview device) ──
-  const serviceSlider = useAutoSlide(services.length, isMobile ? 1 : isTablet ? 2 : 4);
   // Banners keep sliding even under the mouse (the banner fills the width where the pointer usually rests,
   // and on touch screens a tap counts as a hover that never ends)
   const bannerSlider = useAutoSlide(banners.length, 1, 4000, false);
@@ -403,6 +395,8 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
     ['IFSC Code', profile.bankIfscCode || profile.ifscCode],
     ['Account Type', (profile.bankName || profile.bankAccountNumber || profile.accountNumber) && profile.accountType],
   ].filter((r): r is [string, string] => Boolean(r[1]));
+  // No QR code saved → only the bank details are shown (UPI / phone / wallets left out)
+  const showUpiBlock = wallets.some((w) => w.qr) || bankRows.length === 0;
 
   // ── Which sections render (the nav only lists these) ──
   const show = {
@@ -578,8 +572,8 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
 
       {/* ─── Mobile: profile card (logo, name, owner, contacts) ─── */}
       {isMobile && (
-        <section ref={cardRef} data-section="home" className="bg-[var(--b1)]">
-          <div className="px-6 pt-8 pb-12 flex flex-col items-center text-center text-white">
+        <section data-section="home" className="bg-[var(--b1)]">
+          <div ref={cardRef} className="px-6 pt-8 pb-12 flex flex-col items-center text-center text-white">
             <div className="p-1.5 border-[3px] border-[var(--c)]">
               {profile.logoUrl ? (
                 <img src={profile.logoUrl} alt={businessName} className="w-28 h-28 object-contain bg-white" />
@@ -769,41 +763,21 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
           </section>
         )}
 
-        {/* ─── Our Services (auto-sliding) ─── */}
+        {/* ─── Our Services: simple tiles like Specializations (no images) ─── */}
         {!vis.hideAboutSection && services.length > 0 && (
           <section style={{ order: aboutRank("services") }}>
             <SectionTitle first="Our" second="Services" />
-            <div className="relative" {...serviceSlider.hoverProps}>
-              {serviceSlider.canSlide && <ArrowButton dir="left" onClick={serviceSlider.prev} />}
-              <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${serviceSlider.indices.length}, minmax(0, 1fr))` }}>
-                {serviceSlider.indices.map((idx) => {
-                  const srv = services[idx];
-                  const Icon = iconFor(srv, idx);
-                  const img = products[idx % Math.max(products.length, 1)]?.image || gallery[idx % Math.max(gallery.length, 1)]?.url;
-                  return (
-                    <div key={`${srv}-${idx}-${serviceSlider.start}`} className="rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden flex flex-col tpl-slide-in">
-                      <div className="h-24 bg-[var(--cs)] relative">
-                        {img ? <img src={img} alt={srv} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Icon className="w-10 h-10 text-[var(--c)] opacity-60" /></div>}
-                        <span className="absolute -bottom-4 left-3 w-9 h-9 rounded-full bg-[var(--b1)] text-white border-2 border-white flex items-center justify-center">
-                          <Icon className="w-4 h-4" />
-                        </span>
-                      </div>
-                      <div className="pt-5 px-3 pb-3 flex-1 flex flex-col">
-                        <h3 className="text-[14px] font-bold text-[#0B1B33] leading-tight">{srv}</h3>
-                        <ul className="mt-1.5 space-y-0.5 text-[11px] text-slate-600 list-disc pl-4 flex-1">
-                          {serviceBullets[idx].map((b) => <li key={b} className="leading-snug">{b}</li>)}
-                        </ul>
-                        <a href={enquireUrl(srv)} target="_blank" rel="noopener noreferrer" className="mt-2.5 inline-flex items-center justify-center gap-1.5 rounded-md bg-[var(--c)] hover:bg-[var(--cd)] py-1.5 text-[12px] font-semibold text-white">
-                          <Mail className="w-3.5 h-3.5" /> Enquire Now
-                        </a>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {serviceSlider.canSlide && <ArrowButton dir="right" onClick={serviceSlider.next} />}
+            <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${isMobile || isTablet ? 4 : 8}, minmax(0, 1fr))` }}>
+              {services.map((srv, i) => {
+                const Icon = iconFor(srv, i);
+                return (
+                  <div key={`${srv}-${i}`} className="rounded-xl bg-white border border-slate-200 px-1.5 py-3 flex flex-col items-center text-center gap-1.5 hover:border-[var(--c)] transition-colors">
+                    <Icon className={`${isMobile ? "w-5 h-5" : "w-7 h-7"} text-[var(--c)]`} />
+                    <span className={`${isMobile ? "text-[9.5px]" : "text-[11.5px]"} font-semibold text-[#0B1B33] leading-tight line-clamp-2`}>{srv}</span>
+                  </div>
+                );
+              })}
             </div>
-            {isMobile && <Dots count={services.length} active={serviceSlider.start} onSelect={serviceSlider.goTo} />}
           </section>
         )}
 
@@ -840,7 +814,7 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                   return (
                     <div key={`${p.id}-${idx}`} className={`group rounded-xl bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-[var(--c)] transition-all overflow-hidden flex ${isMobile ? 'flex-row' : 'flex-col'}`}>
                       <div className={`${isMobile ? 'w-32 shrink-0' : 'aspect-[4/3]'} bg-[var(--cs)] flex items-center justify-center overflow-hidden`}>
-                        {img ? <img src={img} alt={name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" /> : <Package className="w-8 h-8 text-[var(--c)] opacity-60" />}
+                        {img ? <img src={img} alt={name} onClick={() => setImagePopup({ src: img, title: name })} className="w-full h-full object-contain cursor-zoom-in" /> : <Package className="w-8 h-8 text-[var(--c)] opacity-60" />}
                       </div>
                       <div className="p-2.5 flex-1 flex flex-col min-w-0">
                         <h3 className="text-[12.5px] font-bold text-[#0B1B33] leading-tight line-clamp-1">{name}</h3>
@@ -883,12 +857,12 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
             {/* Desktop: UPI + wallets on the left, bank details on the right; mobile: stacked */}
             <div
               className={
-                !isMobile && bankRows.length > 0 && (wallets.length > 0 || profile.upiId || upiPhone)
+                !isMobile && bankRows.length > 0 && showUpiBlock && (wallets.length > 0 || profile.upiId || upiPhone)
                   ? 'grid grid-cols-2 gap-4 items-start'
                   : 'space-y-3'
               }
             >
-              {(profile.upiId || upiPhone || wallets.length > 0) && (
+              {showUpiBlock && (profile.upiId || upiPhone || wallets.length > 0) && (
               <div className="space-y-3 min-w-0">
               {(profile.upiId || upiPhone) && (
                 <div className="flex flex-wrap gap-2">
@@ -958,7 +932,7 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                         aria-label={g.title || `Open photo ${idx + 1}`}
                         className="group relative block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md text-left tpl-fade-in"
                       >
-                        <img src={g.url || g.image} alt={g.title || ''} className="w-full aspect-[4/3] object-cover transition-transform duration-300 group-hover:scale-105" />
+                        <img src={g.url || g.image} alt={g.title || ''} className="w-full aspect-[4/3] object-contain bg-[var(--cs)]" />
                         <span className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         <span className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 text-[#0B1B33] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <ZoomIn className="w-3.5 h-3.5" />
@@ -1266,6 +1240,32 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Product image popup ─── */}
+      {imagePopup && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Image viewer"
+          onClick={() => setImagePopup(null)}
+          className="fixed inset-0 z-[80] flex flex-col bg-black/90 backdrop-blur-sm text-white tpl-fade-in"
+        >
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <span className="text-[14px] font-semibold truncate">{imagePopup.title}</span>
+            <button
+              type="button"
+              onClick={() => setImagePopup(null)}
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className={`flex-1 min-h-0 flex items-center justify-center pb-6 ${isMobile ? "px-3" : "px-16"}`}>
+            <img src={imagePopup.src} alt={imagePopup.title || ""} onClick={(e) => e.stopPropagation()} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl tpl-fade-in" />
           </div>
         </div>
       )}

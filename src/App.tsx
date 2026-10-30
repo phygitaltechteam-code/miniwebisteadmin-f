@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import { Eye, Menu, LogOut } from 'lucide-react';
@@ -40,6 +40,7 @@ import { FranchiseMaster } from './pages/superadmin/FranchiseMaster';
 import { EnquiriesDropdown } from './components/EnquiriesDropdown';
 import { PublicCardPage } from './pages/PublicCardPage';
 import { PlanExpiryAlert } from './components/PlanExpiryAlert';
+import { loadCardSections, applyCardSections } from './lib/api/cardLoader';
 
 // ─── Super Admin / Franchise Layout ───────────────────────────────────────────
 function SuperAdminPortal({
@@ -116,7 +117,7 @@ function SuperAdminPortal({
       case 'franchise':
         return 'Franchisee List';
       case 'billing':
-        return 'Billing Management';
+        return 'Billing Report';
       case 'pricing':
         return 'Customer Pricing';
       case 'report':
@@ -290,6 +291,19 @@ function AdminCardBuilder({
   const handleFieldChange = <K extends keyof ProfileData>(key: K, value: ProfileData[K]) => {
     setProfile((prev) => ({ ...prev, [key]: value }));
   };
+
+  // Admin's own card loaded up front (customers/… APIs) so the preview shows the full saved card,
+  // the same as the super admin builder and the public page
+  useEffect(() => {
+    if (isInsideSuperAdmin) return;
+    let alive = true;
+    loadCardSections().then((sections) => {
+      if (alive) setProfile((prev) => applyCardSections(prev, sections));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [isInsideSuperAdmin]);
 
   const handleSelectStep = (n: number) => {
     setCurrentStep(n);
