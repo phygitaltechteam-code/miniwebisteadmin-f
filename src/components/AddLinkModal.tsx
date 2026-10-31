@@ -31,6 +31,8 @@ export const AddLinkModal: React.FC<AddLinkModalProps> = ({
 }) => {
   // Only the custom link lets the user set its own logo and name
   const isCustom = linkKey.startsWith('customLink');
+  // The Phone link takes a phone number (the card turns it into a call link), not a URL
+  const isPhone = linkKey === 'callLinks';
   const [linkUrl, setLinkUrl] = useState(currentValue);
   const [linkName, setLinkName] = useState(currentName || defaultName);
   const [iconUrl, setIconUrl] = useState(currentIcon);
@@ -62,7 +64,11 @@ export const AddLinkModal: React.FC<AddLinkModalProps> = ({
     let url = linkUrl.trim();
     const name = (isCustom ? linkName.trim() : '') || defaultName;
     if (!url) {
-      toast.error('Please enter a link.');
+      toast.error(isPhone ? 'Please enter a phone number.' : 'Please enter a link.');
+      return;
+    }
+    if (isPhone && url.replace(/\D/g, '').length < 10) {
+      toast.error('Enter a valid phone number');
       return;
     }
 
@@ -116,7 +122,7 @@ export const AddLinkModal: React.FC<AddLinkModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-1">
           <h2 className="text-[20px] font-bold text-[#212121]">
-            {isCustom ? 'Add Custom Link' : `${defaultName} Link`}
+            {isCustom ? 'Add Custom Link' : isPhone ? defaultName : `${defaultName} Link`}
           </h2>
           <button
             type="button"
@@ -179,15 +185,22 @@ export const AddLinkModal: React.FC<AddLinkModalProps> = ({
         {/* Paste Link */}
         <div className="relative pt-1.5">
           <div className={boxClass}>
-            <span className={floatLabelClass}>{isCustom ? 'Enter your custom link' : 'Enter Link'}</span>
+            <span className={floatLabelClass}>{isCustom ? 'Enter your custom link' : isPhone ? 'Enter Phone Number' : 'Enter Link'}</span>
             <input
-              type="text"
+              type={isPhone ? 'tel' : 'text'}
+              inputMode={isPhone ? 'tel' : undefined}
               value={linkUrl}
-              onChange={(e) => setLinkUrl(e.target.value)}
+              onChange={(e) =>
+                setLinkUrl(
+                  isPhone
+                    ? e.target.value.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '').slice(0, 15)
+                    : e.target.value
+                )
+              }
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSave();
               }}
-              placeholder="Paste Link"
+              placeholder={isPhone ? 'e.g. 9876543210' : 'Paste Link'}
               autoFocus={!isCustom}
               className={inputClass}
             />

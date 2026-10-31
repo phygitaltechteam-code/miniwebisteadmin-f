@@ -87,7 +87,13 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
             onChange('whatsappNumber', data.whatsappNumber || data.whatsappPhone);
           }
           if (data.altPhone && !profile.altPhone) onChange('altPhone', data.altPhone);
-          if (data.landline && !profile.landline) onChange('landline', data.landline);
+          // Landline: full number with STD code (older cards saved the UI default "022" as the code)
+          const savedLandline =
+            data.landline ||
+            (data.landlineNumber
+              ? `${data.landlineCode && data.landlineCode !== '022' ? data.landlineCode : ''}${data.landlineNumber}`
+              : '');
+          if (savedLandline && !profile.landline) onChange('landline', savedLandline);
           if (data.extraPhones && Array.isArray(data.extraPhones)) onChange('extraPhones', data.extraPhones);
           if (data.email && !profile.email) onChange('email', data.email);
           if (data.extraEmails && Array.isArray(data.extraEmails)) onChange('extraEmails', data.extraEmails);
@@ -1008,21 +1014,19 @@ export const Step1BasicDetails: React.FC<Step1Props> = ({
                 Landline No (Optional)
               </label>
               <div className="flex">
-                <span className="inline-flex items-center px-2.5 h-9 rounded-l border border-r-0 border-[#C4C4C4] bg-gray-50 text-[14px] font-medium text-gray-700 select-none">
-                  022
-                </span>
+                {/* Full number with the city STD code, e.g. 02332345678 */}
                 <input
                   type="tel"
-                  maxLength={12}
+                  maxLength={15}
                   inputMode="numeric"
                   pattern="[0-9]*"
                   value={profile.landline || ''}
                   onChange={(e) => {
-                    const clean = e.target.value.replace(/\D/g, '').slice(0, 12);
+                    const clean = e.target.value.replace(/\D/g, '').slice(0, 15);
                     onChange('landline', clean);
                   }}
-                  placeholder="Landline number"
-                  className="flex-1 min-w-0 h-9 px-2.5 rounded-r border border-[#C4C4C4] bg-white text-[14px] text-[#000000DE] font-['Roboto',Helvetica,Arial,sans-serif] outline-none focus:border-[#2196F3] focus:ring-1 focus:ring-[#2196F3]"
+                  placeholder="e.g. 0233 2345678 (with STD code)"
+                  className="flex-1 min-w-0 h-9 px-2.5 rounded border border-[#C4C4C4] bg-white text-[14px] text-[#000000DE] font-['Roboto',Helvetica,Arial,sans-serif] outline-none focus:border-[#2196F3] focus:ring-1 focus:ring-[#2196F3]"
                 />
               </div>
             </div>

@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { 
-  Sliders, Eye, EyeOff, Save, 
-  ArrowLeft, CheckCircle2, RotateCcw, Loader2, Type
+  Eye, EyeOff, Save, 
+  ArrowLeft, CheckCircle2, RotateCcw, Loader2
 } from 'lucide-react';
 import { ProfileData } from '../../types/profile';
 import GenericInputField from '@/components/Forms/Input/GenericInputField';
 import GenericButton from '@/components/Forms/Buttons/GenericButton';
-import TypographyCustomizerModal from '@/components/TypographyCustomizerModal';
 import { step7SettingsHeadingsSchema } from '@/schemas/cardProfileSchema';
 import { 
   getCustomerSettings, 
@@ -33,7 +32,6 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
   adminId,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isTypographyModalOpen, setIsTypographyModalOpen] = useState(false);
 
   // Auto-fetch existing card settings & headings on mount (GET customers/settings or superAdmin/admin/:adminId/settings)
   useEffect(() => {
@@ -229,63 +227,6 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
         </button>
       </div>
 
-      {/* Pricing & Renewal Amount Configuration */}
-      <div className="mb-2.5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <GenericInputField
-            label="Card Price (₹)"
-            type="number"
-            value={profile.amount}
-            onChange={(e) => onChange('amount', Number(e.target.value) || 0)}
-            placeholder="e.g. 1499"
-          />
-
-          <GenericInputField
-            label="Annual Renewal (₹)"
-            type="number"
-            value={profile.renewalAmount}
-            onChange={(e) => onChange('renewalAmount', Number(e.target.value) || 0)}
-            placeholder="e.g. 999"
-          />
-        </div>
-      </div>
-
-      {/* Typography & Font Studio Section */}
-      <div className="mb-2.5 pt-2.5 border-t border-[#E0E0E0]">
-        <div className="p-3 rounded-lg border border-[#E0E0E0] bg-[#FAFAFA] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-[#2196F3]/10 text-[#2196F3] flex items-center justify-center shrink-0">
-              <Type className="w-5 h-5 stroke-[2.2]" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="text-[14px] font-bold text-[#000000DE]">
-                  Typography & Font Customizer
-                </h4>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#2196F3] border border-blue-200">
-                  {profile.typography?.primaryFont || 'Roboto'}
-                </span>
-                <span className="text-[10px] text-[#757575] bg-white px-1.5 py-0.5 rounded border border-[#E0E0E0]">
-                  Weight: {profile.typography?.globalFontWeight || '400'}
-                </span>
-              </div>
-              <p className="text-[12px] text-[#757575] mt-0.5 truncate">
-                20 Fonts • 28 HTML Elements • 9 Weights • Text Transform • Line Heights • Colors
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsTypographyModalOpen(true)}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded bg-[#2196F3] hover:bg-[#1E88E5] text-white text-[13px] font-medium shadow-none transition-colors shrink-0"
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>Customize Typography</span>
-          </button>
-        </div>
-      </div>
-
       {/* 11 Visibility Toggles */}
       <div className="mb-2.5 pt-2.5 border-t border-[#E0E0E0]">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-2.5 rounded-lg border border-[#E0E0E0] bg-[#FAFAFA]">
@@ -376,13 +317,6 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
         </GenericButton>
       </div>
 
-      {/* Typography Customizer Studio Modal */}
-      <TypographyCustomizerModal
-        isOpen={isTypographyModalOpen}
-        onClose={() => setIsTypographyModalOpen(false)}
-        settings={profile.typography}
-        onApplySettings={(newSettings) => onChange('typography', newSettings)}
-      />
     </section>
   );
 };

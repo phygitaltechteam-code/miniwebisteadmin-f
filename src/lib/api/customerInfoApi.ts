@@ -355,8 +355,9 @@ export const formatCustomerInfoFormData = (profile: Partial<ProfileData>): FormD
   fd.append('primaryPhone', profile.primaryPhone || '');
   fd.append('alternatePhone', (profile as any).alternatePhone || profile.altPhone || '');
   fd.append('whatsappNumber', profile.whatsappNumber || profile.whatsappPhone || '');
-  fd.append('landlineCode', (profile as any).landlineCode || '022');
-  fd.append('landlineNumber', (profile as any).landlineNumber || profile.landline || '');
+  // The landline field holds the full number with its STD code; no fixed code is added
+  fd.append('landlineCode', '');
+  fd.append('landlineNumber', profile.landline || (profile as any).landlineNumber || '');
 
   // Additional Phones: array of strings e.g. ['9876543210']
   const rawPhones = profile.extraPhones || (profile as any).additionalPhones || [];

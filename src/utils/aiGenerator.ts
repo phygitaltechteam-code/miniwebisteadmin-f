@@ -22,17 +22,18 @@ export function generateAiKeywords(
   services: string[] = [],
   previous: string[] = []
 ): string[] {
+  // Natural search-style phrases, the way people actually look for a service
+  // Lowercase ordinary words inside a phrase, keep acronyms (CRM, SMS, UI/UX)
+  const lower = (s: string) => s.split(' ').map((w) => (/^[A-Z0-9/&]+$/.test(w) ? w : w.toLowerCase())).join(' ');
   const servicePatterns = [
     (s: string) => s,
-    (s: string) => `${s} Solutions`,
-    (s: string) => `Premium ${s}`,
-    (s: string) => `Expert ${s}`,
-    (s: string) => `Professional ${s}`,
-    (s: string) => `${s} Specialist`,
-    (s: string) => `Affordable ${s}`,
-    (s: string) => `${s} Consultation`,
-    (s: string) => `Best ${s} Near Me`,
-    (s: string) => `Certified ${s}`,
+    (s: string) => `${s} services`,
+    (s: string) => `${s} near me`,
+    (s: string) => `Affordable ${lower(s)}`,
+    (s: string) => `${s} experts`,
+    (s: string) => `Trusted ${lower(s)} provider`,
+    (s: string) => `${s} for small business`,
+    (s: string) => `${s} company`,
   ];
 
   const serviceKeywords = services
@@ -41,31 +42,16 @@ export function generateAiKeywords(
     .flatMap((s) => servicePatterns.map((fn) => fn(s)));
 
   const defaultPool = [
-    'Trusted Vendor Network',
-    'Enterprise Networking',
-    'Brand Visibility & Promotion',
-    'Strategic Business Growth',
-    'Executive Leadership Connect',
-    'Customer First Excellence',
-    'B2B & B2C Partnerships',
-    'Innovative Solutions',
-    'Market Expansion',
-    'Verified Services',
-    'Quality Assured Work',
-    'Timely Project Delivery',
-    'Transparent Pricing',
-    'Experienced Team',
-    'Client Satisfaction Guaranteed',
-    'End-to-End Support',
-    'Local Business Leader',
-    'Reliable & Trusted Partner',
-    'Customized Solutions',
-    'Industry Best Practices',
-    'Dedicated Customer Care',
-    'Value for Money',
-    'Fast Turnaround',
-    'Modern Techniques',
-    'Long-Term Partnerships',
+    'Quick response',
+    'Transparent pricing',
+    'Experienced team',
+    'On-time delivery',
+    'Friendly customer support',
+    'Quality work',
+    'Value for money',
+    'Customised solutions',
+    'After-sales support',
+    'Trusted by local businesses',
   ];
 
   const pool = Array.from(new Set([...serviceKeywords, ...defaultPool]));
@@ -211,6 +197,18 @@ export function generateAiServices(
 
   const industryMap: Array<{ match: RegExp; services: string[] }> = [
     {
+      match: /(digital services|digital card|business card|mini website|website|online presence|automation|whatsapp|\bsms\b|\bcrm\b|software solutions|it services)/i,
+      services: [
+        'Digital Business Cards',
+        'Mini Website Design',
+        'WhatsApp & SMS Automation',
+        'CRM & Lead Management',
+        'Google Business Profile Management',
+        'Online Review Management',
+        'Social Media Marketing',
+      ],
+    },
+    {
       match: /(electrical|electrician|wiring|switchboard|lighting installation|electrical repair|mcb|fuse|power backup)/i,
       services: [
         'Residential & Commercial Electrical Wiring',
@@ -255,7 +253,7 @@ export function generateAiServices(
       ],
     },
     {
-      match: /(software|tech|it\b|information technology|web|app\b|cloud|developer|coding|cyber|data|computer)/i,
+      match: /(software|\btech|\bit\b|information technology|\bweb\b|\bapps?\b|cloud|developer|coding|cyber|\bdata\b|computer)/i,
       services: [
         'Custom Software Development',
         'Web & Mobile App Development',
@@ -354,7 +352,7 @@ export function generateAiServices(
       ],
     },
     {
-      match: /(auto|car|bike|motor|vehicle|garage|service center|tyre|battery|mechanic|dealership)/i,
+      match: /(\bauto(mobile|motive)?s?\b|\bcars?\b|\bbikes?\b|motorcycle|two wheeler|four wheeler|vehicle|garage|tyre|car battery|mechanic|dealership)/i,
       services: [
         'Periodic Vehicle Servicing & Tuning',
         'Engine Diagnostics & Mechanical Repair',
@@ -507,8 +505,8 @@ export function generateAiServices(
     });
   }
 
-  // 2. If categories didn't yield enough, check businessName
-  if (servicePool.length < 4 && businessText) {
+  // 2. Only when the categories match nothing, look at the business name
+  if (servicePool.length === 0 && businessText) {
     industryMap.forEach(({ match, services }) => {
       if (match.test(businessText)) {
         servicePool.push(...services);
