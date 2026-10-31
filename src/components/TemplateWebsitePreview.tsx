@@ -453,6 +453,8 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
   ].filter((r): r is [string, string] => Boolean(r[1]));
   // No QR code saved → only the bank details are shown (UPI / phone / wallets left out)
   const showUpiBlock = wallets.some((w) => w.qr) || bankRows.length === 0;
+  // Desktop with nothing beside the bank card: lay its fields out across the row
+  const bankAlone = !isMobile && bankRows.length > 0 && !(showUpiBlock && (wallets.length > 0 || profile.upiId || upiPhone));
 
   // ── Which sections render (the nav only lists these) ──
   const show = {
@@ -467,6 +469,8 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
     enquiry: !vis.hideEnquirySection,
     share: !vis.hideShareSection,
   };
+  // Desktop: Write a Review, Send Enquiry and Share sit in one row
+  const shareInRow = !isMobile && !isTablet && show.share && (show.enquiry || show.feedback);
   // ── Section order from the builder's drag & drop (sectionOrder / aboutBlockOrder, settings API) ──
   // Without a saved order: Links, About, Products, Payment, Gallery, Videos. Feedback, Enquiry and Share stay last.
   const sectionOrder: CardSectionKey[] = [
@@ -819,10 +823,10 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
           </section>
         )}
 
-        {/* ─── Our Services: simple tiles like Specializations (no images) ─── */}
+        {/* ─── Nature of Business (business natures; only when saved): simple tiles like Specializations ─── */}
         {!vis.hideAboutSection && services.length > 0 && (
           <section style={{ order: aboutRank("services") }}>
-            <SectionTitle first="Our" second="Services" />
+            <SectionTitle first="Nature of" second="Business" />
             <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${isMobile || isTablet ? 4 : 8}, minmax(0, 1fr))` }}>
               {services.map((srv, i) => {
                 const Icon = iconFor(srv, i);
@@ -842,7 +846,7 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
           <section style={{ order: aboutRank("specialities") }}>
             <SectionTitle first="Our" second="Specializations" sub={headings.specialitiesSubheading || undefined} />
             <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${isMobile || isTablet ? 4 : 8}, minmax(0, 1fr))` }}>
-              {specialities.slice(0, 8).map((sp, i) => {
+              {specialities.map((sp, i) => {
                 const Icon = iconFor(sp, i);
                 return (
                   <div key={sp} className="rounded-xl bg-white border border-slate-200 px-1.5 py-3 flex flex-col items-center text-center gap-1.5 hover:border-[var(--c)] transition-colors">
@@ -957,13 +961,24 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
               </div>
               )}
               {bankRows.length > 0 && (
-                <div className={`rounded-xl bg-white border border-slate-200 border-t-4 border-t-[var(--c)] shadow-sm p-4 min-w-0 ${isMobile ? '' : 'max-w-2xl'}`}>
+                <div className="rounded-xl bg-white border border-slate-200 border-t-4 border-t-[var(--c)] shadow-sm p-4 min-w-0">
                   <div className="flex items-center gap-2 mb-3 text-[14px] font-bold text-[#0B1B33]">
                     <span className="w-8 h-8 rounded-full bg-[var(--cs)] flex items-center justify-center">
                       <Landmark className="w-4 h-4 text-[var(--c)]" />
                     </span>
                     Bank Details
                   </div>
+                  {bankAlone ? (
+                    // Desktop, bank details only: every field side by side across the full width
+                    <dl className="grid gap-3 text-[13px]" style={{ gridTemplateColumns: `repeat(${isTablet ? 3 : bankRows.length}, minmax(0, 1fr))` }}>
+                      {bankRows.map(([label, value]) => (
+                        <div key={label} className="rounded-lg bg-[var(--cs)] px-3 py-2.5 min-w-0">
+                          <dt className="text-[11.5px] text-slate-500">{label}</dt>
+                          <dd className="mt-0.5 font-semibold text-[#0B1B33] break-all">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : (
                   <dl className="divide-y divide-slate-100 text-[13px]">
                     {bankRows.map(([label, value]) => (
                       <div key={label} className="flex items-baseline justify-between gap-4 py-2">
@@ -972,6 +987,7 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                       </div>
                     ))}
                   </dl>
+                  )}
                 </div>
               )}
             </div>
@@ -1035,15 +1051,85 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
 
         {/* ─── Feedback + Enquiry forms (feedback first via grid order) ─── */}
         {(show.enquiry || show.feedback) && (
-          <div className={`grid gap-6 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`} style={{ order: 100 }}>
+          <div className={`grid gap-6 ${isMobile ? "grid-cols-1" : shareInRow ? "grid-cols-3" : "grid-cols-2"}`} style={{ order: 100 }}>
+            {/* Desktop: saved reviews in a row above both forms, so the two columns stay even */}
+            {!isMobile && show.feedback && reviews.length > 0 && (
+              <section data-section="feedback" className="order-0 col-span-full">
+                <SectionTitle {...titleParts(headings.feedbackHeading, 'Give Feedback')} />
+                <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${isTablet ? 2 : 3}, minmax(0, 1fr))` }}>
+                  {reviews.map((r) => (
+                    <div key={r.id} className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm tpl-fade-in min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span className="w-8 h-8 shrink-0 rounded-full bg-[var(--cs)] text-[var(--c)] flex items-center justify-center text-[13px] font-bold">
+                            {(r.fullName || 'C').charAt(0).toUpperCase()}
+                          </span>
+                          <span className="text-[13px] font-semibold text-[#0B1B33] truncate">{r.fullName}</span>
+                        </span>
+                        <span className="flex shrink-0">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <Star key={n} className={`w-3.5 h-3.5 text-amber-400 ${n <= r.rating ? 'fill-amber-400' : ''}`} />
+                          ))}
+                        </span>
+                      </div>
+                      {r.message && <p className="mt-2 text-[12.5px] text-slate-600 leading-relaxed break-words line-clamp-3">{r.message}</p>}
+                      {r.createdAt && (
+                        <p className="mt-1 text-[10.5px] text-slate-400">
+                          {new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+            {shareInRow && (
+              <section data-section="share" className="order-3 flex flex-col">
+                <SectionTitle first="Share Our" second="Profile" />
+                <div className="flex-1 rounded-2xl border border-slate-200 border-t-4 border-t-[var(--c)] bg-white p-5 shadow-sm flex flex-col items-center text-center gap-3">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(cardUrl)}`}
+                    alt="Profile QR code"
+                    className="w-32 h-32 rounded-md border border-slate-100 p-1"
+                  />
+                  <div className="min-w-0 w-full">
+                    <p className="text-[12px] text-slate-500">Scan the QR or share the link</p>
+                    <p className="mt-1 text-[13px] font-semibold text-[#0B1B33] break-all">{cardUrl}</p>
+                  </div>
+                  <div className="!mt-auto grid w-full grid-cols-2 gap-2">
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(`${businessName} ${cardUrl}`.trim())}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#25D366] py-3 text-[13px] font-semibold text-white"
+                    >
+                      <Share2 className="w-3.5 h-3.5" /> WhatsApp
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(cardUrl).then(() => {
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 1500);
+                        }).catch(() => {});
+                      }}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--c)] hover:bg-[var(--cd)] py-3 text-[13px] font-semibold text-white"
+                    >
+                      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} {copied ? 'Copied' : 'Copy Link'}
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
+
             {show.enquiry && (
-              <section data-section="enquiry" className="order-2">
+              <section data-section="enquiry" className="order-2 flex flex-col">
                 <SectionTitle {...titleParts(headings.enquirySectionHeading, 'Send Enquiry')} />
-                <form onSubmit={sendEnquiry} className="rounded-2xl border border-slate-200 border-t-4 border-t-[var(--c)] bg-white p-5 shadow-sm space-y-3">
+                <form onSubmit={sendEnquiry} className="flex-1 flex flex-col rounded-2xl border border-slate-200 border-t-4 border-t-[var(--c)] bg-white p-5 shadow-sm space-y-3">
                   <input required value={enquiry.name} onChange={(e) => setEnquiry({ ...enquiry, name: e.target.value })} placeholder="Enter Full Name" className={inputClass} />
                   <input required type="tel" value={enquiry.phone} onChange={(e) => setEnquiry({ ...enquiry, phone: e.target.value })} placeholder="Enter Mobile Number" className={inputClass} />
                   <input type="email" value={enquiry.email} onChange={(e) => setEnquiry({ ...enquiry, email: e.target.value })} placeholder="Enter Email" className={inputClass} />
-                  <textarea required value={enquiry.message} onChange={(e) => setEnquiry({ ...enquiry, message: e.target.value })} placeholder="Enter your comment" rows={3} className={inputClass} />
+                  <textarea required value={enquiry.message} onChange={(e) => setEnquiry({ ...enquiry, message: e.target.value })} placeholder="Enter your comment" rows={3} className={`${inputClass} flex-1 resize-none`} />
                   {enquiryState.error && <p className="text-[12px] text-red-600">{enquiryState.error}</p>}
                   {enquiryState.sent && <p className="text-[12.5px] font-semibold text-emerald-600 tpl-fade-in">Thank you! Your enquiry has been sent.</p>}
                   <button type="submit" disabled={enquiryState.busy} className="w-full rounded-lg bg-[var(--c)] hover:bg-[var(--cd)] px-5 py-3 shadow-sm transition-colors text-[13px] font-semibold text-white disabled:opacity-60">
@@ -1054,11 +1140,15 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
             )}
 
             {show.feedback && (
-              <section data-section="feedback" className="order-1">
-                <SectionTitle {...titleParts(headings.feedbackHeading, 'Give Feedback')} />
+              <section data-section={!isMobile && reviews.length > 0 ? undefined : 'feedback'} className="order-1 flex flex-col">
+                {!isMobile && reviews.length > 0 ? (
+                  <SectionTitle first="Write a" second="Review" />
+                ) : (
+                  <SectionTitle {...titleParts(headings.feedbackHeading, 'Give Feedback')} />
+                )}
 
-                {/* Saved reviews first (newest on top), then the form */}
-                {reviews.length > 0 && (
+                {/* Mobile: saved reviews first (newest on top), then the form */}
+                {isMobile && reviews.length > 0 && (
                   <div className="mb-4 space-y-2.5">
                     {reviews.map((r) => (
                       <div key={r.id} className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm tpl-fade-in">
@@ -1086,8 +1176,8 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                   </div>
                 )}
 
-                <div className="rounded-2xl border border-slate-200 border-t-4 border-t-[var(--c)] bg-white p-5 shadow-sm">
-                    <form onSubmit={sendFeedback} className="space-y-3">
+                <div className="flex-1 flex flex-col rounded-2xl border border-slate-200 border-t-4 border-t-[var(--c)] bg-white p-5 shadow-sm">
+                    <form onSubmit={sendFeedback} className="flex-1 flex flex-col space-y-3">
                       <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                         <div className="flex" onMouseLeave={() => setFeedback({ ...feedback, hover: 0 })}>
                           {[1, 2, 3, 4, 5].map((n) => (
@@ -1107,7 +1197,7 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                         </span>
                       </div>
                       <input required value={feedback.name} onChange={(e) => setFeedback({ ...feedback, name: e.target.value })} placeholder="Enter Full Name" className={inputClass} />
-                      <textarea required value={feedback.message} onChange={(e) => setFeedback({ ...feedback, message: e.target.value })} placeholder="Enter your feedback" rows={3} className={inputClass} />
+                      <textarea required value={feedback.message} onChange={(e) => setFeedback({ ...feedback, message: e.target.value })} placeholder="Enter your feedback" rows={3} className={`${inputClass} flex-1 resize-none`} />
                       {feedbackError && <p className="text-[12px] text-red-600">{feedbackError}</p>}
                       {feedback.sent && <p className="text-[12.5px] font-semibold text-emerald-600 tpl-fade-in">Thank you for your feedback!</p>}
                       <button
@@ -1125,8 +1215,8 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
           </div>
         )}
 
-        {/* ─── Share ─── */}
-        {show.share && (
+        {/* ─── Share (desktop: in the forms row above) ─── */}
+        {show.share && !shareInRow && (
           <section data-section="share" style={{ order: 101 }}>
             <SectionTitle first="Share Our" second="Profile" />
             <div className="rounded-xl bg-white border border-slate-200 p-4 flex items-center gap-4">
@@ -1135,17 +1225,21 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                 alt="Profile QR code"
                 className="w-24 h-24 shrink-0 rounded-md border border-slate-100 p-1"
               />
-              <div className="min-w-0 space-y-2">
-                <p className="text-[12px] text-slate-500">Scan the QR or share the link</p>
-                <p className="text-[12px] font-semibold text-[#0B1B33] truncate">{cardUrl}</p>
-                <div className="flex flex-wrap gap-2">
+              <div className={`min-w-0 flex-1 ${isMobile ? 'space-y-2' : 'flex items-center gap-6'}`}>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] text-slate-500">Scan the QR or share the link</p>
+                  <p className={`mt-1 font-semibold text-[#0B1B33] ${isMobile ? 'text-[12px] break-all' : 'text-[14px] truncate'}`}>{cardUrl}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
                   <a
                     href={`https://wa.me/?text=${encodeURIComponent(`${businessName} ${cardUrl}`.trim())}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-md bg-[#25D366] px-3 py-1.5 text-[12px] font-semibold text-white"
+                    title="Share on WhatsApp"
+                    aria-label="Share on WhatsApp"
+                    className={`inline-flex items-center justify-center gap-1.5 rounded-md bg-[#25D366] text-white font-semibold ${isMobile ? 'w-9 h-9' : 'px-4 py-2 text-[13px]'}`}
                   >
-                    <Share2 className="w-3.5 h-3.5" /> WhatsApp
+                    <Share2 className={isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} /> {!isMobile && 'WhatsApp'}
                   </a>
                   <button
                     type="button"
@@ -1155,9 +1249,12 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                         setTimeout(() => setCopied(false), 1500);
                       }).catch(() => {});
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-[var(--c)] hover:bg-[var(--cd)] px-3 py-1.5 text-[12px] font-semibold text-white"
+                    title={copied ? 'Copied' : 'Copy link'}
+                    aria-label={copied ? 'Copied' : 'Copy link'}
+                    className={`inline-flex items-center justify-center gap-1.5 rounded-md bg-[var(--c)] hover:bg-[var(--cd)] text-white font-semibold ${isMobile ? 'w-9 h-9' : 'px-4 py-2 text-[13px]'}`}
                   >
-                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} {copied ? 'Copied' : 'Copy Link'}
+                    {copied ? <Check className={isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} /> : <Copy className={isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} />}
+                    {!isMobile && (copied ? 'Copied' : 'Copy Link')}
                   </button>
                 </div>
               </div>
@@ -1181,7 +1278,8 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
                 {tagline && <div className="text-[10px] text-white/70">{tagline}</div>}
               </div>
             </div>
-            {savedLinks.length > 0 && (
+            {/* Hidden with the Links section (Card Settings) */}
+            {!vis.hideLinksSection && savedLinks.length > 0 && (
               <>
                 <h4 className="mt-4 text-[13px] font-bold mb-2">Connect With Us</h4>
                 <div className="flex flex-wrap gap-2">

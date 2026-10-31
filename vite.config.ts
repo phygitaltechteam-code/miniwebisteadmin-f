@@ -11,6 +11,9 @@ export default defineConfig({
   },
   server: {
     host: true,
+    // Fixed port: card links in .env (VITE_CARD_BASE_URL) point at this PC on :5175
+    port: 5175,
+    strictPort: true,
   },
   build: {
     chunkSizeWarningLimit: 3000,
