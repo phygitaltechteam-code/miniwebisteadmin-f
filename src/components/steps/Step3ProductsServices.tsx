@@ -38,6 +38,9 @@ interface Step3Props {
   adminId?: string;
 }
 
+/** Images allowed on one product */
+const MAX_PRODUCT_IMAGES = 20;
+
 export const Step3ProductsServices: React.FC<Step3Props> = ({
   profile,
   onChange,
@@ -149,9 +152,17 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
   };
 
   const handleAddProductImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    const picked = Array.from(e.target.files || []);
     e.target.value = '';
-    if (files.length === 0) return;
+    if (picked.length === 0) return;
+    // Up to MAX_PRODUCT_IMAGES per product; extra files are skipped
+    const room = MAX_PRODUCT_IMAGES - images.length;
+    if (room <= 0) {
+      toast.error(`You can add up to ${MAX_PRODUCT_IMAGES} images per product`);
+      return;
+    }
+    const files = picked.slice(0, room);
+    if (picked.length > room) toast.error(`Only ${room} more image${room === 1 ? '' : 's'} added (limit ${MAX_PRODUCT_IMAGES})`);
 
     for (const file of files) {
       let preview: string;
@@ -585,8 +596,12 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
 
                 {/* Multiple Images List (Matches Screenshot 2) */}
                 <div className="pt-2">
+                  <p className="mb-1.5 text-[11px] text-gray-500">
+                    Images {images.length}/{MAX_PRODUCT_IMAGES}
+                  </p>
                   <div className="flex items-center gap-3 overflow-x-auto pb-2">
-                    {/* Add Image Button */}
+                    {/* Add Image Button (hidden at the limit) */}
+                    {images.length < MAX_PRODUCT_IMAGES && (
                     <label className="w-20 h-20 sm:w-22 sm:h-22 rounded-xl border-2 border-dashed border-[#90caf9] bg-white hover:bg-sky-50 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors p-2 text-center shrink-0 group">
                       <Plus className="w-5 h-5 text-[#1e88e5]" />
                       <span className="text-[11px] font-bold text-[#1e88e5] leading-tight">
@@ -600,6 +615,7 @@ export const Step3ProductsServices: React.FC<Step3Props> = ({
                         className="hidden"
                       />
                     </label>
+                    )}
 
                     {/* Uploaded Images with Kebab Menu */}
                     {images.map((imgUrl, idx) => (
