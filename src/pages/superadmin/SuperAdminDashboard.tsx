@@ -58,7 +58,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       : []),
     {
       title: 'Digital Cards Live',
-      value: totalAdmins > 0 ? totalAdmins : 1,
+      value: totalAdmins,
       change: '100% online',
       icon: CreditCard,
       action: () => onNavigate('admins'),

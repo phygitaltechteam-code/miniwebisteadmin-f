@@ -31,6 +31,7 @@ export const PublicCardPage: React.FC<{ vanityUrl: string }> = ({ vanityUrl }) =
   // Enquiry / feedback forms save to this card (admin id, else the display link)
   const [cardId, setCardId] = useState('');
   const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'expired' | 'error'>('loading');
+  const [expiredOn, setExpiredOn] = useState('');
 
   useEffect(() => {
     let alive = true;
@@ -50,7 +51,13 @@ export const PublicCardPage: React.FC<{ vanityUrl: string }> = ({ vanityUrl }) =
         if (!alive) return;
         const status = error?.response?.status;
         // 403 CARD_EXPIRED: the business plan has expired
-        setState(status === 404 ? 'missing' : status === 403 && error?.response?.data?.data?.code === 'CARD_EXPIRED' ? 'expired' : 'error');
+        const info = error?.response?.data?.data;
+        const expired = status === 403 && info?.code === 'CARD_EXPIRED';
+        if (expired && info?.expiryDate) {
+          const d = new Date(info.expiryDate);
+          if (!isNaN(d.getTime())) setExpiredOn(d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
+        }
+        setState(status === 404 ? 'missing' : expired ? 'expired' : 'error');
       });
     return () => {
       alive = false;
@@ -76,7 +83,7 @@ export const PublicCardPage: React.FC<{ vanityUrl: string }> = ({ vanityUrl }) =
           {state === 'missing'
             ? 'This digital card does not exist or is no longer active.'
             : state === 'expired'
-              ? 'This business card is not active right now. Please contact the business directly.'
+              ? `${expiredOn ? `The plan for this card ended on ${expiredOn}. ` : ''}This business card is not active right now. Please contact the business directly.`
               : 'The card could not be loaded. Please check your connection and try again.'}
         </p>
         {state === 'error' && (
