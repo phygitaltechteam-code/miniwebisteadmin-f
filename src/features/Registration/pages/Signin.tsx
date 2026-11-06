@@ -1,6 +1,7 @@
 /*eslint-disable*/
 import { useAuthContext } from '@/context/AuthContext';
-import { api } from '@/utils/axios';
+import { api, setEmployeePortal } from '@/utils/axios';
+import { employeeLogin } from '@/lib/api/employee/auth';
 import { useMutation } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import React, { useState, useEffect } from 'react';
@@ -18,6 +19,9 @@ const Signin: React.FC<SigninProps> = ({ onSuccess: onLoginSuccess }) => {
   const [phoneError, setPhoneError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [formSubmitted, setFormSubmitted] = useState(false);
+  // Employee mode signs in through POST employee/login (rejects non-employee accounts with 403)
+  const [loginAs, setLoginAs] = useState<'admin' | 'employee'>('admin');
+  const isEmployeeLogin = loginAs === 'employee';
 
   interface SignInPayload { username: string; password: string; }
 
@@ -27,11 +31,13 @@ const Signin: React.FC<SigninProps> = ({ onSuccess: onLoginSuccess }) => {
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: SignInPayload) => {
-      const response = await api.post('/users/login', data);
+      const response = isEmployeeLogin ? await employeeLogin(data) : await api.post('/users/login', data);
       return response;
     },
     onSuccess: (data: any) => {
       const tokenData = data?.data || data;
+      // The employee's panel (portal) is loaded again from employee/profile after login
+      setEmployeePortal(null);
       localStorage.setItem('token', JSON.stringify(tokenData));
       localStorage.setItem('token_key', JSON.stringify(tokenData));
       if (tokenData?.accessToken) {
@@ -121,11 +127,29 @@ const Signin: React.FC<SigninProps> = ({ onSuccess: onLoginSuccess }) => {
               <p className="mt-1 text-sm text-gray-500">Enter your credentials to continue</p>
             </div>
 
+            {/* Login as: Admin / Employee */}
+            <div className="mb-6 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1" role="tablist" aria-label="Login as">
+              {(['admin', 'employee'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  role="tab"
+                  aria-selected={loginAs === mode}
+                  onClick={() => setLoginAs(mode)}
+                  className={`h-9 rounded-lg text-sm font-semibold transition-all ${
+                    loginAs === mode ? 'bg-white text-[#2563EB] shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {mode === 'admin' ? 'Admin' : 'Employee'}
+                </button>
+              ))}
+            </div>
+
             {/* Form Fields */}
             <div className="flex flex-col gap-5">
               {/* Mobile or Email */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-semibold text-gray-700">Mobile Number or Email</label>
+                <label className="text-sm font-semibold text-gray-700">{isEmployeeLogin ? 'Mobile Number' : 'Mobile Number or Email'}</label>
                 <input
                   type="text"
                   placeholder="10-digit mobile or email address"

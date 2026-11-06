@@ -10,7 +10,11 @@ import {
   DollarSign,
   LogOut,
   Star,
+  UserCog,
+  ShieldCheck,
+  KeyRound,
 } from 'lucide-react';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 export type SuperAdminView =
   | 'home'
@@ -18,6 +22,8 @@ export type SuperAdminView =
   | 'reviews'
   | 'categories'
   | 'franchise'
+  | 'employees'
+  | 'employee-restrictions'
   | 'billing'
   | 'pricing'
   | 'report'
@@ -31,16 +37,20 @@ interface SuperAdminSidebarProps {
   onClose?: () => void;
   userRole?: string;
   onSignOut?: () => void;
+  /** Employee login: only these views are shown (the others are blocked) */
+  allowedViews?: SuperAdminView[];
+  /** Employee login: which panel's menu to start from */
+  baseMenu?: 'SUPERADMIN' | 'FRANCHISE';
 }
 
-interface NavItemConfig {
+export interface NavItemConfig {
   id: SuperAdminView;
   label: string;
   icon: React.ElementType;
   superAdminOnly?: boolean;
 }
 
-const navItems: NavItemConfig[] = [
+export const navItems: NavItemConfig[] = [
   {
     id: 'home',
     label: 'Home',
@@ -64,6 +74,16 @@ const navItems: NavItemConfig[] = [
     superAdminOnly: true,
   },
   {
+    id: 'employees',
+    label: 'Employee Master',
+    icon: UserCog,
+  },
+  {
+    id: 'employee-restrictions',
+    label: 'Employee Restriction Master',
+    icon: ShieldCheck,
+  },
+  {
     id: 'categories',
     label: 'Category Master',
     icon: Tag,
@@ -83,9 +103,12 @@ const navItems: NavItemConfig[] = [
 ];
 
 // Nav items shown only to Franchise role (limited panel)
-const franchiseNavItems: NavItemConfig[] = [
+export const franchiseNavItems: NavItemConfig[] = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'admins', label: 'All Businesses', icon: Briefcase },
+  // Its own staff
+  { id: 'employees', label: 'Employee Master', icon: UserCog },
+  { id: 'employee-restrictions', label: 'Employee Restriction Master', icon: ShieldCheck },
   // Reviews left on its own businesses' cards
   { id: 'reviews', label: 'All Reviews', icon: Star },
   // Its own monthly bill to SuperAdmin (view only)
@@ -147,15 +170,20 @@ export const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({
   onClose,
   userRole,
   onSignOut,
+  allowedViews,
+  baseMenu,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   const isFranchise = userRole?.trim().toUpperCase() === 'FRANCHISE';
+  const isEmployee = userRole?.trim().toUpperCase() === 'EMPLOYEE';
 
   // Franchise users see only Home + All Businesses; super admins see the full list,
   // including superAdminOnly items such as Category Master and Franchisee List
-  const visibleItems = isFranchise ? franchiseNavItems : navItems;
+  const baseItems = (baseMenu ? baseMenu === 'FRANCHISE' : isFranchise) ? franchiseNavItems : navItems;
+  const visibleItems = allowedViews ? baseItems.filter((i) => allowedViews.includes(i.id)) : baseItems;
 
   const handleToggleCollapse = () => {
     if (onClose) {
@@ -187,6 +215,7 @@ export const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({
           onCancel={handleLogoutCancel}
         />
       )}
+      {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} />}
 
       <aside
         className={`h-screen bg-white text-slate-800 flex flex-col border-r border-[#E0E0E0] shadow-none select-none transition-all duration-200 font-['Roboto',Helvetica,Arial,sans-serif] ${
@@ -256,6 +285,21 @@ export const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({
               </button>
             );
           })}
+
+          {/* Employee: change own password */}
+          {isEmployee && (
+            <button
+              type="button"
+              onClick={() => setShowChangePassword(true)}
+              title="Change password"
+              className={`w-full flex items-center gap-3.5 px-4 py-3 text-left text-[#212121] hover:bg-[#F5F5F5] transition-colors duration-150 font-normal border-b border-[#E0E0E0] font-['Roboto',Helvetica,Arial,sans-serif] ${
+                isCollapsed ? 'justify-center px-2' : ''
+              }`}
+            >
+              <KeyRound className="w-[19px] h-[19px] text-[#616161] shrink-0" />
+              {!isCollapsed && <span className="text-[14px]">Change password</span>}
+            </button>
+          )}
 
           {/* Logout Row — triggers confirmation popup */}
           {onSignOut && (

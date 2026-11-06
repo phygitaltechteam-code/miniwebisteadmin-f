@@ -1,4 +1,4 @@
-import { api, isFranchiseUser } from '@/utils/axios';
+import { api, isFranchiseScope } from '@/utils/axios';
 
 export interface adminPayload {
   adminCategoryId?: string;
@@ -56,7 +56,7 @@ export type AdminItem = admin;
 // GET admins — franchise role uses franchise/admins, superadmin uses superadmin/admin
 export const getAdmins = async (): Promise<admin[]> => {
   try {
-    const isFranchise = isFranchiseUser();
+    const isFranchise = isFranchiseScope();
     const endpoints = isFranchise
       ? ['franchise/admins', 'franchise/admin']
       : ['superadmin/admin', 'superAdmin/admin'];
@@ -121,13 +121,13 @@ export interface CopyAdminPayload {
 // POST copy of an admin (new admin from the form, data copied from :id) —
 // superAdmin/admin/:id/copy, or franchise/admins/:id/copy on a franchise session
 export const copyAdmin = async (id: string, payload: CopyAdminPayload): Promise<{ admin: any; copied?: any }> => {
-  const res: any = await api.post(isFranchiseUser() ? `franchise/admins/${id}/copy` : `superAdmin/admin/${id}/copy`, payload);
+  const res: any = await api.post(isFranchiseScope() ? `franchise/admins/${id}/copy` : `superAdmin/admin/${id}/copy`, payload);
   return res?.data ?? res;
 };
 
 // GET one admin — superAdmin/admin/:id, or franchise/admins/:id on a franchise session
 export const getAdminById = async (id: string): Promise<any> => {
-  const res: any = await api.get(isFranchiseUser() ? `franchise/admins/${id}` : `superAdmin/admin/${id}`);
+  const res: any = await api.get(isFranchiseScope() ? `franchise/admins/${id}` : `superAdmin/admin/${id}`);
   return res?.data ?? res;
 };
 
@@ -176,7 +176,7 @@ export const saveAdminProfile = async (data: adminPayload): Promise<admin> => {
     payload.adminCategoryId = data.adminCategoryId;
   }
 
-  const isFranchise = isFranchiseUser();
+  const isFranchise = isFranchiseScope();
   const endpoints = isFranchise
     ? ['franchise/admins', 'franchise/admin']
     : ['superadmin/admin', 'superAdmin/admin'];
@@ -265,7 +265,7 @@ export const editAdmin = async (id: string, data: Partial<adminPayload>): Promis
     payload.password = data.password;
   }
 
-  const isFranchise = isFranchiseUser();
+  const isFranchise = isFranchiseScope();
   const prefixes = isFranchise
     ? ['franchise/admins', 'franchise/admin']
     : ['superadmin/admin', 'superAdmin/admin'];
@@ -330,7 +330,7 @@ export const isRecordActive = (each: any): boolean => {
 
 // DELETE admin
 export const deleteAdmin = async (id: string): Promise<{ success: boolean; id: string }> => {
-  const isFranchise = isFranchiseUser();
+  const isFranchise = isFranchiseScope();
   const prefixes = isFranchise
     ? ['franchise/admins', 'franchise/admin']
     : ['superadmin/admin', 'superAdmin/admin'];

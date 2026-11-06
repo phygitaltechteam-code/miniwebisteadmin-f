@@ -1,4 +1,4 @@
-import { api, isFranchiseUser } from '@/utils/axios';
+import { api, isFranchiseScope } from '@/utils/axios';
 import { getAdmins } from './admin';
 import { normalizeFeedback, PublicFeedback, FeedbackSummary } from '../publicFeedbackApi';
 
@@ -151,7 +151,7 @@ export const getAdminWiseFeedbackSummary = async (
   } catch (error: any) {
     const status = error?.response?.status;
     // If not found or franchise mode, attempt graceful fallback to loading admins
-    if ([404, 405].includes(status) || isFranchiseUser()) {
+    if ([404, 405].includes(status) || isFranchiseScope()) {
       return fallbackAdminWiseSummary(params);
     }
     throw error;
@@ -222,7 +222,7 @@ export const getAllSuperAdminFeedbacks = async (
     };
   } catch (error: any) {
     const status = error?.response?.status;
-    if ([404, 405].includes(status) || isFranchiseUser()) {
+    if ([404, 405].includes(status) || isFranchiseScope()) {
       return fallbackAllFeedbacks(params);
     }
     throw error;

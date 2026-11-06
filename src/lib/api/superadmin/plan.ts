@@ -1,4 +1,4 @@
-import { api, isFranchiseUser } from '@/utils/axios';
+import { api, isFranchiseScope } from '@/utils/axios';
 
 /**
  * Subscription plans.
@@ -56,7 +56,7 @@ export interface SelectedPlanTerms {
   plan?: Partial<PlanItem> | null;
 }
 
-const base = () => (isFranchiseUser() ? 'franchise' : 'superAdmin');
+const base = () => (isFranchiseScope() ? 'franchise' : 'superAdmin');
 
 const unwrap = (res: any) => res?.data?.data ?? res?.data;
 
@@ -77,7 +77,7 @@ const normalizePlan = (p: any): PlanItem => ({
 
 export const getPlans = async (params: { audience?: PlanAudience; franchiseId?: string; isActive?: boolean } = {}): Promise<PlanItem[]> => {
   // The franchise list is always its own admin plans, so audience / franchiseId are not sent there
-  const query = isFranchiseUser()
+  const query = isFranchiseScope()
     ? { ...(params.isActive !== undefined ? { isActive: params.isActive } : {}) }
     : Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ''));
   const data = unwrap(await api.get(`${base()}/plans`, { params: query }));
@@ -87,7 +87,7 @@ export const getPlans = async (params: { audience?: PlanAudience; franchiseId?: 
 
 export const createPlan = async (payload: PlanPayload): Promise<PlanItem> => {
   const body: any = { ...payload };
-  if (isFranchiseUser()) {
+  if (isFranchiseScope()) {
     delete body.audience;
     delete body.franchiseId;
   } else if (!body.franchiseId) {
@@ -110,7 +110,7 @@ export const deletePlan = async (id: string): Promise<void> => {
 
 /** Select a plan for an admin (SuperAdmin or franchise) or for a franchise (SuperAdmin only) */
 export const selectPlan = async (target: 'admin' | 'franchise', id: string, payload: SelectPlanPayload): Promise<SelectedPlanTerms> => {
-  const url = isFranchiseUser()
+  const url = isFranchiseScope()
     ? `franchise/admins/${id}/plan`
     : `superAdmin/${target}/${id}/plan`;
   return unwrap(await api.post(url, payload));

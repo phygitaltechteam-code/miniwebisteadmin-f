@@ -19,6 +19,16 @@ export enum SUPERADMIN_CATEGORY_KEYS {
   GET_BY_ID = 'superadmin-get-category-by-id',
 }
 
+export enum SUPERADMIN_EMPLOYEE_KEYS {
+  GET_ALL = 'superadmin-get-employees',
+  PAGES = 'superadmin-get-employee-pages',
+  PERMISSIONS = 'superadmin-get-employee-permissions',
+}
+
+export enum EMPLOYEE_SELF_KEYS {
+  PROFILE = 'employee-my-profile',
+}
+
 export enum SUPERADMIN_FRANCHISE_KEYS {
   GET_ALL = 'superadmin-get-franchises',
   GET_BY_ID = 'superadmin-get-franchise-by-id',

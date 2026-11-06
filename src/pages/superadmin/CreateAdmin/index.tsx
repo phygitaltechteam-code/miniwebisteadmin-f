@@ -17,7 +17,7 @@ import {
 import { readIsActive } from '@/lib/api/superadmin/admin';
 import { pickPlanTerms } from '@/lib/api/superadmin/plan';
 import { useGetCategories } from '@/lib/react-query/superadmin/category';
-import { isFranchiseUser } from '@/utils/axios';
+import { isFranchiseScope } from '@/utils/axios';
 import { formSchema, FormValues, AdminRow, EMPTY_FORM } from './schema';
 import { listFromResponse, toAdminRow, toFormValues, toAdminPayload } from './adminRows';
 import { buildAdminColumns } from './adminColumns';
@@ -64,7 +64,7 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
   const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null);
   // isActive returned by the toggle API, per admin id (wins over the list until it refreshes)
   const [adminStatusOverride, setAdminStatusOverride] = useState<Record<string, boolean>>({});
-  const isFranchise = isFranchiseUser();
+  const isFranchise = isFranchiseScope();
 
   const rawCategoryList = listFromResponse(categoriesData, 'categories');
   const rawAdminList = listFromResponse(adminData, 'admins');
