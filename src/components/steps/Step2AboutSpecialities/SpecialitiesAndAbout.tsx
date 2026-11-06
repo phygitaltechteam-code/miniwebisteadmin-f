@@ -92,7 +92,7 @@ export const AboutTextBlock: React.FC<{ m: Step2Model }> = ({ m }) => {
           type="button"
           onClick={handleAiGenerateNarrative}
           className="px-2.5 py-1 rounded-lg bg-blue-50 text-[#2563EB] border border-blue-200 text-xs font-bold hover:bg-blue-100 flex items-center gap-1.5 transition-colors shadow-2xs"
-          title={profile.aboutNarrative ? 'Regenerate narrative with a different template' : 'Generate narrative using AI'}
+          title={profile.aboutNarrative ? 'Regenerate a polished version from the text you entered' : 'Generate narrative using AI'}
         >
           <Sparkles className="w-3.5 h-3.5" />
           <span>{profile.aboutNarrative ? 'Regenerate' : 'AI Write'}</span>

@@ -58,7 +58,7 @@ const FeedbackForm: React.FC<SectionProps> = ({ t }) => {
       {!isMobile && reviews.length > 0 ? (
         <SectionTitle isMobile={isMobile} first="Write a" second="Review" />
       ) : (
-        <SectionTitle isMobile={isMobile} {...titleParts(headings.feedbackHeading, 'Give Feedback')} />
+        <SectionTitle isMobile={isMobile} {...titleParts(headings.feedbackHeading, 'Customer Reviews')} />
       )}
 
       {/* Mobile: saved reviews first (newest on top), then the form */}
@@ -89,15 +89,15 @@ const FeedbackForm: React.FC<SectionProps> = ({ t }) => {
             </span>
           </div>
           <input required value={feedback.name} onChange={(e) => setFeedback({ ...feedback, name: e.target.value })} placeholder="Enter Full Name" className={INPUT_CLASS} />
-          <textarea required value={feedback.message} onChange={(e) => setFeedback({ ...feedback, message: e.target.value })} placeholder="Enter your feedback" rows={3} className={`${INPUT_CLASS} flex-1 resize-none`} />
+          <textarea required value={feedback.message} onChange={(e) => setFeedback({ ...feedback, message: e.target.value })} placeholder="Write your review" rows={3} className={`${INPUT_CLASS} flex-1 resize-none`} />
           {feedbackError && <p className="text-[12px] text-red-600">{feedbackError}</p>}
-          {feedback.sent && <p className="text-[12.5px] font-semibold text-emerald-600 tpl-fade-in">Thank you for your feedback!</p>}
+          {feedback.sent && <p className="text-[12.5px] font-semibold text-emerald-600 tpl-fade-in">Thank you for your review!</p>}
           <button
             type="submit"
             disabled={!feedback.rating || feedbackBusy}
             className="w-full rounded-lg bg-[var(--c)] hover:bg-[var(--cd)] px-5 py-3 shadow-sm transition-colors text-[13px] font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {feedbackBusy ? 'Sending…' : 'Give Feedback'}
+            {feedbackBusy ? 'Sending…' : 'Submit Review'}
           </button>
         </form>
       </div>
@@ -105,7 +105,7 @@ const FeedbackForm: React.FC<SectionProps> = ({ t }) => {
   );
 };
 
-/** Feedback + Enquiry forms (feedback first via grid order); on desktop the Share card joins the row */
+/** Review + Enquiry forms (review first via grid order); on desktop the Share card joins the row */
 export const FormsRow: React.FC<SectionProps> = ({ t }) => {
   const { isMobile, isTablet, show, shareInRow, reviews, headings } = t;
   return (
@@ -113,7 +113,7 @@ export const FormsRow: React.FC<SectionProps> = ({ t }) => {
       {/* Desktop: saved reviews in a row above both forms, so the two columns stay even */}
       {!isMobile && show.feedback && reviews.length > 0 && (
         <section data-section="feedback" className="order-0 col-span-full">
-          <SectionTitle isMobile={isMobile} {...titleParts(headings.feedbackHeading, 'Give Feedback')} />
+          <SectionTitle isMobile={isMobile} {...titleParts(headings.feedbackHeading, 'Customer Reviews')} />
           <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${isTablet ? 2 : 3}, minmax(0, 1fr))` }}>
             {reviews.map((r) => <ReviewCard key={r.id} r={r} clamp />)}
           </div>

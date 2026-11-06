@@ -1,11 +1,30 @@
 import React from 'react';
-import { Share2, Copy, Check } from 'lucide-react';
+import { Share2, Copy, Check, Download } from 'lucide-react';
 import { SectionProps } from '../useTemplateModel';
 import { SectionTitle } from '../SectionTitle';
 import { copyCardLink } from '../helpers';
 
 const qrSrc = (cardUrl: string, size: number) => `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(cardUrl)}`;
 const whatsappShareHref = (businessName: string, cardUrl: string) => `https://wa.me/?text=${encodeURIComponent(`${businessName} ${cardUrl}`.trim())}`;
+
+/** Save the profile QR as a PNG; opens it in a new tab if the image can't be fetched */
+const downloadQr = async (cardUrl: string, businessName: string) => {
+  const src = qrSrc(cardUrl, 600);
+  try {
+    const res = await fetch(src);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const objectUrl = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = `${businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'profile'}-qr.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    window.open(src, '_blank', 'noopener,noreferrer');
+  }
+};
 
 /** Desktop: Share card in the same row as the Review / Enquiry forms */
 export const ShareInRow: React.FC<SectionProps> = ({ t }) => {
@@ -19,7 +38,7 @@ export const ShareInRow: React.FC<SectionProps> = ({ t }) => {
           <p className="text-[12px] text-slate-500">Scan the QR or share the link</p>
           <p className="mt-1 text-[13px] font-semibold text-[#0B1B33] break-all">{cardUrl}</p>
         </div>
-        <div className="!mt-auto grid w-full grid-cols-2 gap-2">
+        <div className="!mt-auto grid w-full grid-cols-3 gap-2">
           <a
             href={whatsappShareHref(businessName, cardUrl)}
             target="_blank"
@@ -34,6 +53,13 @@ export const ShareInRow: React.FC<SectionProps> = ({ t }) => {
             className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--c)] hover:bg-[var(--cd)] py-3 text-[13px] font-semibold text-white"
           >
             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} {copied ? 'Copied' : 'Copy Link'}
+          </button>
+          <button
+            type="button"
+            onClick={() => downloadQr(cardUrl, businessName)}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--c)] hover:bg-[var(--cd)] py-3 text-[13px] font-semibold text-white"
+          >
+            <Download className="w-3.5 h-3.5" /> Download
           </button>
         </div>
       </div>
@@ -75,6 +101,15 @@ export const ShareSection: React.FC<SectionProps> = ({ t }) => {
             >
               {copied ? <Check className={iconClass} /> : <Copy className={iconClass} />}
               {!isMobile && (copied ? 'Copied' : 'Copy Link')}
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadQr(cardUrl, businessName)}
+              title="Download QR code"
+              aria-label="Download QR code"
+              className={`inline-flex items-center justify-center gap-1.5 rounded-md bg-[var(--c)] hover:bg-[var(--cd)] text-white font-semibold ${isMobile ? 'w-9 h-9' : 'px-4 py-2 text-[13px]'}`}
+            >
+              <Download className={iconClass} /> {!isMobile && 'Download QR'}
             </button>
           </div>
         </div>

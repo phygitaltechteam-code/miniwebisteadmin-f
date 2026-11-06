@@ -5,13 +5,13 @@ import { linkHref, titleParts } from '../helpers';
 
 /** Links saved in Link Store and ticked to show */
 export const LinksSection: React.FC<SectionProps> = ({ t }) => {
-  const { isMobile, isTablet, headings, savedLinks, sectionRank } = t;
+  const { isMobile, isTablet, headings, savedLinks, sectionRank, whatsappGreeting } = t;
   return (
     <section data-section="links" style={{ order: sectionRank('links') }}>
       <SectionTitle isMobile={isMobile} {...titleParts(headings.linksHeading, 'Quick Links')} />
       <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${isMobile ? 2 : isTablet ? 3 : 4}, minmax(0, 1fr))` }}>
         {savedLinks.map(({ key, label, url, logo, Icon }) => {
-          const href = linkHref(key, url);
+          const href = linkHref(key, url, whatsappGreeting);
           return (
             <a
               key={key}

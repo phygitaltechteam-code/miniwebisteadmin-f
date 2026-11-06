@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ProfileData, AboutBlockKey, DEFAULT_ABOUT_BLOCK_ORDER } from '@/types/profile';
 import { saveSettingsOrder } from '@/lib/api/customerSettingsApi';
 import { reorderList, reorderErrorText } from '@/lib/api/reorderApi';
 import { useDragReorder, moveItem } from '@/hooks/useDragReorder';
 import { step2AboutSpecialitiesSchema } from '@/schemas/cardProfileSchema';
-import { generateAiKeywords, generateAiNarrative, generateAiServices } from '@/utils/aiGenerator';
+import { generateAiKeywords, generateAiNarrative, generateAiNarrativeFromText, generateAiServices, narrativeTemplates } from '@/utils/aiGenerator';
+import { htmlToText } from '@/utils/richText';
 import { updateCustomerInfo, formatAdminInfoPayload } from '@/lib/api/customerInfoApi';
 import { saveOrUpdateCustomerAbout, formatAdminAboutPayload, formatAboutFormData } from '@/lib/api/customerAboutApi';
 import { useAboutLoaders } from './useAboutLoaders';
@@ -28,6 +29,9 @@ export const useStep2Model = ({ profile, onChange, onNext, onToast, adminId }: S
   // Chip currently being dragged for reordering
   const [dragItem, setDragItem] = useState<{ list: ChipList; index: number } | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  // Text written by the user that About Regenerate works from, and the last About text we generated
+  const narrativeSeedRef = useRef('');
+  const lastGeneratedRef = useRef('');
 
   const { availableCategories, hasExistingAbout, setHasExistingAbout, backendServices } = useAboutLoaders(profile, onChange, adminId);
 
@@ -256,6 +260,7 @@ export const useStep2Model = ({ profile, onChange, onNext, onToast, adminId }: S
       }
       if (!profile.aboutNarrative) {
         const generatedNarrative = generateAiNarrative(profile.businessName, activeServicesList, profile.contactName);
+        lastGeneratedRef.current = generatedNarrative;
         onChange('aboutNarrative', generatedNarrative);
       }
     }
@@ -276,14 +281,26 @@ export const useStep2Model = ({ profile, onChange, onNext, onToast, adminId }: S
   };
 
   const handleAiGenerateNarrative = () => {
-    const text = generateAiNarrative(
-      profile.businessName,
-      activeServicesList,
-      profile.contactName,
-      profile.aboutNarrative || ''
-    );
+    const current = profile.aboutNarrative || '';
+    const currentText = htmlToText(current);
+    const isGenerated =
+      currentText === htmlToText(lastGeneratedRef.current) ||
+      narrativeTemplates(profile.businessName, activeServicesList).some((t) => htmlToText(t) === currentText);
+
+    // The user typed or edited the text: it becomes the source for regenerating
+    if (currentText && !isGenerated) narrativeSeedRef.current = current;
+    // Text cleared: back to the stock templates
+    if (!currentText) narrativeSeedRef.current = '';
+
+    const seed = narrativeSeedRef.current;
+    const text = seed
+      ? generateAiNarrativeFromText(profile.businessName, activeServicesList, seed, current)
+      : generateAiNarrative(profile.businessName, activeServicesList, profile.contactName, current);
+    lastGeneratedRef.current = text;
     onChange('aboutNarrative', text);
-    onToast('AI generated professional business narrative! Click Regenerate to cycle.');
+    onToast(seed
+      ? 'Regenerated about text from your content! Click Regenerate for another version.'
+      : 'AI generated professional business narrative! Click Regenerate to cycle.');
   };
 
   const handleAddSpeciality = () => {

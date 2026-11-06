@@ -19,6 +19,7 @@ import CustomerPricingManagement from './pages/superadmin/CustomerPricingManagem
 import ReportsAnalytics from './pages/superadmin/ReportsAnalytics';
 import GreetingsManagement from './pages/superadmin/GreetingsManagement';
 import AiCreditLedger from './pages/superadmin/AiCreditLedger';
+import AllReviews from './pages/superadmin/AllReviews';
 import { SuperAdminSidebar, SuperAdminView } from './components/superadmin/SuperAdminSidebar';
 import { MobileBottomNav } from './components/superadmin/MobileBottomNav';
 
@@ -122,6 +123,8 @@ function SuperAdminPortal({
         return 'Dashboard';
       case 'admins':
         return 'All Businesses';
+      case 'reviews':
+        return 'All Reviews';
       case 'categories':
         return 'Category Master';
       case 'franchise':
@@ -237,6 +240,14 @@ function SuperAdminPortal({
         {activeView === 'admins' && (
           <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
             <CreateAdmin onOpenCardForge={handleOpenCardForge} />
+          </div>
+        )}
+        {activeView === 'reviews' && (
+          <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
+            <AllReviews
+              onOpenBusiness={openBusinessFromEnquiry}
+              onBack={() => handleSelectView('home')}
+            />
           </div>
         )}
         {activeView === 'franchise' && (
