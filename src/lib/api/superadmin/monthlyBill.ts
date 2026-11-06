@@ -1,4 +1,4 @@
-import { api, isFranchiseUser } from '@/utils/axios';
+import { api, isFranchiseScope } from '@/utils/axios';
 
 /**
  * Franchise monthly bills: what a franchise owes SuperAdmin for its new cards and renewals in a month (rate per card).
@@ -75,7 +75,7 @@ const unwrap = (res: any) => res?.data ?? res;
 
 /** One franchise's bill for a month (franchise session: its own) */
 export const getFranchiseMonthlyBill = async (franchiseId: string | undefined, q: MonthQuery): Promise<MonthlyBill> => {
-  const url = isFranchiseUser() || !franchiseId ? 'franchise/monthly-bills' : `superAdmin/franchise/${franchiseId}/monthly-bills`;
+  const url = isFranchiseScope() || !franchiseId ? 'franchise/monthly-bills' : `superAdmin/franchise/${franchiseId}/monthly-bills`;
   const res: any = await api.get(url, { params: q });
   return toMonthlyBill(unwrap(res));
 };

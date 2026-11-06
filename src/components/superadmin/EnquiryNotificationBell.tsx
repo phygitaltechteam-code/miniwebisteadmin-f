@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Bell, Inbox, Loader2, MessageCircle, Phone, RefreshCw, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { isFranchiseUser } from '@/utils/axios';
+import { isFranchiseScope } from '@/utils/axios';
 import { getAllBusinessEnquiries } from '@/lib/api/superadmin/allEnquiries';
 import { LatestEnquiryPopup } from '@/components/LatestEnquiryPopup';
 import { getExpiryAlerts, ExpiryAlertAdmin } from './ExpiryAlertsPopup';
@@ -10,7 +10,7 @@ const fmtDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
 /** Last time the list was opened (per role); enquiries after it count as new */
-const seenKey = () => `enquiry-bell-seen:${isFranchiseUser() ? 'franchise' : 'superadmin'}`;
+const seenKey = () => `enquiry-bell-seen:${isFranchiseScope() ? 'franchise' : 'superadmin'}`;
 const readSeen = () => {
   try {
     return Number(localStorage.getItem(seenKey())) || 0;
@@ -35,7 +35,7 @@ export const EnquiryNotificationBell: React.FC<{ onOpenBusiness?: (adminId: stri
   const boxRef = useRef<HTMLDivElement>(null);
 
   const { data: enquiries = [], isLoading, isFetching, isError, refetch } = useQuery({
-    queryKey: ['all-business-enquiries', isFranchiseUser() ? 'franchise' : 'superadmin'],
+    queryKey: ['all-business-enquiries', isFranchiseScope() ? 'franchise' : 'superadmin'],
     queryFn: getAllBusinessEnquiries,
     refetchInterval: 60 * 1000,
     staleTime: 60 * 1000,
@@ -254,7 +254,7 @@ export const EnquiryNotificationBell: React.FC<{ onOpenBusiness?: (adminId: stri
       {/* Popup for each new enquiry as it comes in */}
       <LatestEnquiryPopup
         enquiries={enquiries}
-        storageKey={`popped-enquiries:${isFranchiseUser() ? 'franchise' : 'superadmin'}`}
+        storageKey={`popped-enquiries:${isFranchiseScope() ? 'franchise' : 'superadmin'}`}
         onView={(e) => {
           const hit = enquiries.find((x) => x.id === e.id);
           if (hit?.adminId && onOpenBusiness) onOpenBusiness(hit.adminId, hit.businessName);

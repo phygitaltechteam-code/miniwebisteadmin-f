@@ -100,7 +100,7 @@ export const isSuperAdminUser = (): boolean => {
 /**
  * Check if the currently stored authentication token belongs to a Franchise user.
  */
-export const isFranchiseUser = (): boolean => {
+const storedRoleIs = (target: string): boolean => {
   try {
     const raw =
       localStorage.getItem('token') ||
@@ -124,13 +124,13 @@ export const isFranchiseUser = (): boolean => {
       parsed?.data?.role ||
       '';
 
-    if (String(directRole).toUpperCase() === 'FRANCHISE') return true;
+    if (String(directRole).toUpperCase() === target) return true;
 
     if (tokenStr) {
       try {
         const decoded: any = jwtDecode(tokenStr);
         const role = decoded?.role || decoded?.user?.role || '';
-        if (String(role).toUpperCase() === 'FRANCHISE') return true;
+        if (String(role).toUpperCase() === target) return true;
       } catch {}
     }
     return false;
@@ -138,6 +138,48 @@ export const isFranchiseUser = (): boolean => {
     return false;
   }
 };
+
+export const isFranchiseUser = (): boolean => storedRoleIs('FRANCHISE');
+
+/**
+ * Check if the currently stored authentication token belongs to an Employee user.
+ */
+export const isEmployeeUser = (): boolean => storedRoleIs('EMPLOYEE');
+
+export type EmployeePortal = 'SUPERADMIN' | 'FRANCHISE';
+
+/** Set from GET employee/profile (`portal`), so URL helpers know which panel the employee belongs to */
+export const EMPLOYEE_PORTAL_KEY = 'employee_portal';
+
+export const setEmployeePortal = (portal: EmployeePortal | null) => {
+  try {
+    if (portal) localStorage.setItem(EMPLOYEE_PORTAL_KEY, portal);
+    else localStorage.removeItem(EMPLOYEE_PORTAL_KEY);
+  } catch {}
+};
+
+/** Employee's panel: profile `portal`, else FRANCHISE when the login response carries a franchise */
+export const getEmployeePortal = (): EmployeePortal => {
+  try {
+    const stored = String(localStorage.getItem(EMPLOYEE_PORTAL_KEY) || '').toUpperCase();
+    if (stored === 'FRANCHISE' || stored === 'SUPERADMIN') return stored;
+    const raw = localStorage.getItem('token');
+    if (raw && raw.startsWith('{')) {
+      const t = JSON.parse(raw);
+      const user = t?.user || t?.data?.user || {};
+      const employee = t?.employee || user?.employee || {};
+      const franchiseId =
+        t?.franchise?.id || user?.franchise?.id || employee?.franchise?.id ||
+        t?.franchiseId || user?.franchiseId || employee?.franchiseId;
+      if (franchiseId) return 'FRANCHISE';
+    }
+  } catch {}
+  return 'SUPERADMIN';
+};
+
+/** Franchise panel scope: a franchise login, or an employee of a franchise (same screens and API shapes) */
+export const isFranchiseScope = (): boolean =>
+  isFranchiseUser() || (isEmployeeUser() && getEmployeePortal() === 'FRANCHISE');
 
 export const api: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_SERVER_URL,
@@ -147,9 +189,10 @@ api.interceptors.request.use(compressUploadImages);
 
 api.interceptors.request.use(async (req) => {
   const isFranchise = isFranchiseUser();
+  const isEmployee = isEmployeeUser();
 
-  // Strict guard: on SuperAdmin or Franchise sessions, NEVER dispatch any request to customers/*
-  if (isSuperAdminUser() || isFranchise) {
+  // Strict guard: on SuperAdmin, Franchise or Employee sessions, NEVER dispatch any request to customers/*
+  if (isSuperAdminUser() || isFranchise || isEmployee) {
     const targetUrl = req.url || '';
     if (targetUrl.startsWith('customers/') || targetUrl.includes('/customers/')) {
       console.warn(`[axios] Blocked customers/ route on Admin/Franchise session: ${targetUrl}`);
@@ -157,14 +200,19 @@ api.interceptors.request.use(async (req) => {
     }
   }
 
-  // Franchise panel: superAdmin/admin/:id/... => franchise/admin/:id/...
+  // Franchise panel (franchise login or a franchise's employee): superAdmin/admin/:id/... => franchise/admin/:id/...
   // e.g. superAdmin/admin/:adminId/info -> franchise/admin/:adminId/info
-  if (isFranchise && req.url) {
+  if ((isFranchise || (isEmployee && getEmployeePortal() === 'FRANCHISE')) && req.url) {
     if (/^\/?superAdmin\/admin\//i.test(req.url)) {
       req.url = req.url.replace(/^(\/?)superAdmin\/admin\//i, '$1franchise/admin/');
     } else if (/^\/?superadmin\//i.test(req.url)) {
       req.url = req.url.replace(/^(\/?)superadmin\//i, '$1franchise/');
     }
+  }
+
+  // Employee panel: the same API as their SuperAdmin / franchise, under employee/ (every method)
+  if (isEmployee && req.url && /^\/?(superadmin|franchise)\//i.test(req.url)) {
+    req.url = req.url.replace(/^(\/?)(superadmin|franchise)\//i, '$1employee/');
   }
 
   const accessToken = getStoredAccessToken();
@@ -178,7 +226,7 @@ api.interceptors.request.use(async (req) => {
 
       if (isExpired && refreshToken) {
         try {
-          const res = await unAuthenticatedApi.post('/users/refresh-token', {
+          const res = await unAuthenticatedApi.post(isEmployee ? 'employee/refresh' : '/users/refresh-token', {
             refreshToken,
           });
 

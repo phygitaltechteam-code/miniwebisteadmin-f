@@ -1,4 +1,4 @@
-import { api, isFranchiseUser } from '@/utils/axios';
+import { api, isFranchiseScope } from '@/utils/axios';
 
 /**
  * Plan bills (one per "select plan"): superAdmin/transactions, or franchise/transactions on a franchise session
@@ -36,7 +36,7 @@ export interface TransactionPage {
   total: number;
 }
 
-const base = () => (isFranchiseUser() ? 'franchise' : 'superAdmin');
+const base = () => (isFranchiseScope() ? 'franchise' : 'superAdmin');
 
 export const getTransactions = async (filters: TransactionFilters = {}): Promise<TransactionPage> => {
   const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== undefined && v !== ''));

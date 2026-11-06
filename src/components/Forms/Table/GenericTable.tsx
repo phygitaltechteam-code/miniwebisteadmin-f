@@ -4,6 +4,7 @@ import {GrFormNext, GrFormPrevious} from 'react-icons/gr';
 import {MdDelete} from 'react-icons/md';
 import {FiEye} from 'react-icons/fi';
 import {FaArrowLeft} from 'react-icons/fa';
+import {useCanEdit} from '@/context/PagePermissionContext';
 
 type Button<T> = {
   label: string;
@@ -48,18 +49,24 @@ export const GenericTable = <T,>({
   columns,
   itemsPerPage = 5,
   searchAble,
-  action,
+  action: actionProp,
   title,
-  onEdit: handleEdit,
-  onDelete: handleDelete,
+  onEdit: editProp,
+  onDelete: deleteProp,
   paginationOff = false,
   onView,
   onRowClick,
   showBackButton = false,
   onBack,
-  headerAction,
+  headerAction: headerActionProp,
   showSrNo = false,
 }: GenericTableProps<T>) => {
+  // View-only page (employee with VIEW permission): no add / edit / delete
+  const canEdit = useCanEdit();
+  const handleEdit = canEdit ? editProp : undefined;
+  const handleDelete = canEdit ? deleteProp : undefined;
+  const action = actionProp && (canEdit || !!onView);
+  const headerAction = canEdit ? headerActionProp : undefined;
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState<{
