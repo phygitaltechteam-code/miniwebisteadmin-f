@@ -129,7 +129,7 @@ export const initialProfileData: ProfileData = {
     paymentHeading: 'Payment Options',
     galleryHeading: 'Photo Gallery',
     youtubeVideosHeading: 'Video Presentations',
-    feedbackHeading: 'Customer Feedback',
+    feedbackHeading: 'Customer Reviews',
     enquirySectionHeading: 'Send Business Enquiry',
     specialitiesSubheading: 'Specialities & Features',
   },
@@ -142,7 +142,7 @@ export const initialProfileData: ProfileData = {
     enquiry: 'ENQUIRY',
     gallery: 'GALLERY',
     videos: 'VIDEOS',
-    feedback: 'FEEDBACK',
+    feedback: 'REVIEWS',
   },
   typography: defaultTypographySettings,
 };

@@ -30,16 +30,27 @@ export const formatPrice = (price?: string | number, currency?: string) => {
   return (currency || 'INR') === 'INR' ? `₹ ${value}` : `${currency} ${value}`;
 };
 
-/** Turn a saved link value into something clickable (email → mailto, number → tel / wa.me, bare domain → https) */
-export const linkHref = (key: string, value: string) => {
+/** Add a prefilled message to a WhatsApp chat link that doesn't carry one already */
+const withWhatsappText = (url: string, text?: string) => {
+  if (!text || !/^https?:\/\/(wa\.me|api\.whatsapp\.com)\//i.test(url) || /[?&]text=/i.test(url)) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}text=${encodeURIComponent(text)}`;
+};
+
+/**
+ * Turn a saved link value into something clickable (email → mailto, number → tel / wa.me, bare domain → https).
+ * `whatsappText` is prefilled in WhatsApp chat links.
+ */
+export const linkHref = (key: string, value: string, whatsappText?: string) => {
   const v = value.trim();
-  if (/^(https?:|mailto:|tel:)/i.test(v)) return v;
+  if (/^(https?:|mailto:|tel:)/i.test(v)) return withWhatsappText(v, whatsappText);
   if (key === 'emailLinks' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return `mailto:${v}`;
   if (/^\+?[\d\s-]{7,}$/.test(v)) {
     const digits = v.replace(/\D/g, '');
-    return key.startsWith('whatsapp') ? `https://wa.me/${digits.length === 10 ? `91${digits}` : digits}` : `tel:${v.replace(/[^\d+]/g, '')}`;
+    return key.startsWith('whatsapp')
+      ? withWhatsappText(`https://wa.me/${digits.length === 10 ? `91${digits}` : digits}`, whatsappText)
+      : `tel:${v.replace(/[^\d+]/g, '')}`;
   }
-  return `https://${v}`;
+  return withWhatsappText(`https://${v}`, whatsappText);
 };
 
 const ICON_SET = [Home, Building2, Factory, Briefcase, Camera, Fingerprint, Zap, Settings, ShieldCheck, Lightbulb, Leaf, Sparkles];

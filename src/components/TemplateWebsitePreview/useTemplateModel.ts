@@ -33,7 +33,11 @@ export const useTemplateModel = (
   const aboutHtml = profile.aboutNarrative || profile.aboutUsText || '';
   const about = stripHtml(aboutHtml);
   const heroText = about ? firstSentences(about) : '';
-  const headings = profile.headings || ({} as ProfileData['headings']);
+  const savedHeadings = profile.headings || ({} as ProfileData['headings']);
+  // The section is called Reviews now; cards still holding the old default heading show the new one
+  const headings = /^customer feedback$/i.test(String(savedHeadings.feedbackHeading || '').trim())
+    ? { ...savedHeadings, feedbackHeading: 'Customer Reviews' }
+    : savedHeadings;
 
   // ── Contact details for the mobile profile card ──
   // Add the prefix (Mr. / Mrs. …) only when the saved name doesn't already start with it
@@ -62,14 +66,17 @@ export const useTemplateModel = (
   const banners = [...(profile.banners || []), profile.bannerUrl].filter((b, i, arr): b is string => Boolean(b) && arr.indexOf(b) === i);
   const phone = (profile.primaryPhone || '').replace(/[^\d+]/g, '');
   const whatsapp = (profile.whatsappPhone || profile.whatsappNumber || profile.primaryPhone || '').replace(/\D/g, '');
-  const whatsappUrl = whatsapp ? `https://wa.me/${whatsapp.length === 10 ? `91${whatsapp}` : whatsapp}` : '#';
+  const whatsappBase = `https://wa.me/${whatsapp.length === 10 ? `91${whatsapp}` : whatsapp}`;
+  /** Prefilled message for the plain WhatsApp buttons, so the business knows where the contact came from */
+  const whatsappGreeting = `Hi ${businessName}, I got your contact from your digital card.`;
+  const whatsappUrl = whatsapp ? `${whatsappBase}?text=${encodeURIComponent(whatsappGreeting)}` : '#';
   const enquireUrl = (subject: string) =>
-    whatsapp ? `${whatsappUrl}?text=${encodeURIComponent(`Hi ${businessName}, I want to enquire about ${subject}.`)}` : '#';
+    whatsapp ? `${whatsappBase}?text=${encodeURIComponent(`Hi ${businessName}, I want to enquire about ${subject}.`)}` : '#';
   /** Product Enquire: WhatsApp with the product's saved enquiry message; no saved message = chat opens empty */
   const productEnquiryUrl = (message: string | undefined) => {
     const text = message?.trim();
     if (!whatsapp) return '#';
-    return text ? `${whatsappUrl}?text=${encodeURIComponent(text)}` : whatsappUrl;
+    return text ? `${whatsappBase}?text=${encodeURIComponent(text)}` : whatsappBase;
   };
   const cardUrl = cardUrlFor(profile.vanityUrl);
   const vis = profile.visibility || ({} as ProfileData['visibility']);
@@ -271,7 +278,8 @@ export const useTemplateModel = (
     { id: 'payment', label: labels.payment || 'Payment' },
     { id: 'gallery', label: labels.gallery || 'Image Gallery' },
     { id: 'videos', label: labels.videos || 'Videos' },
-    { id: 'feedback', label: labels.feedback || 'Feedback' },
+    // Old default label "FEEDBACK" shows as Reviews
+    { id: 'feedback', label: !labels.feedback || /^feedback$/i.test(labels.feedback.trim()) ? 'Reviews' : labels.feedback },
     { id: 'enquiry', label: labels.enquiry || 'Enquiry Form' },
     { id: 'share', label: 'Share' },
   ]
@@ -293,7 +301,7 @@ export const useTemplateModel = (
     menuOpen, setMenuOpen, headerHidden, navItems, activeNav, goTo,
     businessName, tagline, kicker, about, aboutHtml, heroText, headings, vis,
     ownerName, designation, phones, emails, fullAddress, banners, bannerSlider,
-    phone, whatsapp, whatsappUrl, enquireUrl, productEnquiryUrl, cardUrl,
+    phone, whatsapp, whatsappUrl, whatsappGreeting, enquireUrl, productEnquiryUrl, cardUrl,
     services, specialities, products, gallery, videos, savedLinks,
     wallets, upiPhone, bankRows, showUpiBlock, bankAlone,
     show, shareInRow, sectionRank, aboutRank,

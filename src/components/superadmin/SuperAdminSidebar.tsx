@@ -9,11 +9,13 @@ import {
   Receipt,
   DollarSign,
   LogOut,
+  Star,
 } from 'lucide-react';
 
 export type SuperAdminView =
   | 'home'
   | 'admins'
+  | 'reviews'
   | 'categories'
   | 'franchise'
   | 'billing'
@@ -49,6 +51,11 @@ const navItems: NavItemConfig[] = [
     label: 'All Businesses',
     icon: Briefcase,
   },
+  {
+    id: 'reviews',
+    label: 'All Reviews',
+    icon: Star,
+  },
   // Note: 'All Projects' intentionally omitted per user specification
   {
     id: 'franchise',
@@ -79,6 +86,8 @@ const navItems: NavItemConfig[] = [
 const franchiseNavItems: NavItemConfig[] = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'admins', label: 'All Businesses', icon: Briefcase },
+  // Reviews left on its own businesses' cards
+  { id: 'reviews', label: 'All Reviews', icon: Star },
   // Its own monthly bill to SuperAdmin (view only)
   { id: 'billing', label: 'Billing Report', icon: Receipt },
   // Same subscription plans page as the super admin, for the franchise's own businesses

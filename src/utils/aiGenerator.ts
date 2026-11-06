@@ -4,6 +4,8 @@
  * based on the registered enterprise name and key services.
  */
 
+import { htmlToText } from '@/utils/richText';
+
 function shuffle<T>(items: T[]): T[] {
   const arr = [...items];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -73,12 +75,8 @@ export function generateAiKeywords(
   return shuffle(picked);
 }
 
-export function generateAiNarrative(
-  businessName: string,
-  services: string[] = [],
-  contactName: string = '',
-  previous: string = ''
-): string {
+/** The stock About Us templates for this business (also used to tell generated text from user-written text) */
+export function narrativeTemplates(businessName: string, services: string[] = []): string[] {
   const name = businessName.trim() || 'Our Enterprise';
   const cleanServices = services
     .map((s) => (typeof s === 'object' ? String((s as any).businessNature || (s as any).name || '') : String(s)))
@@ -95,7 +93,7 @@ export function generateAiNarrative(
       ? cleanServices.slice(0, 3).join(' and ')
       : 'our specialized offerings';
 
-  const templates = [
+  return [
     `Welcome to ${name}
 
 ${name} is a premier enterprise committed to delivering end-to-end excellence, high-precision execution, and dependable solutions. With a firm dedication to professional integrity and customer-centric values, we specialize in ${servicesList}.
@@ -155,9 +153,96 @@ What We Offer:
 
 "A new direction of trust, quality and progress!"`,
   ];
+}
+
+export function generateAiNarrative(
+  businessName: string,
+  services: string[] = [],
+  contactName: string = '',
+  previous: string = ''
+): string {
+  const templates = narrativeTemplates(businessName, services);
 
   // Never return the narrative that is currently shown
   const options = templates.filter((t) => t.trim() !== previous.trim());
+  const pickFrom = options.length > 0 ? options : templates;
+  return pickFrom[Math.floor(Math.random() * pickFrom.length)];
+}
+
+/** Tidy user-written text: one sentence per item, capitalised, ending with punctuation */
+function polishSentences(text: string): string[] {
+  return htmlToText(text)
+    .replace(/\s+([,.!?])/g, '$1')
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => {
+      const fixed = s.replace(/\bi\b/g, 'I').replace(/,(?=\S)/g, ', ');
+      const capped = fixed.charAt(0).toUpperCase() + fixed.slice(1);
+      return /[.!?]$/.test(capped) ? capped : `${capped}.`;
+    });
+}
+
+/**
+ * Regenerate About Us text from what the user typed: their content is polished and
+ * placed in a professional layout with the business name and services around it.
+ * Pass the currently shown narrative as `previous` so every click gives a new variant.
+ */
+export function generateAiNarrativeFromText(
+  businessName: string,
+  services: string[] = [],
+  userText: string = '',
+  previous: string = ''
+): string {
+  const name = businessName.trim() || 'Our Enterprise';
+  const sentences = polishSentences(userText);
+  if (sentences.length === 0) return generateAiNarrative(businessName, services, '', previous);
+
+  // Short texts stay one paragraph; longer ones are split into an intro and the rest
+  const intro = sentences.slice(0, 2).join(' ');
+  const rest = sentences.slice(2).join(' ');
+  const story = rest ? `${intro}\n\n${rest}` : intro;
+
+  const cleanServices = services
+    .map((s) => (typeof s === 'object' ? String((s as any).businessNature || (s as any).name || '') : String(s)))
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  const offer = (heading: string, mark: string) =>
+    cleanServices.length > 0 ? `\n\n${heading}\n${cleanServices.map((s) => `${mark} ${s}`).join('\n')}` : '';
+
+  const templates = [
+    `About ${name}
+
+${story}${offer('What We Offer:', '✓')}
+
+"Reliability, excellent quality and customer satisfaction are our ultimate goals!"`,
+
+    `Welcome to ${name}
+
+${story}
+
+Why Choose Us?
+• Honest, transparent and customer-first service
+• Experienced team with attention to detail
+• Prompt support from start to finish${offer('Our Key Services:', '•')}`,
+
+    `${name} — Your Trusted Partner
+
+${story}${offer('Our Expertise:', '✦')}
+
+We look forward to serving you and building a lasting relationship based on trust and quality.`,
+
+    `Who We Are
+
+${story}
+
+At ${name}, every client matters. We combine skill, care and fair pricing to deliver results you can rely on.${offer('Services:', '✓')}
+
+"Let's grow together, let's progress together!"`,
+  ];
+
+  const options = templates.filter((t) => htmlToText(t) !== htmlToText(previous));
   const pickFrom = options.length > 0 ? options : templates;
   return pickFrom[Math.floor(Math.random() * pickFrom.length)];
 }

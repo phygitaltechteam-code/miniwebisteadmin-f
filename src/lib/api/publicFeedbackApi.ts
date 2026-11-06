@@ -7,6 +7,8 @@ export interface PublicFeedback {
   fullName: string;
   message: string;
   createdAt?: string;
+  /** Reviewer's mobile number, when the backend sends one */
+  phone?: string;
 }
 
 /** POST client/admins/feedback/:target (admin id or vanity URL); no login */
@@ -35,17 +37,21 @@ export const submitPublicEnquiry = async (
   await unAuthenticatedApi.post(`client/admins/enquiry/${encodeURIComponent(target)}`, clean);
 };
 
+/** One saved review from any API response shape */
+export const normalizeFeedback = (f: any, i: number): PublicFeedback => ({
+  id: String(f?.id || f?._id || `fb_${i}`),
+  rating: Number(f?.rating ?? f?.stars) || 0,
+  fullName: String(f?.fullName || f?.name || 'Customer'),
+  message: String(f?.message || f?.feedback || ''),
+  createdAt: f?.createdAt || f?.created_at,
+  phone: String(f?.phone || f?.phoneNumber || f?.mobile || f?.mobileNumber || ''),
+});
+
 /** Saved reviews from the public card response: feedbacks.latest (or an older plain list) */
 export const feedbacksFromCard = (card: any): PublicFeedback[] => {
   const fb = card?.feedbacks;
   const raw = Array.isArray(fb) ? fb : fb?.latest || fb?.items || card?.feedback?.items || card?.feedback?.feedbacks || [];
-  return (Array.isArray(raw) ? raw : []).map((f: any, i: number) => ({
-    id: String(f?.id || `fb_${i}`),
-    rating: Number(f?.rating ?? f?.stars) || 0,
-    fullName: String(f?.fullName || f?.name || 'Customer'),
-    message: String(f?.message || f?.feedback || ''),
-    createdAt: f?.createdAt,
-  }));
+  return (Array.isArray(raw) ? raw : []).map(normalizeFeedback);
 };
 
 export interface FeedbackSummary {

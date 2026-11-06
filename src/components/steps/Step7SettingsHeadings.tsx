@@ -104,7 +104,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
       enquiry: 'ENQUIRY',
       gallery: 'GALLERY',
       videos: 'VIDEOS',
-      feedback: 'FEEDBACK',
+      feedback: 'REVIEWS',
     });
     if (adminId) {
       resetCustomerSettings(adminId).catch(() => {});
@@ -171,7 +171,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
     { key: 'hidePaymentSection', label: 'Hide Payment Options Section' },
     { key: 'hideGallerySection', label: 'Hide Gallery Section' },
     { key: 'hideYoutubeSection', label: 'Hide Youtube Videos Section' },
-    { key: 'hideFeedbackSection', label: 'Hide Feedback Section' },
+    { key: 'hideFeedbackSection', label: 'Hide Review Section' },
     { key: 'hideEnquirySection', label: 'Hide Enquiry Form Section' },
     { key: 'hideShareSection', label: 'Hide Share Section' },
     { key: 'hideUnenteredSocialMediaLinks', label: 'Hide Unentered Social Media Links' },
@@ -186,7 +186,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
     { key: 'paymentHeading', label: 'Payment Heading' },
     { key: 'galleryHeading', label: 'Gallery Heading' },
     { key: 'youtubeVideosHeading', label: 'Youtube Videos Heading' },
-    { key: 'feedbackHeading', label: 'Feedback Heading' },
+    { key: 'feedbackHeading', label: 'Review Heading' },
     { key: 'enquirySectionHeading', label: 'Enquiry Section Heading' },
     { key: 'specialitiesSubheading', label: 'Specialities Subheading' },
   ];
@@ -200,7 +200,7 @@ export const Step7SettingsHeadings: React.FC<Step7Props> = ({
     { key: 'enquiry', label: 'Enquiry' },
     { key: 'gallery', label: 'Gallery' },
     { key: 'videos', label: 'Videos' },
-    { key: 'feedback', label: 'Feedback' },
+    { key: 'feedback', label: 'Reviews' },
   ];
 
   return (

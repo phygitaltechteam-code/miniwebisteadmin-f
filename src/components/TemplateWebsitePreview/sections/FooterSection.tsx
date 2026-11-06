@@ -6,7 +6,7 @@ import { displayPhone, linkHref } from '../helpers';
 
 /** Footer: brand + social icons, quick links, contact info */
 export const FooterSection: React.FC<SectionProps> = ({ t }) => {
-  const { profile, isMobile, isTablet, pad, businessName, tagline, vis, savedLinks, navItems, goTo, whatsapp, fullAddress } = t;
+  const { profile, isMobile, isTablet, pad, businessName, tagline, vis, savedLinks, navItems, goTo, whatsapp, whatsappGreeting, fullAddress } = t;
   return (
     <footer className={`bg-gradient-to-r from-[var(--b1)] to-[var(--b2)] text-white ${pad} py-6`}>
       <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : isTablet ? 'grid-cols-2' : 'grid-cols-3'}`}>
@@ -28,7 +28,7 @@ export const FooterSection: React.FC<SectionProps> = ({ t }) => {
               <h4 className="mt-4 text-[13px] font-bold mb-2">Connect With Us</h4>
               <div className="flex flex-wrap gap-2">
                 {savedLinks.map(({ key, label, url, logo, Icon }) => {
-                  const href = linkHref(key, url);
+                  const href = linkHref(key, url, whatsappGreeting);
                   return (
                     <a
                       key={key}
