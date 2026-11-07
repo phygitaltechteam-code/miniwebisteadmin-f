@@ -1,7 +1,7 @@
 import React from 'react';
 import { Phone, MessageCircle, Mail, MapPin } from 'lucide-react';
 import { SectionProps } from '../useTemplateModel';
-import { displayPhone } from '../helpers';
+import { displayPhone, mapsHref, telHref } from '../helpers';
 
 /** Mobile only: profile card (logo, name, owner, contacts) */
 export const MobileProfileCard: React.FC<SectionProps> = ({ t }) => {
@@ -23,10 +23,10 @@ export const MobileProfileCard: React.FC<SectionProps> = ({ t }) => {
       </div>
       <div className="relative bg-white rounded-t-[28px] -mt-6 px-6 pt-6 pb-4 space-y-6">
         {[
-          { Icon: Phone, items: phones.map((p) => ({ label: displayPhone(p), href: `tel:${p.replace(/[^\d+]/g, '')}` })) },
+          { Icon: Phone, items: phones.map((p) => ({ label: displayPhone(p), href: telHref(p) })) },
           { Icon: Mail, items: emails.map((e) => ({ label: e, href: `mailto:${e}` })) },
           { Icon: MessageCircle, items: whatsapp ? [{ label: displayPhone(whatsapp.slice(-10)), href: whatsappUrl }] : [] },
-          { Icon: MapPin, items: fullAddress ? [{ label: fullAddress, href: profile.mapLink || '' }] : [] },
+          { Icon: MapPin, items: fullAddress ? [{ label: fullAddress, href: mapsHref(fullAddress, profile.mapLink) }] : [] },
         ]
           .filter((row) => row.items.length > 0)
           .map(({ Icon, items }, i) => (

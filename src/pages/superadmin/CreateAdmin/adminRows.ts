@@ -123,6 +123,7 @@ export const toAdminRow = (each: any, idx: number, rawCategoryList: any[], isFra
     endDate: endRaw ? String(endRaw).split('T')[0] : '',
     dateTime: formattedDateTime,
     isActive: isRecordActive(each),
+    totalVisits: Number(each.totalVisits ?? each.visits?.totalVisits ?? each._count?.cardVisits ?? 0) || 0,
     raw: each,
   };
 };

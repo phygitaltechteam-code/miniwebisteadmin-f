@@ -4,6 +4,20 @@ import { TemplateWebsitePreview } from '@/components/TemplateWebsitePreview';
 import { getPublicCard, publicCardToProfile } from '@/lib/api/publicCardApi';
 import { feedbacksFromCard, feedbackSummaryFromCard, FeedbackSummary, PublicFeedback } from '@/lib/api/publicFeedbackApi';
 import { ProfileData } from '@/types/profile';
+import { recordCardVisit } from '@/lib/api/visitsApi';
+
+/** Cards already counted in this page load (StrictMode runs effects twice) */
+const visitSent = new Set<string>();
+
+/** Where the guest came from, e.g. /<slug>?source=qr */
+const visitSource = () => {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    return (p.get('source') || p.get('src') || p.get('utm_source') || '').slice(0, 40) || undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 /** Phone layout below this width, desktop layout above */
 const MOBILE_MAX_WIDTH = 768;
@@ -46,6 +60,12 @@ export const PublicCardPage: React.FC<{ vanityUrl: string }> = ({ vanityUrl }) =
         setCardId(String((card as any)?.id || (card as any)?.adminId || ''));
         setState('ready');
         if (data.businessName) document.title = data.businessName;
+        // Count this guest visit once (the backend skips repeats within 30 minutes); never blocks the page
+        const visitTarget = String((card as any)?.id || (card as any)?.adminId || vanityUrl);
+        if (!visitSent.has(visitTarget)) {
+          visitSent.add(visitTarget);
+          recordCardVisit(visitTarget, visitSource()).catch(() => {});
+        }
       })
       .catch((error) => {
         if (!alive) return;

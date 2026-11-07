@@ -2,11 +2,11 @@ import React from 'react';
 import { Phone, MessageCircle, Mail, MapPin } from 'lucide-react';
 import { SectionProps } from '../useTemplateModel';
 import { LINK_BRAND_COLORS } from '../linkDefs';
-import { displayPhone, linkHref } from '../helpers';
+import { displayPhone, linkHref, mapsHref, telHref } from '../helpers';
 
 /** Footer: brand + social icons, quick links, contact info */
 export const FooterSection: React.FC<SectionProps> = ({ t }) => {
-  const { profile, isMobile, isTablet, pad, businessName, tagline, vis, savedLinks, navItems, goTo, whatsapp, whatsappGreeting, fullAddress } = t;
+  const { profile, isMobile, isTablet, pad, businessName, tagline, vis, savedLinks, navItems, goTo, whatsapp, whatsappUrl, whatsappGreeting, fullAddress } = t;
   return (
     <footer className={`bg-gradient-to-r from-[var(--b1)] to-[var(--b2)] text-white ${pad} py-6`}>
       <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : isTablet ? 'grid-cols-2' : 'grid-cols-3'}`}>
@@ -63,11 +63,34 @@ export const FooterSection: React.FC<SectionProps> = ({ t }) => {
         <div>
           <h4 className="text-[13px] font-bold mb-2">Contact Info</h4>
           <ul className="space-y-1.5 text-[12px] text-white/80">
-            {profile.primaryPhone && <li className="flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-[var(--c)]" /> {displayPhone(profile.primaryPhone)}</li>}
-            {whatsapp && <li className="flex items-center gap-2"><MessageCircle className="w-3.5 h-3.5 text-[var(--c)]" /> {displayPhone(whatsapp.slice(-10))}</li>}
-            {profile.email && <li className="flex items-center gap-2 break-all"><Mail className="w-3.5 h-3.5 text-[var(--c)] shrink-0" /> {profile.email}</li>}
+            {/* Each line opens its app: dialler, WhatsApp chat, mail, Google Maps */}
+            {profile.primaryPhone && (
+              <li>
+                <a href={telHref(profile.primaryPhone)} className="flex items-center gap-2 hover:text-white">
+                  <Phone className="w-3.5 h-3.5 text-[var(--c)]" /> {displayPhone(profile.primaryPhone)}
+                </a>
+              </li>
+            )}
+            {whatsapp && (
+              <li>
+                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white">
+                  <MessageCircle className="w-3.5 h-3.5 text-[var(--c)]" /> {displayPhone(whatsapp.slice(-10))}
+                </a>
+              </li>
+            )}
+            {profile.email && (
+              <li>
+                <a href={`mailto:${profile.email.trim()}`} className="flex items-center gap-2 break-all hover:text-white">
+                  <Mail className="w-3.5 h-3.5 text-[var(--c)] shrink-0" /> {profile.email}
+                </a>
+              </li>
+            )}
             {fullAddress && (
-              <li className="flex items-start gap-2"><MapPin className="w-3.5 h-3.5 text-[var(--c)] shrink-0 mt-0.5" /> {fullAddress}</li>
+              <li>
+                <a href={mapsHref(fullAddress, profile.mapLink)} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 hover:text-white">
+                  <MapPin className="w-3.5 h-3.5 text-[var(--c)] shrink-0 mt-0.5" /> {fullAddress}
+                </a>
+              </li>
             )}
           </ul>
         </div>

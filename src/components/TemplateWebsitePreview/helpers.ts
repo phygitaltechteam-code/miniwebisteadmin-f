@@ -36,19 +36,54 @@ const withWhatsappText = (url: string, text?: string) => {
   return `${url}${url.includes('?') ? '&' : '?'}text=${encodeURIComponent(text)}`;
 };
 
+/** Phone number → tel: link (dialler) */
+export const telHref = (num: string) => `tel:${num.replace(/[^\d+]/g, '')}`;
+
+/** Phone number → WhatsApp chat (10 digits get the 91 country code), optionally with a prefilled message */
+export const whatsappHref = (num: string, text?: string) => {
+  const digits = num.replace(/\D/g, '');
+  return withWhatsappText(`https://wa.me/${digits.length === 10 ? `91${digits}` : digits}`, text);
+};
+
+/** Address → saved map link when it is a URL, otherwise a Google Maps search for the address */
+export const mapsHref = (address: string, mapLink?: string) => {
+  const link = String(mapLink ?? '').trim();
+  if (/^https?:\/\//i.test(link)) return link;
+  if (link && /^[\w-]+(\.[\w-]+)+(\/|$)/.test(link)) return `https://${link}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address.trim())}`;
+};
+
+/** Profile URL prefix for a bare username / @handle saved in a social link */
+const SOCIAL_BASE: Record<string, string> = {
+  instagramLink: 'https://instagram.com/',
+  facebookLink: 'https://facebook.com/',
+  facebookGroup: 'https://facebook.com/groups/',
+  twitter: 'https://x.com/',
+  youTubeLink: 'https://youtube.com/@',
+  linkedinLink: 'https://linkedin.com/in/',
+  telegram: 'https://t.me/',
+};
+
 /**
- * Turn a saved link value into something clickable (email → mailto, number → tel / wa.me, bare domain → https).
+ * Turn a saved link value into something clickable: email → mailto, number → tel / wa.me,
+ * address (Location) → Google Maps, @handle → the social profile, bare domain → https.
  * `whatsappText` is prefilled in WhatsApp chat links.
  */
 export const linkHref = (key: string, value: string, whatsappText?: string) => {
   const v = value.trim();
-  if (/^(https?:|mailto:|tel:)/i.test(v)) return withWhatsappText(v, whatsappText);
-  if (key === 'emailLinks' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return `mailto:${v}`;
-  if (/^\+?[\d\s-]{7,}$/.test(v)) {
-    const digits = v.replace(/\D/g, '');
-    return key.startsWith('whatsapp')
-      ? withWhatsappText(`https://wa.me/${digits.length === 10 ? `91${digits}` : digits}`, whatsappText)
-      : `tel:${v.replace(/[^\d+]/g, '')}`;
+  if (!v) return '#';
+  if (/^(https?:|mailto:|tel:|sms:|whatsapp:|geo:)/i.test(v)) return withWhatsappText(v, whatsappText);
+  if (key === 'emailLinks' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return `mailto:${v.replace(/^mailto:/i, '')}`;
+  // Phone number: WhatsApp keys open a chat, everything else (Call) opens the dialler
+  if (/^\+?[\d\s()-]{7,}$/.test(v)) {
+    return key.startsWith('whatsapp') ? whatsappHref(v, whatsappText) : telHref(v);
+  }
+  const looksLikeDomain = /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(v) || /^www\./i.test(v);
+  // Location / Google Business saved as an address (not a URL) → Maps search
+  if ((key === 'location' || key === 'googleMyBussiness') && !looksLikeDomain) return mapsHref(v);
+  // Social link saved as a username or @handle → that profile
+  if (SOCIAL_BASE[key] && !looksLikeDomain && !v.includes('/') && !/\s/.test(v)) {
+    return `${SOCIAL_BASE[key]}${v.replace(/^@/, '')}`;
   }
   return withWhatsappText(`https://${v}`, whatsappText);
 };
