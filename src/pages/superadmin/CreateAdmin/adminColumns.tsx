@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit2, Copy, Trash2, IndianRupee } from 'lucide-react';
+import { Edit2, Copy, Trash2, IndianRupee, Eye } from 'lucide-react';
 import { Column } from '@/components/Forms/Table/GenericTable';
 import StatusToggle from '@/components/Forms/StatusToggle';
 import { AdminRow } from './schema';
@@ -115,6 +115,18 @@ export const buildAdminColumns = ({ statusOverride, togglingId, onToggleStatus, 
         </span>
       );
     },
+  },
+  {
+    accessor: 'totalVisits',
+    header: 'Visits',
+    sortable: true,
+    className: 'text-center w-20',
+    render: (row) => (
+      <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#212121] tabular-nums" title="Guest visits on this card">
+        <Eye className="w-3.5 h-3.5 text-gray-400" />
+        {row.totalVisits.toLocaleString('en-IN')}
+      </span>
+    ),
   },
   {
     accessor: (row) => (row.isActive ? 'Active' : 'Inactive'),
