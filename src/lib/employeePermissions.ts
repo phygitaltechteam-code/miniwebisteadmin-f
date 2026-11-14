@@ -39,7 +39,13 @@ export const PAGE_KEY_TO_VIEW: Record<string, SuperAdminView> = {
   CUSTOMER_PLANS_AND_PRICING: 'pricing',
   CUSTOMER_PLANS_PRICING_MANAGEMENT: 'pricing',
   CARD_FORGE: 'card-builder',
+  EMPLOYEE_RESTRICTION_MASTER: 'employee-restrictions',
+  EMPLOYEE_RESTRICTIONS: 'employee-restrictions',
+  EMPLOYEE_RESTRICTION: 'employee-restrictions',
 };
+
+/** Pages not offered in the Restriction Master (employees never get the first two; Card Forge follows All Businesses) */
+export const HIDDEN_EMPLOYEE_VIEWS: SuperAdminView[] = ['employee-restrictions', 'employees', 'card-builder'];
 
 const normalizeText = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -98,8 +104,11 @@ export const toViewAccess = (byKey: PermissionsByKey): ViewAccess => {
   const access: ViewAccess = {};
   Object.entries(byKey).forEach(([key, level]) => {
     const view = pageKeyToView(key);
-    if (view) access[view] = level;
+    if (view && view !== 'employee-restrictions' && view !== 'employees') access[view] = level;
   });
+  // Card Forge is opened from All Businesses, so it has the same level
+  if (access.admins) access['card-builder'] = access.admins;
+  else delete access['card-builder'];
   return access;
 };
 

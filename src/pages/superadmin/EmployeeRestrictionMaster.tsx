@@ -5,7 +5,9 @@ import { isRecordActive } from '@/lib/api/superadmin/admin';
 import { EmployeePage } from '@/lib/api/superadmin/employee';
 import {
   FALLBACK_LEVELS,
+  HIDDEN_EMPLOYEE_VIEWS,
   normalizePermissions,
+  pageKeyToView,
   pageIcon,
   PermissionsByKey,
 } from '@/lib/employeePermissions';
@@ -32,7 +34,15 @@ export const EmployeeRestrictionMaster: React.FC<EmployeeRestrictionMasterProps>
 
   // Pages + Block/View/Edit options come from the backend
   const { data: pagesData, isLoading: isLoadingPages, isError: pagesError } = useEmployeePages();
-  const pages: EmployeePage[] = pagesData?.pages || [];
+  // Employee Master, Restriction Master and Card Forge are never assigned here
+  const pages: EmployeePage[] = useMemo(
+    () =>
+      (pagesData?.pages || []).filter((p) => {
+        const view = pageKeyToView(p.key, p.label);
+        return !view || !HIDDEN_EMPLOYEE_VIEWS.includes(view);
+      }),
+    [pagesData],
+  );
   const options = pagesData?.permissionOptions?.length ? pagesData.permissionOptions : FALLBACK_LEVELS;
   const defaultPermission = pagesData?.defaultPermission || 'BLOCK';
 
