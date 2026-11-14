@@ -61,11 +61,6 @@ export const navItems: NavItemConfig[] = [
     label: 'All Businesses',
     icon: Briefcase,
   },
-  {
-    id: 'reviews',
-    label: 'All Reviews',
-    icon: Star,
-  },
   // Note: 'All Projects' intentionally omitted per user specification
   {
     id: 'franchise',
@@ -79,17 +74,6 @@ export const navItems: NavItemConfig[] = [
     icon: UserCog,
   },
   {
-    id: 'employee-restrictions',
-    label: 'Employee Restriction Master',
-    icon: ShieldCheck,
-  },
-  {
-    id: 'categories',
-    label: 'Category Master',
-    icon: Tag,
-    superAdminOnly: true,
-  },
-  {
     id: 'billing',
     label: 'Billing Report',
     icon: Receipt,
@@ -98,6 +82,22 @@ export const navItems: NavItemConfig[] = [
     id: 'pricing',
     label: 'Customer plans & pricing management',
     icon: DollarSign,
+  },
+  {
+    id: 'categories',
+    label: 'Category Master',
+    icon: Tag,
+    superAdminOnly: true,
+  },
+  {
+    id: 'reviews',
+    label: 'All Reviews',
+    icon: Star,
+  },
+  {
+    id: 'employee-restrictions',
+    label: 'Employee Restriction Master',
+    icon: ShieldCheck,
   },
   // Report, Greetings Management and AI Credit Ledger are hidden from the sidebar (pages still exist; Billing shows the bills)
 ];
@@ -108,13 +108,13 @@ export const franchiseNavItems: NavItemConfig[] = [
   { id: 'admins', label: 'All Businesses', icon: Briefcase },
   // Its own staff
   { id: 'employees', label: 'Employee Master', icon: UserCog },
-  { id: 'employee-restrictions', label: 'Employee Restriction Master', icon: ShieldCheck },
-  // Reviews left on its own businesses' cards
-  { id: 'reviews', label: 'All Reviews', icon: Star },
   // Its own monthly bill to SuperAdmin (view only)
   { id: 'billing', label: 'Billing Report', icon: Receipt },
   // Same subscription plans page as the super admin, for the franchise's own businesses
   { id: 'pricing', label: 'Customer plans & pricing management', icon: DollarSign },
+  // Reviews left on its own businesses' cards
+  { id: 'reviews', label: 'All Reviews', icon: Star },
+  { id: 'employee-restrictions', label: 'Employee Restriction Master', icon: ShieldCheck },
 ];
 
 // Logout Confirmation Modal

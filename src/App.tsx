@@ -115,7 +115,11 @@ function SuperAdminPortal({
     const menu = employeeBaseMenu === 'FRANCHISE' ? franchiseNavItems : navItems;
     const views: SuperAdminView[] = [...menu.map((i) => i.id), 'card-builder'];
     return views.filter(
-      (v) => v !== 'employee-restrictions' && !!employeeAccess?.[v] && employeeAccess[v] !== 'BLOCK',
+      (v) =>
+        v !== 'employee-restrictions' &&
+        v !== 'employees' &&
+        !!employeeAccess?.[v] &&
+        employeeAccess[v] !== 'BLOCK',
     );
   }, [isEmployee, employeeBaseMenu, employeeAccess]);
   const isViewAllowed = (view: SuperAdminView) => !allowedViews || allowedViews.includes(view);
@@ -380,12 +384,12 @@ function SuperAdminPortal({
             <FranchiseMaster />
           </div>
         )}
-        {activeView === 'employees' && (
+        {activeView === 'employees' && !isEmployee && (
           <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
             <EmployeeMaster userRole={pageRole} />
           </div>
         )}
-        {activeView === 'employee-restrictions' && (
+        {activeView === 'employee-restrictions' && !isEmployee && (
           <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
             <EmployeeRestrictionMaster userRole={pageRole} onNavigate={handleSelectView} />
           </div>
