@@ -44,6 +44,18 @@ import { EnquiriesDropdown } from './components/EnquiriesDropdown';
 import { PublicCardPage } from './pages/PublicCardPage';
 import { PlanExpiryAlert, PlanExpiredGate } from './components/PlanExpiryAlert';
 import { loadCardSections, applyCardSections } from './lib/api/cardLoader';
+import { LeadsPage } from './pages/LeadsPage';
+import { CustomersPage } from './pages/CustomersPage';
+
+type AdminView = 'card' | 'leads' | 'customers';
+const readAdminView = (): AdminView => {
+  try {
+    const view = new URLSearchParams(window.location.search).get('view');
+    return view === 'leads' || view === 'customers' ? view : 'card';
+  } catch {
+    return 'card';
+  }
+};
 
 // ─── Super Admin / Franchise Layout ───────────────────────────────────────────
 function SuperAdminPortal({
@@ -112,6 +124,8 @@ function SuperAdminPortal({
       url.searchParams.set('view', view);
       if (view !== 'card-builder') {
         url.searchParams.delete('adminId');
+        // Card forge's Card | Leads | Customers pane
+        url.searchParams.delete('tab');
       }
       window.history.pushState({}, '', url.toString());
     } catch {}
@@ -229,7 +243,7 @@ function SuperAdminPortal({
 
         {activeView === 'home' && (
           <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
-            <SuperAdminDashboard onNavigate={handleSelectView} userRole={userRole} />
+            <SuperAdminDashboard onNavigate={handleSelectView} userRole={userRole} onOpenBusiness={openBusinessFromEnquiry} />
           </div>
         )}
         {activeView === 'categories' && (
@@ -318,6 +332,27 @@ function AdminCardBuilder({
   const [isFullCardModalOpen, setIsFullCardModalOpen] = useState<boolean>(false);
   const [modalMode, setModalMode] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  // Card builder, Leads or Customers, kept in ?view= so a reload or a shared link opens the same page
+  const [view, setView] = useState<AdminView>(() => (isInsideSuperAdmin ? 'card' : readAdminView()));
+
+  useEffect(() => {
+    if (isInsideSuperAdmin) return;
+    const onPop = () => setView(readAdminView());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [isInsideSuperAdmin]);
+
+  const changeView = (next: AdminView) => {
+    setView(next);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', next);
+      window.history.pushState({ view: next }, '', url.toString());
+    } catch {
+      /* URL not writable (e.g. sandboxed preview): the view still changes */
+    }
+    window.scrollTo({ top: 0 });
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -368,72 +403,85 @@ function AdminCardBuilder({
             profile={profile}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            onSelectStep={handleSelectStep}
+            onSelectStep={(n) => {
+              if (view !== 'card') changeView('card');
+              handleSelectStep(n);
+            }}
             onSignOut={onSignOut}
+            view={view}
+            onViewChange={changeView}
           />
           <PlanExpiryAlert />
         </>
       )}
 
-      <main className="flex-1 w-full max-w-[1520px] mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-3.5 flex flex-col gap-2.5 sm:gap-4 pb-24 sm:pb-14 overflow-x-hidden">
-        <TabStepper
-          currentStep={currentStep}
-          onSelectStep={handleSelectStep}
-          productCount={profile.products.length}
-        />
+      {view === 'leads' && !isInsideSuperAdmin ? (
+        <LeadsPage />
+      ) : view === 'customers' && !isInsideSuperAdmin ? (
+        <CustomersPage />
+      ) : (
+        <>
+          <main className="flex-1 w-full max-w-[1520px] mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-3.5 flex flex-col gap-2.5 sm:gap-4 pb-24 sm:pb-14 overflow-x-hidden">
+            <TabStepper
+              currentStep={currentStep}
+              onSelectStep={handleSelectStep}
+              productCount={profile.products.length}
+            />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 xl:gap-6 items-start">
-          {/* Left Form Process Step Area */}
-          <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3.5 sm:gap-5 min-w-0">
-            {currentStep === 1 && <Step1BasicDetails profile={profile} onChange={handleFieldChange} onNext={next} onToast={showToast} />}
-            {currentStep === 2 && <Step2AboutSpecialities profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}
-            {currentStep === 3 && <Step3ProductsServices profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}
-            {currentStep === 4 && <Step4LinksSocial profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}
-            {currentStep === 5 && <Step5PaymentQR profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}
-            {currentStep === 6 && <Step6GalleryMedia profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}
-            {currentStep === 7 && <Step7YoutubeVideos profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}
-            {currentStep === 8 && <Step7SettingsHeadings profile={profile} onChange={handleFieldChange} onPrev={prev} onSaveAll={handleSaveAll} onToast={showToast} />}
-          </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 xl:gap-6 items-start">
+              {/* Left Form Process Step Area */}
+              <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3.5 sm:gap-5 min-w-0">
+                {currentStep === 1 && <Step1BasicDetails profile={profile} onChange={handleFieldChange} onNext={next} onToast={showToast} />}
+                {currentStep === 2 && <Step2AboutSpecialities profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}
+                {currentStep === 3 && <Step3ProductsServices profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}
+                {currentStep === 4 && <Step4LinksSocial profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}
+                {currentStep === 5 && <Step5PaymentQR profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}
+                {currentStep === 6 && <Step6GalleryMedia profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}
+                {currentStep === 7 && <Step7YoutubeVideos profile={profile} onChange={handleFieldChange} onNext={next} onPrev={prev} onToast={showToast} />}
+                {currentStep === 8 && <Step7SettingsHeadings profile={profile} onChange={handleFieldChange} onPrev={prev} onSaveAll={handleSaveAll} onToast={showToast} />}
+              </div>
 
-          {/* Right Sticky Mobile Preview on Every Process */}
-          <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 sticky top-20 self-start">
-            <MobileSimulator
-              profile={profile}
-              onOpenFullPreview={(mode) => {
-                setModalMode(mode || 'desktop');
+              {/* Right Sticky Mobile Preview on Every Process */}
+              <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 sticky top-20 self-start">
+                <MobileSimulator
+                  profile={profile}
+                  onOpenFullPreview={(mode) => {
+                    setModalMode(mode || 'desktop');
+                    setIsFullCardModalOpen(true);
+                  }}
+                  onToast={showToast}
+                />
+              </aside>
+            </div>
+          </main>
+
+          {/* Sleek compact Floating Action Button for mobile & tablet screens */}
+          <div className="lg:hidden fixed bottom-4 right-4 z-40">
+            <button
+              type="button"
+              onClick={() => {
+                setModalMode('mobile');
                 setIsFullCardModalOpen(true);
               }}
-              onToast={showToast}
-            />
-          </aside>
-        </div>
-      </main>
+              aria-label="Live Card Preview"
+              title="Live Card Preview"
+              className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#2563EB] text-white shadow-xl flex items-center justify-center hover:bg-[#1D4ED8] active:scale-95 transition-all border-2 border-white relative group"
+            >
+              <Eye className="w-5 h-5" />
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
+            </button>
+          </div>
 
-      {/* Sleek compact Floating Action Button for mobile & tablet screens */}
-      <div className="lg:hidden fixed bottom-4 right-4 z-40">
-        <button
-          type="button"
-          onClick={() => {
-            setModalMode('mobile');
-            setIsFullCardModalOpen(true);
-          }}
-          aria-label="Live Card Preview"
-          title="Live Card Preview"
-          className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#2563EB] text-white shadow-xl flex items-center justify-center hover:bg-[#1D4ED8] active:scale-95 transition-all border-2 border-white relative group"
-        >
-          <Eye className="w-5 h-5" />
-          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
-        </button>
-      </div>
-
-      {/* Full Screen Whole-Screen Card Modal */}
-      <FullCardModal
-        isOpen={isFullCardModalOpen}
-        onClose={() => setIsFullCardModalOpen(false)}
-        initialMode={modalMode}
-        profile={profile}
-        onToast={showToast}
-      />
+          {/* Full Screen Whole-Screen Card Modal */}
+          <FullCardModal
+            isOpen={isFullCardModalOpen}
+            onClose={() => setIsFullCardModalOpen(false)}
+            initialMode={modalMode}
+            profile={profile}
+            onToast={showToast}
+          />
+        </>
+      )}
 
       {toastMessage && (
         <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-50 bg-[#091426] text-white px-5 py-2.5 rounded-xl shadow-2xl border border-slate-700/80 text-xs font-semibold flex items-center gap-2">

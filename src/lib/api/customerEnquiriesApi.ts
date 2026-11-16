@@ -154,33 +154,34 @@ export const getCustomerEnquiries = async (adminId?: string): Promise<CustomerEn
 };
 
 /**
- * PATCH customers/enquires/:id OR superAdmin/admin/:adminId/enquires/:id
- * Updates status of an enquiry (e.g. 'New' | 'In Progress' | 'Completed')
+ * PATCH customers/enquires/:id OR superAdmin/admin/:adminId/enquires/:id with { isRead }.
+ * The backend only stores read/unread.
  */
-export const updateCustomerEnquiryStatus = async (
+export const setCustomerEnquiryRead = async (
   id: string,
-  status: CustomerEnquiry['status'],
+  isRead: boolean,
   adminId?: string
 ): Promise<any> => {
   const endpoint = adminId
     ? `superAdmin/admin/${adminId}/enquires/${id}`
     : `customers/enquires/${id}`;
   try {
-    const response = await api.patch(endpoint, { status });
+    const response = await api.patch(endpoint, { isRead });
     return (response as any)?.data || response;
   } catch (error: any) {
-    if (!adminId && error?.response?.status === 404) {
-      try {
-        const fallback = await api.patch(`customers/enquiries/${id}`, { status });
-        return (fallback as any)?.data || fallback;
-      } catch {
-        // Fallback or ignore if backend has no PATCH endpoint
-      }
-    }
-    console.warn(`[customerEnquiriesApi] Could not update status on server for ${id}:`, error);
+    console.warn(`[customerEnquiriesApi] Could not update read state on server for ${id}:`, error);
     return null;
   }
 };
+
+/**
+ * Kept for existing callers: the UI status maps to read/unread ('New' = unread).
+ */
+export const updateCustomerEnquiryStatus = async (
+  id: string,
+  status: CustomerEnquiry['status'],
+  adminId?: string
+): Promise<any> => setCustomerEnquiryRead(id, status !== 'New', adminId);
 
 /**
  * DELETE customers/enquires/:id OR superAdmin/admin/:adminId/enquires/:id

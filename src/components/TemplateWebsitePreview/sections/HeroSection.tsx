@@ -1,10 +1,10 @@
 import React from 'react';
-import { Phone, MessageCircle, ArrowRight } from 'lucide-react';
+import { Phone, MessageCircle, ArrowRight, UserPlus } from 'lucide-react';
 import { SectionProps } from '../useTemplateModel';
 
-/** Desktop / tablet hero banner with Call, WhatsApp and Get a Quote */
+/** Desktop / tablet hero banner with Call, WhatsApp, Get a Quote and Save Contact */
 export const HeroSection: React.FC<SectionProps> = ({ t }) => {
-  const { isMobile, pad, kicker, businessName, tagline, heroText, phone, whatsappUrl, enquireUrl } = t;
+  const { isMobile, pad, kicker, businessName, tagline, heroText, phone, whatsappUrl, enquireUrl, vcardHref } = t;
   return (
     <section data-section="home" className="relative overflow-hidden bg-gradient-to-r from-[var(--b1)] to-[var(--b2)] text-white">
       <div className={`relative ${pad} ${isMobile ? 'py-6' : 'py-10'} flex gap-6`}>
@@ -25,6 +25,11 @@ export const HeroSection: React.FC<SectionProps> = ({ t }) => {
             <a href={enquireUrl('a quote')} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center justify-center gap-2 rounded-lg bg-white text-[var(--c)] px-5 py-2.5 text-[13px] font-semibold ${isMobile ? 'col-span-2' : ''}`}>
               Get a Quote <ArrowRight className="w-4 h-4" />
             </a>
+            {vcardHref && (
+              <a href={vcardHref} download className={`inline-flex items-center justify-center gap-2 rounded-lg border border-white/70 hover:bg-white/10 px-5 py-2.5 text-[13px] font-semibold ${isMobile ? 'col-span-2' : ''}`}>
+                <UserPlus className="w-4 h-4" /> Save Contact
+              </a>
+            )}
           </div>
         </div>
       </div>

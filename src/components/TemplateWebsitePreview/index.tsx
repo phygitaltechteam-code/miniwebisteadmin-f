@@ -16,7 +16,7 @@ import { GallerySection, VideosSection } from './sections/MediaSections';
 import { FormsRow } from './sections/FormsRow';
 import { ShareSection } from './sections/ShareCard';
 import { FooterSection } from './sections/FooterSection';
-import { GalleryLightbox, ProductPopup, ImagePopup } from './sections/Popups';
+import { GalleryLightbox, ProductPopup, ImagePopup, ExchangePopup } from './sections/Popups';
 
 export { TEMPLATE_PALETTES, paletteForTheme } from './palette';
 export type { TemplatePaletteKey } from './palette';
@@ -68,6 +68,7 @@ export const TemplateWebsitePreview: React.FC<TemplateWebsitePreviewProps> = ({ 
       <GalleryLightbox t={t} />
       <ProductPopup t={t} />
       <ImagePopup t={t} />
+      <ExchangePopup t={t} />
 
       {/* Floating WhatsApp button */}
       {whatsapp && (

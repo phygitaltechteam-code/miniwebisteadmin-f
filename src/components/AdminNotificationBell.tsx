@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Bell, CalendarClock, Inbox, Loader2, MessageCircle, Phone, RefreshCw, X } from 'lucide-react';
+import { AlertTriangle, Bell, CalendarClock, Check, Inbox, Loader2, MessageCircle, Phone, RefreshCw, UserPlus, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCustomerEnquiries } from '@/lib/react-query/customerEnquiries';
+import { useLeadFromEnquiry } from '@/lib/react-query/leads';
 import { ContactLine, usePlanExpiry } from './PlanExpiryAlert';
 import { LatestEnquiryPopup } from './LatestEnquiryPopup';
 
@@ -37,6 +38,8 @@ export const AdminNotificationBell: React.FC = () => {
   // Checked every minute so a new enquiry pops up
   const { data: enquiries = [], isLoading, isFetching, refetch } = useCustomerEnquiries(undefined, { refetchInterval: 60 * 1000 });
   const plan = usePlanExpiry();
+  const saveAsLead = useLeadFromEnquiry();
+  const [savedLeadIds, setSavedLeadIds] = useState<string[]>([]);
   const planStatus = String(plan?.status || '').toUpperCase();
   const planAlert = Boolean(plan?.showAlert) || planStatus === 'EXPIRED';
   const hasPlan = Boolean(plan?.expiryDate) && planStatus !== 'NO_EXPIRY';
@@ -184,8 +187,7 @@ export const AdminNotificationBell: React.FC = () => {
                       <span className="shrink-0 text-[11px] text-gray-500">{e.createdAt}</span>
                     </div>
                     {e.message && <p className="mt-1 text-[12.5px] text-[#424242] whitespace-pre-line break-words">{e.message}</p>}
-                    {(e.phoneNumber || e.email) && (
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px]">
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px]">
                         {e.phoneNumber && (
                           <>
                             <a href={`tel:${e.phoneNumber}`} className="inline-flex items-center gap-1 rounded border border-[#E0E0E0] px-2 py-0.5 text-[#212121] hover:border-[#2196F3]">
@@ -206,8 +208,27 @@ export const AdminNotificationBell: React.FC = () => {
                             {e.email}
                           </a>
                         )}
+                        <button
+                          type="button"
+                          disabled={saveAsLead.isPending && saveAsLead.variables === e.id}
+                          onClick={() =>
+                            saveAsLead.mutate(e.id, {
+                              onSuccess: () => setSavedLeadIds((prev) => [...prev, e.id]),
+                            })
+                          }
+                          className="ml-auto inline-flex items-center gap-1 rounded border border-[#BBDEFB] bg-[#E3F2FD] px-2 py-0.5 font-medium text-[#1565C0] hover:bg-[#BBDEFB] disabled:opacity-60"
+                          title="Add this enquiry to your leads"
+                        >
+                          {saveAsLead.isPending && saveAsLead.variables === e.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : savedLeadIds.includes(e.id) ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <UserPlus className="w-3 h-3" />
+                          )}
+                          {savedLeadIds.includes(e.id) ? 'Saved as lead' : 'Save as lead'}
+                        </button>
                       </div>
-                    )}
                   </div>
                 );
               })

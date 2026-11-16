@@ -1,8 +1,24 @@
 import React from 'react';
-import { Share2, Copy, Check, Download } from 'lucide-react';
+import { Share2, Copy, Check, Download, Send } from 'lucide-react';
 import { SectionProps } from '../useTemplateModel';
 import { SectionTitle } from '../SectionTitle';
 import { copyCardLink } from '../helpers';
+
+/** "Share your details" (opens the contact exchange popup) and its thank-you line */
+const ShareDetailsButton: React.FC<SectionProps & { className?: string }> = ({ t, className = '' }) => (
+  <div className={`w-full ${className}`}>
+    <button
+      type="button"
+      onClick={t.openExchange}
+      className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--c)] text-[var(--c)] hover:bg-[var(--cs)] py-2.5 text-[13px] font-semibold transition-colors"
+    >
+      <Send className="w-3.5 h-3.5" /> Share your details
+    </button>
+    {t.exchangeState.sent && (
+      <p className="mt-2 text-center text-[12.5px] font-semibold text-emerald-600 tpl-fade-in">Thank you! Your details have been shared.</p>
+    )}
+  </div>
+);
 
 const qrSrc = (cardUrl: string, size: number) => `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(cardUrl)}`;
 const whatsappShareHref = (businessName: string, cardUrl: string) => `https://wa.me/?text=${encodeURIComponent(`${businessName} ${cardUrl}`.trim())}`;
@@ -62,6 +78,7 @@ export const ShareInRow: React.FC<SectionProps> = ({ t }) => {
             <Download className="w-3.5 h-3.5" /> Download
           </button>
         </div>
+        <ShareDetailsButton t={t} />
       </div>
     </section>
   );
@@ -114,6 +131,7 @@ export const ShareSection: React.FC<SectionProps> = ({ t }) => {
           </div>
         </div>
       </div>
+      <ShareDetailsButton t={t} className="mt-3" />
     </section>
   );
 };

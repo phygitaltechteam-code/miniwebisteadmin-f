@@ -1,11 +1,11 @@
 import React from 'react';
-import { Phone, MessageCircle, Mail, MapPin } from 'lucide-react';
+import { Phone, MessageCircle, Mail, MapPin, UserPlus } from 'lucide-react';
 import { SectionProps } from '../useTemplateModel';
 import { displayPhone } from '../helpers';
 
 /** Mobile only: profile card (logo, name, owner, contacts) */
 export const MobileProfileCard: React.FC<SectionProps> = ({ t }) => {
-  const { profile, cardRef, businessName, ownerName, designation, phones, emails, whatsapp, whatsappUrl, fullAddress } = t;
+  const { profile, cardRef, businessName, ownerName, designation, phones, emails, whatsapp, whatsappUrl, fullAddress, vcardHref } = t;
   return (
     <section data-section="home" className="bg-[var(--b1)]">
       <div ref={cardRef} className="px-6 pt-8 pb-12 flex flex-col items-center text-center text-white">
@@ -20,6 +20,15 @@ export const MobileProfileCard: React.FC<SectionProps> = ({ t }) => {
         {(ownerName || designation) && <span className="block w-24 h-[3px] bg-[var(--c)] my-3" />}
         {ownerName && <p className="text-[15px]">{ownerName}</p>}
         {designation && <p className="text-[12px] italic text-white/80 mt-0.5">({designation})</p>}
+        {vcardHref && (
+          <a
+            href={vcardHref}
+            download
+            className="mt-5 inline-flex items-center gap-2 rounded-full bg-[var(--c)] hover:bg-[var(--cd)] px-5 py-2.5 text-[13px] font-semibold text-white shadow-md transition-colors"
+          >
+            <UserPlus className="w-4 h-4" /> Save Contact
+          </a>
+        )}
       </div>
       <div className="relative bg-white rounded-t-[28px] -mt-6 px-6 pt-6 pb-4 space-y-6">
         {[

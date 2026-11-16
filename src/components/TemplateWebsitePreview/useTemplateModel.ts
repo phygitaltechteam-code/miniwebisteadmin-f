@@ -1,6 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { cardUrlFor } from '@/utils/cardUrl';
-import { submitPublicFeedback, submitPublicEnquiry, feedbackErrorText, PublicFeedback } from '@/lib/api/publicFeedbackApi';
+import {
+  submitPublicFeedback,
+  submitPublicEnquiry,
+  submitContactExchange,
+  feedbackErrorText,
+  exchangeErrorText,
+  PublicFeedback,
+  trackCardEvent,
+  cardEventForHref,
+  vcardUrl,
+} from '@/lib/api/publicFeedbackApi';
 import { customLinkKeys } from '@/lib/api/customerSocialApi';
 import { sortByOrder } from '@/lib/api/customerSettingsApi';
 import { ProfileData, CardSectionKey, AboutBlockKey, DEFAULT_SECTION_ORDER, DEFAULT_ABOUT_BLOCK_ORDER } from '@/types/profile';
@@ -10,6 +20,16 @@ import { stripHtml, firstSentences, uniq } from './helpers';
 import { useAutoSlide } from './useAutoSlide';
 
 export type ViewMode = 'mobile' | 'tablet' | 'desktop';
+
+/** ?review=1 (the {review_link} in follow-up messages) or #feedback / #reviews in the page URL */
+export const wantsReviewSection = (): boolean => {
+  try {
+    const review = new URLSearchParams(window.location.search).get('review');
+    return review === '1' || review === 'true' || /^#(feedback|reviews?)$/i.test(window.location.hash);
+  } catch {
+    return false;
+  }
+};
 
 /** Everything the website template renders: data from the builder profile, UI state and form handlers */
 export const useTemplateModel = (
@@ -191,6 +211,48 @@ export const useTemplateModel = (
     }
   };
 
+  // "Share your details" popup: the visitor's contact is saved as a lead for the business
+  const EMPTY_EXCHANGE = { name: '', mobile: '', email: '', company: '', jobTitle: '', message: '' };
+  const [exchangeOpen, setExchangeOpen] = useState(false);
+  const [exchange, setExchange] = useState(EMPTY_EXCHANGE);
+  const [exchangeState, setExchangeState] = useState<{ busy: boolean; sent: boolean; error: string }>({ busy: false, sent: false, error: '' });
+  useEffect(() => {
+    if (!exchangeState.sent) return;
+    const t = setTimeout(() => setExchangeState((st) => ({ ...st, sent: false })), 4000);
+    return () => clearTimeout(t);
+  }, [exchangeState.sent]);
+  const openExchange = () => {
+    setExchangeState({ busy: false, sent: false, error: '' });
+    setExchangeOpen(true);
+  };
+  const sendExchange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const digits = exchange.mobile.replace(/\D/g, '');
+    if (digits.length < 7 || digits.length > 15) {
+      setExchangeState({ busy: false, sent: false, error: 'Please enter a valid mobile number.' });
+      return;
+    }
+    if (!feedbackTarget) {
+      // Builder preview: nothing is saved
+      setExchange(EMPTY_EXCHANGE);
+      setExchangeOpen(false);
+      setExchangeState({ busy: false, sent: true, error: '' });
+      return;
+    }
+    setExchangeState({ busy: true, sent: false, error: '' });
+    try {
+      await submitContactExchange(feedbackTarget, exchange);
+      setExchange(EMPTY_EXCHANGE);
+      setExchangeOpen(false);
+      setExchangeState({ busy: false, sent: true, error: '' });
+    } catch (err) {
+      setExchangeState({ busy: false, sent: false, error: exchangeErrorText(err) });
+    }
+  };
+
+  // Save Contact (.vcf) only on the public card; the builder previews have no card to download
+  const vcardHref = feedbackTarget ? vcardUrl(feedbackTarget) : '';
+
   // ── Carousels ──
   // Banners keep sliding even under the mouse (the banner fills the width where the pointer usually rests,
   // and on touch screens a tap counts as a hover that never ends)
@@ -292,7 +354,46 @@ export const useTemplateModel = (
     setMenuOpen(false);
     rootRef.current?.querySelector(`[data-section="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  // Review link (card link + ?review=1, or #feedback) from follow-up messages: open at the reviews.
+  // Public card only, once, after the sections have rendered.
+  const reviewJumpDone = useRef(false);
+  useEffect(() => {
+    if (!feedbackTarget || !show.feedback || reviewJumpDone.current) return;
+    if (!wantsReviewSection()) return;
+    const t = window.setTimeout(() => {
+      reviewJumpDone.current = true;
+      goTo('feedback');
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [feedbackTarget, show.feedback]);
   const [copied, setCopied] = useState(false);
+
+  // ── Card analytics (public card only; builder previews send nothing) ──
+  // One VIEW per browser tab, and one event per call / WhatsApp / email tap anywhere in the template
+  useEffect(() => {
+    if (!feedbackTarget) return;
+    try {
+      const key = `card-view:${feedbackTarget}`;
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, '1');
+        trackCardEvent(feedbackTarget, 'VIEW');
+      }
+    } catch {
+      trackCardEvent(feedbackTarget, 'VIEW');
+    }
+  }, [feedbackTarget]);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!feedbackTarget || !root) return;
+    const onClick = (e: MouseEvent) => {
+      const link = (e.target as Element | null)?.closest?.('a[href]');
+      const type = link ? cardEventForHref(link.getAttribute('href') || '') : null;
+      if (type) trackCardEvent(feedbackTarget, type);
+    };
+    root.addEventListener('click', onClick);
+    return () => root.removeEventListener('click', onClick);
+  }, [feedbackTarget]);
 
   const pad = isMobile ? 'px-4' : 'px-8';
 
@@ -309,6 +410,7 @@ export const useTemplateModel = (
     enquiry, setEnquiry, enquiryState, sendEnquiry,
     feedback, setFeedback, feedbackBusy, feedbackError, sendFeedback, reviews,
     copied, setCopied,
+    vcardHref, exchangeOpen, setExchangeOpen, openExchange, exchange, setExchange, exchangeState, sendExchange,
   };
 };
 

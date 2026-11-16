@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Inbox, Phone, MessageSquare, Mail, X, RefreshCw, Clock, Tag } from 'lucide-react';
+import { Inbox, Phone, MessageSquare, Mail, X, RefreshCw, Clock, Tag, UserPlus, Check, Loader2 } from 'lucide-react';
 import { CustomerEnquiry } from '../types/profile';
 import {
   useCustomerEnquiries,
   useUpdateCustomerEnquiryStatus,
 } from '@/lib/react-query/customerEnquiries';
+import { useLeadFromEnquiry } from '@/lib/react-query/leads';
 
 interface EnquiriesDropdownProps {
   /** Super admin: pass the admin id to use superAdmin/admin/:adminId/enquires. Admin panel: omit (customers/enquires). */
@@ -20,6 +21,8 @@ export const EnquiriesDropdown: React.FC<EnquiriesDropdownProps> = ({ adminId })
   } = useCustomerEnquiries(adminId);
 
   const updateStatusMutation = useUpdateCustomerEnquiryStatus(adminId);
+  const saveAsLead = useLeadFromEnquiry(adminId);
+  const [savedLeadIds, setSavedLeadIds] = useState<string[]>([]);
 
   const [enquiries, setEnquiries] = useState<CustomerEnquiry[]>([]);
 
@@ -228,6 +231,27 @@ export const EnquiriesDropdown: React.FC<EnquiriesDropdownProps> = ({ adminId })
                           <span>Email</span>
                         </a>
                       )}
+
+                      <button
+                        type="button"
+                        disabled={saveAsLead.isPending && saveAsLead.variables === enq.id}
+                        onClick={() =>
+                          saveAsLead.mutate(enq.id, {
+                            onSuccess: () => setSavedLeadIds((prev) => [...prev, enq.id]),
+                          })
+                        }
+                        className="px-2 py-0.8 rounded-md bg-blue-50 border border-blue-200 hover:bg-blue-100 text-[#2563EB] text-[10px] font-bold flex items-center gap-1 transition-colors shadow-2xs disabled:opacity-60"
+                        title="Add this enquiry to the leads"
+                      >
+                        {saveAsLead.isPending && saveAsLead.variables === enq.id ? (
+                          <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                        ) : savedLeadIds.includes(enq.id) ? (
+                          <Check className="w-2.5 h-2.5" />
+                        ) : (
+                          <UserPlus className="w-2.5 h-2.5" />
+                        )}
+                        <span>{savedLeadIds.includes(enq.id) ? 'Saved' : 'Save as lead'}</span>
+                      </button>
                     </div>
                   </div>
                 </div>

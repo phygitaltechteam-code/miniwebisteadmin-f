@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, ChevronDown, LogOut, ArrowRight, User } from 'lucide-react';
+import { Search, ChevronDown, LogOut, ArrowRight, User, CreditCard, Users, UserCheck } from 'lucide-react';
 import { ProfileData } from '../types/profile';
 import { AdminNotificationBell } from './AdminNotificationBell';
 import { AdminReviewsButton } from './AdminReviewsButton';
 import { LogoutConfirmModal } from './superadmin/SuperAdminSidebar';
+import { useDueTodayCount } from '@/lib/react-query/leads';
 
 interface HeaderProps {
   profile: ProfileData;
@@ -11,6 +12,9 @@ interface HeaderProps {
   onSearchChange: (q: string) => void;
   onSelectStep: (stepNumber: number) => void;
   onSignOut?: () => void;
+  /** Card builder, Leads or Customers; the toggle shows only when onViewChange is given. */
+  view?: 'card' | 'leads' | 'customers';
+  onViewChange?: (view: 'card' | 'leads' | 'customers') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,7 +23,11 @@ export const Header: React.FC<HeaderProps> = ({
   onSearchChange,
   onSelectStep,
   onSignOut,
+  view = 'card',
+  onViewChange,
 }) => {
+  // Follow-ups due today or overdue, shown on the Leads tab
+  const { data: dueCount = 0 } = useDueTodayCount(undefined, !!onViewChange);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -72,13 +80,13 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="w-full h-16 px-4 md:px-6 flex items-center justify-between border-b border-[#c5c6cd]/50 bg-white shadow-xs sticky top-0 z-40">
       {/* Left: Brand Identity & Search Bar */}
-      <div className="flex items-center gap-4 lg:gap-8 flex-1">
+      <div className="flex items-center gap-2 sm:gap-4 lg:gap-8 flex-1 min-w-0">
         {/* Brand Crest & Title */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[#091426] text-white flex items-center justify-center font-bold text-sm sm:text-base shadow-sm ring-1 ring-black/10 shrink-0">
             CF
           </div>
-          <div className="flex flex-col">
+          <div className={`${onViewChange ? 'hidden min-[420px]:flex' : 'flex'} flex-col`}>
             <span className="text-[13px] sm:text-[15px] font-bold text-[#091426] tracking-tight leading-tight">
               CardForge <span className="hidden sm:inline">Enterprise</span>
             </span>
@@ -88,8 +96,43 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
+        {/* Card builder / Leads / Customers switch */}
+        {onViewChange && (
+          <div className="flex items-center rounded-lg border border-[#c5c6cd]/80 bg-[#f8f9ff] p-0.5 shrink-0" role="tablist" aria-label="Section">
+            {([
+              ['card', 'Card Builder', CreditCard],
+              ['leads', 'Leads', Users],
+              ['customers', 'Customers', UserCheck],
+            ] as const).map(([id, label, Icon]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={view === id}
+                onClick={() => view !== id && onViewChange(id)}
+                title={label}
+                className={`relative flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-md text-[13px] font-semibold transition-colors ${
+                  view === id ? 'bg-white text-[#2563EB] shadow-xs ring-1 ring-[#c5c6cd]/60' : 'text-[#45474c] hover:text-[#0b1c30]'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {/* Three tabs: icons only below md so the header fits */}
+                <span className="hidden md:inline">{label}</span>
+                {id === 'leads' && dueCount > 0 && (
+                  <span
+                    className="absolute -top-1.5 -right-1.5 md:static min-w-[18px] h-[18px] px-1 rounded-full bg-[#F44336] text-white text-[10px] font-bold flex items-center justify-center"
+                    title={`${dueCount} follow-up${dueCount === 1 ? '' : 's'} due`}
+                  >
+                    {dueCount > 99 ? '99+' : dueCount}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Search Bar with intelligent quick jump */}
-        <div className="relative max-w-md w-full hidden md:block">
+        <div className={`relative max-w-md w-full hidden ${view === 'card' ? 'md:block' : ''}`}>
           <div className={`relative flex items-center rounded-lg border transition-all ${isSearchFocused ? 'border-[#2563EB] ring-2 ring-[#2563EB]/20 bg-white' : 'border-[#c5c6cd]/80 bg-[#f8f9ff]'
             }`}>
             <Search className="w-4 h-4 ml-3 text-[#75777d] shrink-0" />

@@ -6,7 +6,7 @@ import { TabStepper, getOrderedSteps } from '@/components/TabStepper';
 import { FullCardModal } from '@/components/FullCardModal';
 import { SelectThemeModal } from '@/components/SelectThemeModal';
 import { TypographyCustomizerModal } from '@/components/TypographyCustomizerModal';
-import { Type } from 'lucide-react';
+import { CreditCard, UserCheck, Users } from 'lucide-react';
 import { Step1BasicDetails } from '@/components/steps/Step1BasicDetails';
 import { Step2AboutSpecialities } from '@/components/steps/Step2AboutSpecialities';
 import { Step3ProductsServices } from '@/components/steps/Step3ProductsServices';
@@ -19,6 +19,25 @@ import { useGetAdmin } from '@/lib/react-query/superadmin/admin';
 import { updateCustomerInfo, formatAdminInfoPayload } from '@/lib/api/customerInfoApi';
 import { saveSectionOrder } from '@/lib/api/customerSettingsApi';
 import { loadCardSections, applyCardSections } from '@/lib/api/cardLoader';
+import { LeadsPage } from '@/pages/LeadsPage';
+import { CustomersPage } from '@/pages/CustomersPage';
+import { useDueTodayCount } from '@/lib/react-query/leads';
+
+/** Card builder, or this business's Leads / Customers; kept in ?tab= (?view= is the portal's page) */
+export type CardForgePane = 'card' | 'leads' | 'customers';
+const readPane = (): CardForgePane => {
+  try {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    return tab === 'leads' || tab === 'customers' ? tab : 'card';
+  } catch {
+    return 'card';
+  }
+};
+const PANES: { id: CardForgePane; label: string; Icon: typeof CreditCard }[] = [
+  { id: 'card', label: 'Card', Icon: CreditCard },
+  { id: 'leads', label: 'Leads', Icon: Users },
+  { id: 'customers', label: 'Customers', Icon: UserCheck },
+];
 
 export interface SuperAdminCardForgeProps {
   selectedAdmin?: any;
@@ -103,6 +122,29 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
 
   const urlAdminId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('adminId') || '' : '';
   const effectiveAdminId = currentAdmin?.id || currentAdmin?._id || initialAdmin?.id || initialAdmin?._id || urlAdminId || '';
+
+  // Card | Leads | Customers of this business
+  const [pane, setPane] = useState<CardForgePane>(readPane);
+  useEffect(() => {
+    const onPop = () => setPane(readPane());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const changePane = (next: CardForgePane) => {
+    if (next === pane) return;
+    setPane(next);
+    try {
+      const url = new URL(window.location.href);
+      if (next === 'card') url.searchParams.delete('tab');
+      else url.searchParams.set('tab', next);
+      window.history.pushState({ ...(window.history.state || {}), tab: next }, '', url.toString());
+    } catch {
+      /* URL not writable: the pane still changes */
+    }
+    window.scrollTo({ top: 0 });
+  };
+  // Follow-ups due today or overdue, shown on the Leads tab
+  const { data: dueCount = 0 } = useDueTodayCount(effectiveAdminId || undefined, !!effectiveAdminId);
 
   // When initialAdmin changes, sync URL route with adminId
   useEffect(() => {
@@ -237,6 +279,7 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
   const handleBackToAdmins = () => {
     const url = new URL(window.location.href);
     url.searchParams.delete('adminId');
+    url.searchParams.delete('tab');
     url.searchParams.set('view', 'admins');
     window.history.pushState({}, '', url.toString());
     onBackToAdmins?.();
@@ -245,7 +288,48 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
   return (
     <div className="w-full text-[#0b1c30] flex flex-col font-sans overflow-x-hidden">
       {/* ─── Main Builder Process Area ───────────────────────────────── */}
-      <main className="flex-1 w-full mx-auto px-1 sm:px-3 flex flex-col gap-2 pb-44 md:pb-24 overflow-x-hidden">
+      <main className={`flex-1 w-full mx-auto px-1 sm:px-3 flex flex-col gap-2 overflow-x-hidden ${pane === 'card' ? 'pb-44 md:pb-24' : 'pb-24 md:pb-6'}`}>
+        {effectiveAdminId && (
+          <div className="flex items-center justify-between gap-3 pt-1 px-1 sm:px-0">
+            <div className="flex items-center rounded-lg border border-[#c5c6cd]/80 bg-white p-0.5 shadow-xs" role="tablist" aria-label="Business section">
+              {PANES.map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={pane === id}
+                  onClick={() => changePane(id)}
+                  className={`relative flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-semibold transition-colors ${
+                    pane === id ? 'bg-[#E3F2FD] text-[#1565C0]' : 'text-[#45474c] hover:text-[#0b1c30]'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                  {id === 'leads' && dueCount > 0 && (
+                    <span
+                      className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#F44336] text-white text-[10px] font-bold flex items-center justify-center"
+                      title={`${dueCount} follow-up${dueCount === 1 ? '' : 's'} due`}
+                    >
+                      {dueCount > 99 ? '99+' : dueCount}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            {(profile.businessName || currentAdmin?.fullname) && (
+              <span className="hidden sm:block truncate text-[13px] font-medium text-[#45474c]">
+                {profile.businessName || currentAdmin?.fullname}
+              </span>
+            )}
+          </div>
+        )}
+
+        {effectiveAdminId && pane === 'leads' ? (
+          <LeadsPage key={`leads-${effectiveAdminId}`} adminId={effectiveAdminId} />
+        ) : effectiveAdminId && pane === 'customers' ? (
+          <CustomersPage key={`customers-${effectiveAdminId}`} adminId={effectiveAdminId} />
+        ) : (
+        <>
         <TabStepper
           currentStep={currentStep}
           onSelectStep={handleSelectStep}
@@ -293,9 +377,12 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
             );
           })()}
         </div>
+        </>
+        )}
       </main>
 
-      {/* Floating Dark Action Bar matching Image 2 */}
+      {/* Floating Dark Action Bar matching Image 2 (card pane only) */}
+      {pane === 'card' && (
       <div className="fixed bottom-16 md:bottom-3 left-1/2 -translate-x-1/2 z-40 w-auto max-w-[95vw] bg-[#212121] text-white px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl shadow-2xl border border-slate-700/80 flex flex-col items-center gap-1.5 transition-all">
 
         <div className="text-xs sm:text-[13px] font-medium tracking-wide flex items-center gap-1.5 flex-wrap justify-center">
@@ -331,6 +418,7 @@ export const SuperAdminCardForge: React.FC<SuperAdminCardForgeProps> = ({
           </button>
         </div>
       </div>
+      )}
 
       {/* Select Theme Modal matching Image 1 */}
       <SelectThemeModal

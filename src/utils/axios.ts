@@ -148,10 +148,12 @@ api.interceptors.request.use(compressUploadImages);
 api.interceptors.request.use(async (req) => {
   const isFranchise = isFranchiseUser();
 
-  // Strict guard: on SuperAdmin or Franchise sessions, NEVER dispatch any request to customers/*
+  // Strict guard: on SuperAdmin or Franchise sessions, NEVER dispatch any request to the owner's customers/*.
+  // A business's own Customers list (superAdmin|franchise/admin/:id/customers/...) is allowed.
   if (isSuperAdminUser() || isFranchise) {
     const targetUrl = req.url || '';
-    if (targetUrl.startsWith('customers/') || targetUrl.includes('/customers/')) {
+    const businessCustomers = /^\/?(superAdmin|superadmin|franchise)\/admin\/[^/?#]+\/customers(\/|\?|#|$)/.test(targetUrl);
+    if (!businessCustomers && (targetUrl.startsWith('customers/') || targetUrl.includes('/customers/'))) {
       console.warn(`[axios] Blocked customers/ route on Admin/Franchise session: ${targetUrl}`);
       return Promise.reject(new Error(`[Admin Protection] Customers endpoint blocked on management session: ${targetUrl}`));
     }
@@ -178,7 +180,7 @@ api.interceptors.request.use(async (req) => {
 
       if (isExpired && refreshToken) {
         try {
-          const res = await unAuthenticatedApi.post('/users/refresh-token', {
+          const res = await unAuthenticatedApi.post('/users/refresh', {
             refreshToken,
           });
 
@@ -270,8 +272,13 @@ api.interceptors.response.use(
       console.error('Forbidden:', error.response.data);
       // Admin plan expired (login or any page): show the blocking popup (PlanExpiredGate)
       const body: any = error.response.data;
+      // detail: { message, code, expiryDate, planName, contact } (contact = who to call to renew)
       if (body?.data?.code === 'PLAN_EXPIRED') {
-        window.dispatchEvent(new CustomEvent('plan-expired', { detail: { message: body?.data?.message || body?.message } }));
+        window.dispatchEvent(
+          new CustomEvent('plan-expired', {
+            detail: { ...body.data, message: body?.data?.message || body?.message },
+          }),
+        );
       }
     } else if (error.response?.status === 404) {
       console.error('Not found:', error.response.data);

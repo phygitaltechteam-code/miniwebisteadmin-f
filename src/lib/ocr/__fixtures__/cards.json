@@ -1,0 +1,310 @@
+{
+  "_about": "Synthetic business cards (no real people) in the shape ML Kit returns them: lines in reading order, optional text height 'h' and bounding box [left, top, right, bottom]. 'expected' lists every field present on the card; fields not listed must come out empty. NOTES is only checked when listed.",
+  "cards": [
+    {
+      "id": "classic-in",
+      "lines": [
+        {"t": "Asha Patel", "h": 40, "box": [60, 40, 420, 80]},
+        {"t": "Sales Director", "h": 24, "box": [60, 90, 330, 114]},
+        {"t": "NIMBUS TECHNOLOGIES PVT. LTD.", "h": 30, "box": [60, 160, 640, 190]},
+        {"t": "M: +91 98200 12345", "h": 22, "box": [60, 230, 380, 252]},
+        {"t": "T: 022 2345 6789", "h": 22, "box": [60, 260, 340, 282]},
+        {"t": "E: asha.patel@nimbustech.co.in", "h": 22, "box": [60, 290, 560, 312]},
+        {"t": "www.nimbustech.co.in", "h": 22, "box": [60, 320, 420, 342]},
+        {"t": "Plot No. 12, MIDC, Andheri East,", "h": 22, "box": [60, 370, 600, 392]},
+        {"t": "Mumbai - 400093", "h": 22, "box": [60, 400, 330, 422]}
+      ],
+      "expected": {
+        "NAME": "Asha Patel", "JOB_TITLE": "Sales Director", "COMPANY": "NIMBUS TECHNOLOGIES PVT. LTD.",
+        "MOBILE": "+91 98200 12345", "OFFICE_PHONE": "+91 22 2345 6789", "EMAIL": "asha.patel@nimbustech.co.in",
+        "WEBSITE": "www.nimbustech.co.in", "ADDRESS": "Plot No. 12, MIDC, Andheri East, Mumbai - 400093"
+      }
+    },
+    {
+      "id": "company-first-freemail",
+      "lines": [
+        {"t": "Orbit Industries", "h": 36}, {"t": "Rahul Mehta", "h": 28}, {"t": "Proprietor", "h": 20},
+        {"t": "98765 43210", "h": 20}, {"t": "orbitindustries@gmail.com", "h": 20},
+        {"t": "Shop 4, Laxmi Market, Station Road, Pune 411001", "h": 18}
+      ],
+      "expected": {
+        "NAME": "Rahul Mehta", "JOB_TITLE": "Proprietor", "COMPANY": "Orbit Industries", "MOBILE": "+91 98765 43210",
+        "EMAIL": "orbitindustries@gmail.com", "ADDRESS": "Shop 4, Laxmi Market, Station Road, Pune 411001"
+      }
+    },
+    {
+      "id": "us-fax-cell",
+      "region": "US",
+      "lines": [
+        {"t": "JOHN A. SMITH"}, {"t": "Vice President, Engineering"}, {"t": "Acme Robotics Inc."},
+        {"t": "1200 Market Street, Suite 400"}, {"t": "San Francisco, CA 94103"},
+        {"t": "Tel 415-892-1234 Fax 415-892-1299"}, {"t": "Cell (415) 892-1277"},
+        {"t": "john.smith@acmerobotics.com"}, {"t": "acmerobotics.com"}
+      ],
+      "expected": {
+        "NAME": "JOHN A. SMITH", "JOB_TITLE": "Vice President, Engineering", "COMPANY": "Acme Robotics Inc.",
+        "ADDRESS": "1200 Market Street, Suite 400, San Francisco, CA 94103", "OFFICE_PHONE": "+1 415-892-1234",
+        "FAX": "+1 415-892-1299", "MOBILE": "+1 415-892-1277", "EMAIL": "john.smith@acmerobotics.com", "WEBSITE": "acmerobotics.com"
+      }
+    },
+    {
+      "id": "doctor-two-emails",
+      "lines": [
+        {"t": "Dr. Priya Sharma"}, {"t": "Consultant Dermatologist"}, {"t": "SkinCare Clinic"},
+        {"t": "Mob: 99200 11111 / 88790 22222"}, {"t": "priya@skincareclinic.in | drpriya.sharma@gmail.com"},
+        {"t": "linkedin.com/in/priyasharma"}
+      ],
+      "expected": {
+        "NAME": "Dr. Priya Sharma", "JOB_TITLE": "Consultant Dermatologist", "COMPANY": "SkinCare Clinic",
+        "MOBILE": "+91 99200 11111", "OTHER_PHONE": "+91 88790 22222", "EMAIL": "priya@skincareclinic.in",
+        "EMAIL2": "drpriya.sharma@gmail.com", "LINKEDIN": "linkedin.com/in/priyasharma"
+      }
+    },
+    {
+      "id": "company-only",
+      "lines": [
+        {"t": "GREENLEAF ORGANICS", "h": 34}, {"t": "Wholesale Fruits & Vegetables", "h": 18},
+        {"t": "Shop No. 23, APMC Market, Vashi, Navi Mumbai - 400703", "h": 16}, {"t": "Ph: 022-2788 1234", "h": 16},
+        {"t": "greenleaforganics.in", "h": 16}
+      ],
+      "expected": {
+        "COMPANY": "GREENLEAF ORGANICS", "OFFICE_PHONE": "+91 22 2788 1234", "WEBSITE": "greenleaforganics.in",
+        "ADDRESS": "Shop No. 23, APMC Market, Vashi, Navi Mumbai - 400703"
+      }
+    },
+    {
+      "id": "caterer-name-beside-phone",
+      "lines": [
+        {"t": "Al-Madina Caterers", "h": 60}, {"t": "Best Food & Best Catering Service", "h": 24},
+        {"t": "Salim : 9820734264", "h": 26}, {"t": "Shamsher : 7900113303", "h": 26},
+        {"t": "E-mail : almadinacaterers@gmail.com", "h": 24},
+        {"t": "Tata Nagar, Near Sunni Jama Masjid, Govandi (W),", "h": 22}, {"t": "Mumbai - 400 043.", "h": 22}
+      ],
+      "expected": {
+        "NAME": "Salim", "COMPANY": "Al-Madina Caterers", "MOBILE": "+91 98207 34264", "OTHER_PHONE": "+91 79001 13303",
+        "EMAIL": "almadinacaterers@gmail.com", "ADDRESS": "Tata Nagar, Near Sunni Jama Masjid, Govandi (W), Mumbai - 400 043."
+      }
+    },
+    {
+      "id": "front-back-gstin",
+      "lines": [
+        {"t": "Rohan Deshmukh", "h": 50}, {"t": "Business Development Manager", "h": 41},
+        {"t": "BRIGHTPATH LOGISTICS PVT. LTD.", "h": 33}, {"t": "M: +91 98765 11223 T: 020 2567 8901", "h": 35},
+        {"t": "E: rohan.d@brightpathlogistics.com", "h": 40}, {"t": "www.brightpathlogistics.com", "h": 33},
+        {"t": "Office No. 402, Sai Plaza, Baner Road,", "h": 36}, {"t": "Pune - 411045, Maharashtra", "h": 36},
+        {"t": "GSTIN: 27ABCDE1234F1Z5", "h": 27}
+      ],
+      "expected": {
+        "NAME": "Rohan Deshmukh", "JOB_TITLE": "Business Development Manager", "COMPANY": "BRIGHTPATH LOGISTICS PVT. LTD.",
+        "MOBILE": "+91 98765 11223", "OFFICE_PHONE": "+91 20 2567 8901", "EMAIL": "rohan.d@brightpathlogistics.com",
+        "WEBSITE": "www.brightpathlogistics.com", "ADDRESS": "Office No. 402, Sai Plaza, Baner Road, Pune - 411045, Maharashtra",
+        "NOTES": "GSTIN: 27ABCDE1234F1Z5"
+      }
+    },
+    {
+      "id": "name-title-one-line-pipe",
+      "lines": [
+        {"t": "Kavya Iyer | Head - Procurement", "h": 30}, {"t": "Sundaram Polymers Ltd", "h": 26},
+        {"t": "+91 94440 12345", "h": 20}, {"t": "kavya.iyer@sundarampolymers.com", "h": 20},
+        {"t": "No. 7, Mount Road, Chennai 600002", "h": 18}
+      ],
+      "expected": {
+        "NAME": "Kavya Iyer", "JOB_TITLE": "Head - Procurement", "COMPANY": "Sundaram Polymers Ltd", "MOBILE": "+91 94440 12345",
+        "EMAIL": "kavya.iyer@sundarampolymers.com", "ADDRESS": "No. 7, Mount Road, Chennai 600002"
+      }
+    },
+    {
+      "id": "name-title-one-line-comma",
+      "lines": [
+        {"t": "Arjun Rao, Chief Executive Officer", "h": 28}, {"t": "Zentrix Software", "h": 34},
+        {"t": "arjun@zentrix.io", "h": 18}, {"t": "+91 80 4123 9876", "h": 18}, {"t": "zentrix.io", "h": 18}
+      ],
+      "expected": {
+        "NAME": "Arjun Rao", "JOB_TITLE": "Chief Executive Officer", "COMPANY": "Zentrix Software", "EMAIL": "arjun@zentrix.io",
+        "OFFICE_PHONE": "+91 80 4123 9876", "WEBSITE": "zentrix.io"
+      }
+    },
+    {
+      "id": "title-above-name",
+      "lines": [
+        {"t": "MANAGING DIRECTOR", "h": 18}, {"t": "Vikram Singh Rathore", "h": 34}, {"t": "Rathore Exports", "h": 26},
+        {"t": "Mobile: 98290 55555", "h": 18}, {"t": "Email: vikram@rathoreexports.com", "h": 18},
+        {"t": "C-12, Industrial Area, Jodhpur 342003", "h": 18}
+      ],
+      "expected": {
+        "NAME": "Vikram Singh Rathore", "JOB_TITLE": "MANAGING DIRECTOR", "COMPANY": "Rathore Exports", "MOBILE": "+91 98290 55555",
+        "EMAIL": "vikram@rathoreexports.com", "ADDRESS": "C-12, Industrial Area, Jodhpur 342003"
+      }
+    },
+    {
+      "id": "two-column-geometry",
+      "lines": [
+        {"t": "Meera Nair", "h": 36, "box": [40, 60, 330, 96]},
+        {"t": "Senior Architect", "h": 22, "box": [40, 104, 300, 126]},
+        {"t": "Kochi Design Studio", "h": 24, "box": [40, 300, 360, 324]},
+        {"t": "+91 98470 33221", "h": 20, "box": [560, 60, 860, 80]},
+        {"t": "meera@kochidesign.in", "h": 20, "box": [560, 90, 900, 110]},
+        {"t": "kochidesign.in", "h": 20, "box": [560, 120, 780, 140]},
+        {"t": "2nd Floor, Marine Drive,", "h": 20, "box": [560, 170, 900, 190]},
+        {"t": "Kochi 682031", "h": 20, "box": [560, 198, 760, 218]}
+      ],
+      "expected": {
+        "NAME": "Meera Nair", "JOB_TITLE": "Senior Architect", "COMPANY": "Kochi Design Studio", "MOBILE": "+91 98470 33221",
+        "EMAIL": "meera@kochidesign.in", "WEBSITE": "kochidesign.in", "ADDRESS": "2nd Floor, Marine Drive, Kochi 682031"
+      }
+    },
+    {
+      "id": "extension-and-slash-numbers",
+      "lines": [
+        {"t": "Sunil Gupta", "h": 30}, {"t": "Purchase Manager", "h": 20}, {"t": "Gupta Steel Traders", "h": 26},
+        {"t": "Tel: 011-2345 6789 Extn. 21", "h": 18}, {"t": "Mob: 98110 22334 / 98110 22335", "h": 18},
+        {"t": "sunil@guptasteel.com", "h": 18}
+      ],
+      "expected": {
+        "NAME": "Sunil Gupta", "JOB_TITLE": "Purchase Manager", "COMPANY": "Gupta Steel Traders", "OFFICE_PHONE": "+91 11 2345 6789",
+        "MOBILE": "+91 98110 22334", "OTHER_PHONE": "+91 98110 22335", "EMAIL": "sunil@guptasteel.com"
+      }
+    },
+    {
+      "id": "uae-card",
+      "region": "AE",
+      "lines": [
+        {"t": "Omar Al Hashimi", "h": 32}, {"t": "Regional Sales Manager", "h": 20}, {"t": "Gulf Marine Services LLC", "h": 26},
+        {"t": "M +971 50 123 4567", "h": 18}, {"t": "T +971 4 321 7654", "h": 18}, {"t": "omar.hashimi@gulfmarine.ae", "h": 18},
+        {"t": "PO Box 12345, Dubai, UAE", "h": 18}
+      ],
+      "expected": {
+        "NAME": "Omar Al Hashimi", "JOB_TITLE": "Regional Sales Manager", "COMPANY": "Gulf Marine Services LLC",
+        "MOBILE": "+971 50 123 4567", "OFFICE_PHONE": "+971 4 321 7654", "EMAIL": "omar.hashimi@gulfmarine.ae",
+        "ADDRESS": "PO Box 12345, Dubai, UAE"
+      }
+    },
+    {
+      "id": "initials-name",
+      "lines": [
+        {"t": "R. K. Sharma", "h": 30}, {"t": "Chartered Accountant", "h": 18}, {"t": "Sharma & Associates", "h": 26},
+        {"t": "98290 11122", "h": 18}, {"t": "rk@sharmaassociates.in", "h": 18},
+        {"t": "21, MI Road, Jaipur 302001", "h": 18}
+      ],
+      "expected": {
+        "NAME": "R. K. Sharma", "JOB_TITLE": "Chartered Accountant", "COMPANY": "Sharma & Associates", "MOBILE": "+91 98290 11122",
+        "EMAIL": "rk@sharmaassociates.in", "ADDRESS": "21, MI Road, Jaipur 302001"
+      }
+    },
+    {
+      "id": "mr-honorific-shop",
+      "lines": [
+        {"t": "SHREE GANESH ELECTRICALS", "h": 34}, {"t": "Dealers in Wires, Switches & Fans", "h": 16},
+        {"t": "Mr. Mahesh Patil", "h": 24}, {"t": "9822012345 / 9822054321", "h": 18},
+        {"t": "Main Road, Sangli - 416416", "h": 16}
+      ],
+      "expected": {
+        "NAME": "Mr. Mahesh Patil", "COMPANY": "SHREE GANESH ELECTRICALS", "MOBILE": "+91 98220 12345", "OTHER_PHONE": "+91 98220 54321",
+        "ADDRESS": "Main Road, Sangli - 416416"
+      }
+    },
+    {
+      "id": "tagline-and-www",
+      "lines": [
+        {"t": "PIXELCRAFT", "h": 40}, {"t": "We design brands people love", "h": 16}, {"t": "Neha Joshi", "h": 26},
+        {"t": "Creative Director", "h": 18}, {"t": "+91 99300 44556", "h": 18}, {"t": "hello@pixelcraft.studio", "h": 18},
+        {"t": "www.pixelcraft.studio", "h": 18}
+      ],
+      "expected": {
+        "NAME": "Neha Joshi", "JOB_TITLE": "Creative Director", "COMPANY": "PIXELCRAFT", "MOBILE": "+91 99300 44556",
+        "EMAIL": "hello@pixelcraft.studio", "WEBSITE": "www.pixelcraft.studio"
+      }
+    },
+    {
+      "id": "uk-card",
+      "region": "GB",
+      "lines": [
+        {"t": "Charlotte Evans", "h": 30}, {"t": "Head of Partnerships", "h": 18}, {"t": "Brightwave Media Ltd", "h": 24},
+        {"t": "M: 07911 123456", "h": 16}, {"t": "T: 020 7946 0321", "h": 16}, {"t": "charlotte.evans@brightwave.co.uk", "h": 16},
+        {"t": "brightwave.co.uk", "h": 16}
+      ],
+      "expected": {
+        "NAME": "Charlotte Evans", "JOB_TITLE": "Head of Partnerships", "COMPANY": "Brightwave Media Ltd", "MOBILE": "+44 7911 123456",
+        "OFFICE_PHONE": "+44 20 7946 0321", "EMAIL": "charlotte.evans@brightwave.co.uk", "WEBSITE": "brightwave.co.uk"
+      }
+    },
+    {
+      "id": "whatsapp-label",
+      "lines": [
+        {"t": "Imran Shaikh", "h": 30}, {"t": "Owner", "h": 18}, {"t": "Shaikh Tours & Travels", "h": 26},
+        {"t": "WhatsApp: 90040 12345", "h": 18}, {"t": "Office: 022 2650 1122", "h": 18}, {"t": "shaikhtours@yahoo.com", "h": 18}
+      ],
+      "expected": {
+        "NAME": "Imran Shaikh", "JOB_TITLE": "Owner", "COMPANY": "Shaikh Tours & Travels", "MOBILE": "+91 90040 12345",
+        "OFFICE_PHONE": "+91 22 2650 1122", "EMAIL": "shaikhtours@yahoo.com"
+      }
+    },
+    {
+      "id": "email-split-across-lines",
+      "lines": [
+        {"t": "Pooja Venkatesh", "h": 30}, {"t": "Assistant Manager - HR", "h": 18}, {"t": "Lakshmi Textiles Pvt Ltd", "h": 24},
+        {"t": "pooja.venkatesh@lakshmitextiles", "h": 16}, {"t": ".com", "h": 16}, {"t": "+91 98450 67890", "h": 16}
+      ],
+      "expected": {
+        "NAME": "Pooja Venkatesh", "JOB_TITLE": "Assistant Manager - HR", "COMPANY": "Lakshmi Textiles Pvt Ltd",
+        "EMAIL": "pooja.venkatesh@lakshmitextiles.com", "MOBILE": "+91 98450 67890"
+      }
+    },
+    {
+      "id": "icons-and-noise",
+      "lines": [
+        {"t": "Kiran Rao", "h": 30}, {"t": "Partner", "h": 18}, {"t": "Rao & Kulkarni Associates", "h": 24},
+        {"t": "☎ 98200 54321", "h": 16}, {"t": "✉ kiran @ rao-kulkarni.com", "h": 16}, {"t": "⌂ 5th Floor, FC Road, Pune 411004", "h": 16}
+      ],
+      "expected": {
+        "NAME": "Kiran Rao", "JOB_TITLE": "Partner", "COMPANY": "Rao & Kulkarni Associates", "MOBILE": "+91 98200 54321",
+        "EMAIL": "kiran@rao-kulkarni.com", "ADDRESS": "⌂ 5th Floor, FC Road, Pune 411004"
+      }
+    },
+    {
+      "id": "pan-and-cin",
+      "lines": [
+        {"t": "Deepak Malhotra", "h": 30}, {"t": "Finance Director", "h": 18}, {"t": "Malhotra Capital Pvt Ltd", "h": 24},
+        {"t": "+91 98100 77665", "h": 16}, {"t": "deepak@malhotracapital.com", "h": 16},
+        {"t": "PAN: ABCPM1234D", "h": 14}, {"t": "CIN: U65990DL2015PTC123456", "h": 14}
+      ],
+      "expected": {
+        "NAME": "Deepak Malhotra", "JOB_TITLE": "Finance Director", "COMPANY": "Malhotra Capital Pvt Ltd", "MOBILE": "+91 98100 77665",
+        "EMAIL": "deepak@malhotracapital.com", "NOTES": "PAN: ABCPM1234D\nCIN: U65990DL2015PTC123456"
+      }
+    },
+    {
+      "id": "allcaps-name-and-company",
+      "lines": [
+        {"t": "SANJAY KAPOOR", "h": 28}, {"t": "GENERAL MANAGER", "h": 18}, {"t": "KAPOOR AUTOMOTIVES", "h": 32},
+        {"t": "+91 98140 22113", "h": 16}, {"t": "sanjay@kapoorauto.com", "h": 16}, {"t": "G.T. Road, Ludhiana 141001", "h": 16}
+      ],
+      "expected": {
+        "NAME": "SANJAY KAPOOR", "JOB_TITLE": "GENERAL MANAGER", "COMPANY": "KAPOOR AUTOMOTIVES", "MOBILE": "+91 98140 22113",
+        "EMAIL": "sanjay@kapoorauto.com", "ADDRESS": "G.T. Road, Ludhiana 141001"
+      }
+    },
+    {
+      "id": "website-without-www-and-https",
+      "lines": [
+        {"t": "Fatima Khan", "h": 28}, {"t": "Founder & CEO", "h": 18}, {"t": "Bloom Organics", "h": 26},
+        {"t": "https://bloomorganics.in", "h": 16}, {"t": "fatima@bloomorganics.in", "h": 16}, {"t": "+91 97690 11223", "h": 16}
+      ],
+      "expected": {
+        "NAME": "Fatima Khan", "JOB_TITLE": "Founder & CEO", "COMPANY": "Bloom Organics", "WEBSITE": "https://bloomorganics.in",
+        "EMAIL": "fatima@bloomorganics.in", "MOBILE": "+91 97690 11223"
+      }
+    },
+    {
+      "id": "address-label",
+      "lines": [
+        {"t": "Prakash Hegde", "h": 28}, {"t": "Proprietor", "h": 18}, {"t": "Hegde Printers", "h": 26},
+        {"t": "Address: 14, Car Street,", "h": 16}, {"t": "Udupi 576101", "h": 16}, {"t": "Ph: 0820 252 1234", "h": 16}, {"t": "94481 23456", "h": 16}
+      ],
+      "expected": {
+        "NAME": "Prakash Hegde", "JOB_TITLE": "Proprietor", "COMPANY": "Hegde Printers", "ADDRESS": "Address: 14, Car Street, Udupi 576101",
+        "OFFICE_PHONE": "+91 820 252 1234", "MOBILE": "+91 94481 23456"
+      }
+    }
+  ]
+}

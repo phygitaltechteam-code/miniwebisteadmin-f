@@ -37,7 +37,7 @@ export const ContactLine: React.FC<{ info?: PlanExpiryInfo | null }> = ({ info }
       {name ? <b> {name}</b> : null} to renew.
       {phone && (
         <a
-          href={`tel:${phone.replace(/[^d+]/g, '')}`}
+          href={`tel:${phone.replace(/[^\d+]/g, '')}`}
           className="mt-2 flex items-center justify-center gap-1.5 rounded-lg border border-[#2196F3] py-2 text-[14px] font-semibold text-[#2196F3] hover:bg-blue-50"
         >
           <Phone className="w-4 h-4" /> {phone}
@@ -112,7 +112,7 @@ export const PlanExpiryAlert: React.FC = () => {
         </div>
         <div>
           <h3 className="text-[17px] font-bold text-[#212121]">Plan expiring soon</h3>
-          {info.planName && <p className="text-[12px] text-gray-500 mt-0.5">{info.planName}</p>}
+          {info.planName && <p className="text-[12px] text-[#6B7280] mt-0.5">{info.planName}</p>}
           <p className="mt-2 text-[14px] text-[#424242] leading-relaxed">{message}</p>
         </div>
         <ContactLine info={info} />
@@ -127,16 +127,28 @@ export const PlanExpiryAlert: React.FC = () => {
 /** Event fired by the axios interceptor when the backend answers 403 PLAN_EXPIRED */
 export const PLAN_EXPIRED_EVENT = 'plan-expired';
 
+/** The 403 PLAN_EXPIRED payload passed as the event's detail */
+export interface PlanExpiredDetail {
+  message?: string;
+  code?: string;
+  expiryDate?: string;
+  planName?: string;
+  contact?: PlanExpiryInfo['contact'];
+}
+
 /**
  * Blocking popup once the plan has expired (login or any request answers 403 PLAN_EXPIRED).
  * Logged in: the only way out is Logout. On the login page: OK closes it.
  */
 export const PlanExpiredGate: React.FC<{ isAuthenticated: boolean; onSignOut: () => void }> = ({ isAuthenticated, onSignOut }) => {
   const [message, setMessage] = useState<string | null>(null);
+  // The 403's renewal contact / plan; the saved login response is the fallback
+  const [expired, setExpired] = useState<PlanExpiredDetail | null>(null);
 
   useEffect(() => {
     const onExpired = (e: Event) => {
-      const detail = (e as CustomEvent<{ message?: string }>).detail;
+      const detail = (e as CustomEvent<PlanExpiredDetail | undefined>).detail;
+      setExpired(detail || null);
       setMessage(detail?.message || 'Your plan has expired. Please renew to continue.');
     };
     window.addEventListener(PLAN_EXPIRED_EVENT, onExpired);
@@ -144,6 +156,17 @@ export const PlanExpiredGate: React.FC<{ isAuthenticated: boolean; onSignOut: ()
   }, []);
 
   if (!message) return null;
+
+  const fromLogin = planExpiryFromLogin();
+  const contactInfo: PlanExpiryInfo | null = expired?.contact
+    ? { ...fromLogin, contact: expired.contact }
+    : fromLogin;
+  const planName = expired?.planName || fromLogin?.planName;
+  const expiredOn = expired?.expiryDate ? new Date(expired.expiryDate) : null;
+  const expiredOnText =
+    expiredOn && !isNaN(expiredOn.getTime())
+      ? expiredOn.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      : '';
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4">
@@ -153,14 +176,20 @@ export const PlanExpiredGate: React.FC<{ isAuthenticated: boolean; onSignOut: ()
         </div>
         <div>
           <h3 className="text-[17px] font-bold text-[#212121]">Plan expired</h3>
+          {(planName || expiredOnText) && (
+            <p className="text-[12px] text-[#6B7280] mt-0.5">
+              {[planName, expiredOnText && `Expired on ${expiredOnText}`].filter(Boolean).join(' · ')}
+            </p>
+          )}
           <p className="mt-2 text-[14px] text-[#424242] leading-relaxed">{message}</p>
         </div>
-        <ContactLine info={planExpiryFromLogin()} />
+        <ContactLine info={contactInfo} />
         {isAuthenticated ? (
           <button
             type="button"
             onClick={() => {
               setMessage(null);
+              setExpired(null);
               onSignOut();
             }}
             className="w-full flex items-center justify-center gap-2 rounded-lg bg-rose-500 hover:bg-rose-600 py-2.5 text-[14px] font-medium text-white"
@@ -168,7 +197,7 @@ export const PlanExpiredGate: React.FC<{ isAuthenticated: boolean; onSignOut: ()
             <LogOut className="w-4 h-4" /> Logout
           </button>
         ) : (
-          <button type="button" onClick={() => setMessage(null)} className="w-full rounded-lg bg-[#2196F3] hover:bg-[#1E88E5] py-2.5 text-[14px] font-medium text-white">
+          <button type="button" onClick={() => { setMessage(null); setExpired(null); }} className="w-full rounded-lg bg-[#2196F3] hover:bg-[#1E88E5] py-2.5 text-[14px] font-medium text-white">
             OK
           </button>
         )}

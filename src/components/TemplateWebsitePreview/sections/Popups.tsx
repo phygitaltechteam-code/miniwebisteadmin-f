@@ -3,7 +3,46 @@ import { ChevronLeft, ChevronRight, Mail, X, Download } from 'lucide-react';
 import { cleanRichHtml, RICH_TEXT_CLASS } from '@/utils/richText';
 import { SectionProps } from '../useTemplateModel';
 import { ProductImageSlider } from '../ProductImageSlider';
-import { formatPrice, productImages, downloadImage } from '../helpers';
+import { formatPrice, productImages, downloadImage, INPUT_CLASS } from '../helpers';
+
+/** "Share your details": the visitor leaves their contact, saved as a lead for the business */
+export const ExchangePopup: React.FC<SectionProps> = ({ t }) => {
+  const { exchangeOpen, setExchangeOpen, exchange, setExchange, exchangeState, sendExchange, businessName } = t;
+  if (!exchangeOpen) return null;
+  const close = () => !exchangeState.busy && setExchangeOpen(false);
+  const field = (key: keyof typeof exchange) => ({
+    value: exchange[key],
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setExchange({ ...exchange, [key]: e.target.value }),
+    className: INPUT_CLASS,
+  });
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Share your details" onClick={close} className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4 tpl-fade-in">
+      <div onClick={(e) => e.stopPropagation()} className="w-full sm:max-w-md max-h-[92vh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200">
+          <div className="min-w-0">
+            <h3 className="text-[15px] font-bold text-[#0B1B33]">Share your details</h3>
+            {businessName && <p className="text-[12px] text-slate-500 truncate">with {businessName}</p>}
+          </div>
+          <button type="button" onClick={close} className="w-8 h-8 shrink-0 rounded-full hover:bg-slate-100 flex items-center justify-center" aria-label="Close">
+            <X className="w-5 h-5 text-slate-600" />
+          </button>
+        </div>
+        <form onSubmit={sendExchange} className="overflow-y-auto p-4 space-y-3">
+          <input required maxLength={120} autoComplete="name" placeholder="Full Name *" {...field('name')} />
+          <input required type="tel" maxLength={20} autoComplete="tel" placeholder="Mobile Number *" {...field('mobile')} />
+          <input type="email" maxLength={150} autoComplete="email" placeholder="Email" {...field('email')} />
+          <input maxLength={150} autoComplete="organization" placeholder="Company" {...field('company')} />
+          <input maxLength={120} autoComplete="organization-title" placeholder="Designation" {...field('jobTitle')} />
+          <textarea rows={3} maxLength={1000} placeholder="Message" {...field('message')} className={`${INPUT_CLASS} resize-none`} />
+          {exchangeState.error && <p className="text-[12px] text-red-600">{exchangeState.error}</p>}
+          <button type="submit" disabled={exchangeState.busy} className="w-full rounded-lg bg-[var(--c)] hover:bg-[var(--cd)] px-5 py-3 shadow-sm transition-colors text-[13px] font-semibold text-white disabled:opacity-60">
+            {exchangeState.busy ? 'Sending…' : 'Share'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 /** Full-screen gallery viewer: arrows, swipe, caption and thumbnails */
 export const GalleryLightbox: React.FC<SectionProps> = ({ t }) => {
