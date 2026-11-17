@@ -7,6 +7,8 @@ interface MobileBottomNavProps {
   onSelectView: (view: SuperAdminView) => void;
   onOpenSidebar: () => void;
   isFranchise?: boolean;
+  /** Employee login: only these views get a button */
+  allowedViews?: SuperAdminView[];
 }
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
@@ -14,7 +16,9 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onSelectView,
   onOpenSidebar,
   isFranchise = false,
+  allowedViews,
 }) => {
+  const allowed = (view: SuperAdminView) => !allowedViews || allowedViews.includes(view);
   const secondaryView: SuperAdminView = isFranchise ? 'billing' : 'categories';
   const secondaryLabel = isFranchise ? 'Billing Report' : 'Categories';
   const SecondaryIcon = isFranchise ? Receipt : Tag;
@@ -26,6 +30,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     >
       <div className="flex items-center justify-around relative">
         {/* 1. Businesses */}
+        {allowed('admins') && (
         <button
           type="button"
           onClick={() => onSelectView('admins')}
@@ -36,8 +41,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <Building2 className="w-5 h-5 mb-0.5" />
           <span className="text-[10px] font-medium tracking-tight">Businesses</span>
         </button>
+        )}
 
         {/* 2. Categories / Billing */}
+        {allowed(secondaryView) && (
         <button
           type="button"
           onClick={() => onSelectView(secondaryView)}
@@ -48,8 +55,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <SecondaryIcon className="w-5 h-5 mb-0.5" />
           <span className="text-[10px] font-medium tracking-tight">{secondaryLabel}</span>
         </button>
+        )}
 
         {/* 3. HOME IN THE MIDDLE (Prominent, raised circular button) */}
+        {allowed('home') && (
         <div className="flex-1 flex flex-col items-center justify-center -mt-5 relative z-10">
           <button
             type="button"
@@ -72,8 +81,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             Home
           </span>
         </div>
+        )}
 
         {/* 4. Card Forge */}
+        {allowed('card-builder') && (
         <button
           type="button"
           onClick={() => onSelectView('card-builder')}
@@ -84,6 +95,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <CreditCard className="w-5 h-5 mb-0.5" />
           <span className="text-[10px] font-medium tracking-tight">Card Forge</span>
         </button>
+        )}
 
         {/* 5. Menu Bar for Sidebar */}
         <button

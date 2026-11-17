@@ -1,7 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
-import { Eye, Menu, LogOut } from 'lucide-react';
+import { Eye, Menu, LogOut, ShieldCheck } from 'lucide-react';
+import GenericButton from './components/Forms/Buttons/GenericButton';
+import { PagePermissionProvider } from './context/PagePermissionContext';
+import {
+  getEmployeeSession,
+  normalizePermissions,
+  toViewAccess,
+  ViewAccess,
+} from './lib/employeePermissions';
+import { employeeLogout } from './lib/api/employee/auth';
+import { useMyEmployeeProfile } from './lib/react-query/employee/auth';
+import { getStoredAccessToken, setEmployeePortal } from './utils/axios';
+import { useQueryClient } from '@tanstack/react-query';
 import QueryProvider from './lib/react-query/QueryProvider';
 import AuthContextProvider from './context/AuthContextProvider';
 
@@ -20,7 +32,12 @@ import ReportsAnalytics from './pages/superadmin/ReportsAnalytics';
 import GreetingsManagement from './pages/superadmin/GreetingsManagement';
 import AiCreditLedger from './pages/superadmin/AiCreditLedger';
 import AllReviews from './pages/superadmin/AllReviews';
-import { SuperAdminSidebar, SuperAdminView } from './components/superadmin/SuperAdminSidebar';
+import {
+  SuperAdminSidebar,
+  SuperAdminView,
+  navItems,
+  franchiseNavItems,
+} from './components/superadmin/SuperAdminSidebar';
 import { MobileBottomNav } from './components/superadmin/MobileBottomNav';
 
 // Card Builder (Admin)
@@ -40,6 +57,8 @@ import { Step7YoutubeVideos } from './components/steps/Step7YoutubeVideos';
 import { Step7SettingsHeadings } from './components/steps/Step7SettingsHeadings';
 import { SuperAdminCardForge } from './pages/superadmin/SuperAdminCardForge';
 import { FranchiseMaster } from './pages/superadmin/FranchiseMaster';
+import { EmployeeMaster } from './pages/superadmin/EmployeeMaster';
+import { EmployeeRestrictionMaster } from './pages/superadmin/EmployeeRestrictionMaster';
 import { EnquiriesDropdown } from './components/EnquiriesDropdown';
 import { PublicCardPage } from './pages/PublicCardPage';
 import { PlanExpiryAlert, PlanExpiredGate } from './components/PlanExpiryAlert';
@@ -66,8 +85,56 @@ function SuperAdminPortal({
   userRole?: string;
 }) {
   const isFranchise = userRole?.trim().toUpperCase() === 'FRANCHISE';
+  const isEmployee = userRole?.trim().toUpperCase() === 'EMPLOYEE';
   // Franchise users land on All Businesses (create/manage admins) instead of the dashboard
   const defaultInitialView: SuperAdminView = isFranchise ? 'admins' : 'home';
+
+  // ─── Employee login: same panel as their franchise / SuperAdmin, limited by their permissions ───
+  const [employeeSession] = useState(getEmployeeSession);
+  // GET employee/profile: portal (which panel), permissions, pages and menu. Restriction changes apply on the next load.
+  const employeeProfileQuery = useMyEmployeeProfile(isEmployee);
+  const employeeProfile = employeeProfileQuery.data;
+  const employeeBaseMenu: 'SUPERADMIN' | 'FRANCHISE' =
+    employeeProfile?.portal ?? (employeeSession.franchiseId ? 'FRANCHISE' : 'SUPERADMIN');
+
+  // null while the profile loads; the login response permissions are only a fallback if it fails
+  const employeeAccess: ViewAccess | null = useMemo(() => {
+    if (!isEmployee) return null;
+    if (employeeProfile) {
+      // pages / menu give each page's level; permissions (if sent separately) take priority
+      const byKey = {
+        ...normalizePermissions({ permissions: employeeProfile.pages }),
+        ...normalizePermissions({ permissions: employeeProfile.menu }),
+        ...normalizePermissions({ permissions: employeeProfile.permissions }),
+      };
+      return toViewAccess(byKey);
+    }
+    if (employeeProfileQuery.isError) {
+      return employeeSession.permissions ? toViewAccess(employeeSession.permissions) : {};
+    }
+    return null;
+  }, [isEmployee, employeeProfile, employeeProfileQuery.isError, employeeSession]);
+
+  // Module levels for the pages; franchise staff have no Franchise module, so it never hides their own bills
+  const pageViewAccess: ViewAccess | undefined = useMemo(() => {
+    if (!isEmployee || !employeeAccess) return undefined;
+    return employeeBaseMenu === 'FRANCHISE' ? { ...employeeAccess, franchise: 'EDIT' } : employeeAccess;
+  }, [isEmployee, employeeAccess, employeeBaseMenu]);
+
+  // Views the employee may open (missing = BLOCK); undefined for every other role
+  const allowedViews: SuperAdminView[] | undefined = useMemo(() => {
+    if (!isEmployee) return undefined;
+    const menu = employeeBaseMenu === 'FRANCHISE' ? franchiseNavItems : navItems;
+    const views: SuperAdminView[] = [...menu.map((i) => i.id), 'card-builder'];
+    return views.filter(
+      (v) =>
+        v !== 'employee-restrictions' &&
+        v !== 'employees' &&
+        !!employeeAccess?.[v] &&
+        employeeAccess[v] !== 'BLOCK',
+    );
+  }, [isEmployee, employeeBaseMenu, employeeAccess]);
+  const isViewAllowed = (view: SuperAdminView) => !allowedViews || allowedViews.includes(view);
 
   const [activeView, setActiveView] = useState<SuperAdminView>(() => {
     try {
@@ -92,7 +159,15 @@ function SuperAdminPortal({
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Employee: a blocked view (e.g. from ?view= in the URL) falls back to the first allowed page
+  useEffect(() => {
+    if (allowedViews && allowedViews.length > 0 && !allowedViews.includes(activeView)) {
+      setActiveView(allowedViews[0]);
+    }
+  }, [allowedViews, activeView]);
+
   const handleOpenCardForge = (admin: any) => {
+    if (!isViewAllowed('card-builder')) return;
     setSelectedAdminForCard(admin);
     setActiveView('card-builder');
     const targetId = admin?.id || admin?._id || '';
@@ -118,6 +193,7 @@ function SuperAdminPortal({
     if (isFranchise && (view === 'categories' || view === 'franchise')) {
       return;
     }
+    if (!isViewAllowed(view)) return;
     setActiveView(view);
     try {
       const url = new URL(window.location.href);
@@ -143,6 +219,10 @@ function SuperAdminPortal({
         return 'Category Master';
       case 'franchise':
         return 'Franchisee List';
+      case 'employees':
+        return 'Employee Master';
+      case 'employee-restrictions':
+        return 'Employee Restriction Master';
       case 'billing':
         return 'Billing Report';
       case 'pricing':
@@ -160,6 +240,12 @@ function SuperAdminPortal({
     }
   };
 
+  // Employee: VIEW pages are read only; everyone else always has edit access
+  const pageCanEdit = !isEmployee || employeeAccess?.[activeView] === 'EDIT';
+  // Pages that switch on the role get the panel the employee belongs to
+  const pageRole = isEmployee ? employeeBaseMenu : userRole;
+  const sidebarMenu = isEmployee ? employeeBaseMenu : undefined;
+
   return (
     <div className="h-screen overflow-hidden flex bg-[#f8f9fc] font-satoshi">
       {/* Desktop Sidebar (Fixed on the left, does NOT scroll) */}
@@ -169,6 +255,8 @@ function SuperAdminPortal({
           onSelectView={handleSelectView}
           userRole={userRole}
           onSignOut={onSignOut}
+          allowedViews={allowedViews}
+          baseMenu={sidebarMenu}
         />
       </div>
 
@@ -186,6 +274,8 @@ function SuperAdminPortal({
               onClose={() => setIsMobileMenuOpen(false)}
               userRole={userRole}
               onSignOut={onSignOut}
+              allowedViews={allowedViews}
+              baseMenu={sidebarMenu}
             />
           </div>
         </div>
@@ -213,7 +303,7 @@ function SuperAdminPortal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <EnquiryNotificationBell onOpenBusiness={openBusinessFromEnquiry} />
+            {!isEmployee && <EnquiryNotificationBell onOpenBusiness={openBusinessFromEnquiry} />}
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#2196F3] border border-blue-200 uppercase">
               {userRole}
             </span>
@@ -228,22 +318,61 @@ function SuperAdminPortal({
           </div>
         </header>
 
-        {/* Plan expiry alerts for the admins (once per session) */}
-        <ExpiryAlertsPopup onOpenBusiness={openBusinessFromEnquiry} />
+        {/* Plan expiry alerts for the admins (once per session); not for employees */}
+        {!isEmployee && <ExpiryAlertsPopup onOpenBusiness={openBusinessFromEnquiry} />}
 
         {/* Desktop top bar: enquiry notifications from every business (outside the page tables) */}
         <div className="hidden md:flex items-center justify-end gap-3 px-6 pt-3">
           {/* Opened business: only its enquiries */}
-          {cardAdminId ? (
+          {isEmployee ? null : cardAdminId ? (
             <EnquiriesDropdown key={cardAdminId} adminId={cardAdminId} />
           ) : (
             <EnquiryNotificationBell onOpenBusiness={openBusinessFromEnquiry} />
           )}
         </div>
 
+        {/* Employee: permissions still loading */}
+        {isEmployee && !employeeAccess && (
+          <div className="flex-1 flex items-center justify-center text-sm text-gray-500">Loading your access...</div>
+        )}
+
+        {/* Employee with no page assigned */}
+        {isEmployee && employeeAccess && allowedViews?.length === 0 && (
+          <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
+            <div className="rounded-xl border border-stroke bg-white p-8 sm:p-10 shadow-sm flex flex-col items-center text-center gap-3">
+              <ShieldCheck className="w-10 h-10 text-[#9E9E9E]" />
+              <div>
+                <h2 className="text-lg font-bold text-black">No pages assigned yet</h2>
+                <p className="text-sm text-gray-500 mt-1">Please contact your admin to get access to pages.</p>
+              </div>
+              <GenericButton onClick={onSignOut}>Logout</GenericButton>
+            </div>
+          </div>
+        )}
+
+        {isViewAllowed(activeView) && (!isEmployee || !!employeeAccess) && (
+        <PagePermissionProvider canEdit={pageCanEdit} viewAccess={pageViewAccess}>
+          {/* View-only page: every form submit is blocked */}
+          <div
+            className="flex-1 flex flex-col min-w-0"
+            onSubmitCapture={(e) => {
+              if (!pageCanEdit) {
+                e.preventDefault();
+                e.stopPropagation();
+                toast.error("You have view-only access to this page");
+              }
+            }}
+          >
+        {!pageCanEdit && (
+          <div className="mx-4 sm:mx-6 mt-3 flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[13px] text-[#1976D2]">
+            <Eye className="w-4 h-4 shrink-0" />
+            <span>View only: you can't add, edit or delete on this page</span>
+          </div>
+        )}
+
         {activeView === 'home' && (
           <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
-            <SuperAdminDashboard onNavigate={handleSelectView} userRole={userRole} onOpenBusiness={openBusinessFromEnquiry} />
+            <SuperAdminDashboard onNavigate={handleSelectView} userRole={pageRole} onOpenBusiness={openBusinessFromEnquiry} />
           </div>
         )}
         {activeView === 'categories' && (
@@ -267,6 +396,16 @@ function SuperAdminPortal({
         {activeView === 'franchise' && (
           <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
             <FranchiseMaster />
+          </div>
+        )}
+        {activeView === 'employees' && !isEmployee && (
+          <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
+            <EmployeeMaster userRole={pageRole} />
+          </div>
+        )}
+        {activeView === 'employee-restrictions' && !isEmployee && (
+          <div className="w-full px-4 sm:px-6 py-3.5 flex-1">
+            <EmployeeRestrictionMaster userRole={pageRole} onNavigate={handleSelectView} />
           </div>
         )}
         {activeView === 'billing' && (
@@ -305,12 +444,17 @@ function SuperAdminPortal({
           </div>
         )}
 
+          </div>
+        </PagePermissionProvider>
+        )}
+
         {/* Mobile Bottom Navigation Footer (HOME in the middle) */}
         <MobileBottomNav
           currentView={activeView}
           onSelectView={handleSelectView}
           onOpenSidebar={() => setIsMobileMenuOpen(true)}
-          isFranchise={isFranchise}
+          isFranchise={isEmployee ? employeeBaseMenu === 'FRANCHISE' : isFranchise}
+          allowedViews={allowedViews}
         />
       </main>
     </div>
@@ -511,9 +655,18 @@ function AppContent() {
     } catch { return ''; }
   });
 
+  const queryClient = useQueryClient();
+
   const handleSignOut = () => {
+    // Employee: tell the backend (POST employee/logout) before the token is cleared; failures are ignored
+    if (userRole?.trim().toUpperCase() === 'EMPLOYEE') {
+      employeeLogout(getStoredAccessToken()).catch(() => {});
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('token_key');
+    localStorage.removeItem('accessToken');
+    setEmployeePortal(null);
+    queryClient.clear();
     try {
       sessionStorage.removeItem('plan-expiry-alert-dismissed');
       sessionStorage.removeItem('expiry-alerts-seen');
@@ -536,12 +689,14 @@ function AppContent() {
   const normalizedRole = userRole?.trim().toUpperCase();
   const isSuperAdmin = normalizedRole === 'SUPERADMIN';
   const isFranchise = normalizedRole === 'FRANCHISE';
+  // Employees get the same panel as their SuperAdmin / franchise, limited by their page permissions
+  const isEmployee = normalizedRole === 'EMPLOYEE';
 
   return (
     <>
       <Toaster position="top-right" />
       <PlanExpiredGate isAuthenticated onSignOut={handleSignOut} />
-      {isSuperAdmin || isFranchise ? (
+      {isSuperAdmin || isFranchise || isEmployee ? (
         <SuperAdminPortal onSignOut={handleSignOut} userRole={normalizedRole} />
       ) : (
         <AdminCardBuilder onSignOut={handleSignOut} />

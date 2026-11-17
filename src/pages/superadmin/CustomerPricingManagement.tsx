@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { isFranchiseUser } from '@/utils/axios';
+import { isFranchiseScope } from '@/utils/axios';
 import {
   createPlan,
   deletePlan,
@@ -313,7 +313,7 @@ const formFromPlan = (p: PlanItem): PlanFormState => ({
 });
 
 export const CustomerPricingManagement: React.FC = () => {
-  const isFranchise = isFranchiseUser();
+  const isFranchise = isFranchiseScope();
   const queryClient = useQueryClient();
 
   // SuperAdmin: its own business plans and franchise plans (one tab each). Franchise: its own business plans only.

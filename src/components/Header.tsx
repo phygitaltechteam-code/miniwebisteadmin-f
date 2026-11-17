@@ -3,6 +3,7 @@ import { Search, ChevronDown, LogOut, ArrowRight, User, CreditCard, Users, UserC
 import { ProfileData } from '../types/profile';
 import { AdminNotificationBell } from './AdminNotificationBell';
 import { AdminReviewsButton } from './AdminReviewsButton';
+import { AdminVisitsButton } from './AdminVisitsButton';
 import { LogoutConfirmModal } from './superadmin/SuperAdminSidebar';
 import { useDueTodayCount } from '@/lib/react-query/leads';
 
@@ -188,6 +189,9 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Enquiries, Notifications, User Profile */}
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
+        {/* Guest visits on the admin's card */}
+        <AdminVisitsButton />
+
         {/* All reviews left on the admin's card */}
         <AdminReviewsButton />
 

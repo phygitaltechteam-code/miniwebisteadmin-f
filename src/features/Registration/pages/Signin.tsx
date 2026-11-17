@@ -1,6 +1,6 @@
 /*eslint-disable*/
 import { useAuthContext } from '@/context/AuthContext';
-import { api } from '@/utils/axios';
+import { api, setEmployeePortal } from '@/utils/axios';
 import { useMutation } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import React, { useState, useEffect } from 'react';
@@ -27,11 +27,14 @@ const Signin: React.FC<SigninProps> = ({ onSuccess: onLoginSuccess }) => {
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: SignInPayload) => {
+      // One login for every role (employees included); the role in the response picks the panel
       const response = await api.post('/users/login', data);
       return response;
     },
     onSuccess: (data: any) => {
       const tokenData = data?.data || data;
+      // The employee's panel (portal) is loaded again from employee/profile after login
+      setEmployeePortal(null);
       localStorage.setItem('token', JSON.stringify(tokenData));
       localStorage.setItem('token_key', JSON.stringify(tokenData));
       if (tokenData?.accessToken) {

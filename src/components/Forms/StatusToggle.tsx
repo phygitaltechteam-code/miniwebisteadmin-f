@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Power } from 'lucide-react';
+import { useCanEdit } from '@/context/PagePermissionContext';
 
 interface StatusToggleProps {
   active: boolean;
@@ -17,6 +18,8 @@ interface StatusToggleProps {
 export const StatusToggle: React.FC<StatusToggleProps> = ({ active, onToggle, disabled, name }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  // View-only page: status can't be changed
+  const canEdit = useCanEdit();
   const action = active ? 'Deactivate' : 'Activate';
 
   const handleConfirm = async () => {
@@ -36,7 +39,7 @@ export const StatusToggle: React.FC<StatusToggleProps> = ({ active, onToggle, di
         role="switch"
         aria-checked={active}
         aria-label={active ? 'Active' : 'Inactive'}
-        disabled={disabled || busy}
+        disabled={disabled || busy || !canEdit}
         onClick={() => setConfirmOpen(true)}
         title={active ? 'Click to deactivate' : 'Click to activate'}
         // Inline colors + border so table/button styles can't hide the track in the off state

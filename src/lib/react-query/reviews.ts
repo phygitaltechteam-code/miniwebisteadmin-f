@@ -1,5 +1,5 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { isFranchiseUser } from '@/utils/axios';
+import { isFranchiseScope } from '@/utils/axios';
 import {
   getMyReviews,
   getAllBusinessReviews,
@@ -30,7 +30,7 @@ export const useMyReviews = (options?: { enabled?: boolean; refetchInterval?: nu
 /** SuperAdmin / franchise: reviews of every business this login can see */
 export const useAllBusinessReviews = () =>
   useQuery<ReviewList>({
-    queryKey: ['all-business-reviews', isFranchiseUser() ? 'franchise' : 'superadmin'],
+    queryKey: ['all-business-reviews', isFranchiseScope() ? 'franchise' : 'superadmin'],
     queryFn: () => getAllBusinessReviews(),
     staleTime: 1000 * 60,
     retry: false,

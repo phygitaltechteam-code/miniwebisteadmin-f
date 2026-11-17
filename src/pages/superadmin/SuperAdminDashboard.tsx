@@ -17,6 +17,8 @@ import { useGetCategories } from '@/lib/react-query/superadmin/category';
 import { getPlatformStats } from '@/lib/api/superadmin/stats';
 import { rebaseCardUrl } from '@/utils/cardUrl';
 import GenericButton from '@/components/Forms/Buttons/GenericButton';
+import { useAdminWiseVisits, useVisitOverview } from '@/lib/react-query/visits';
+import { VisitStatTiles, fmtCount, fmtLastVisit } from '@/components/VisitStatTiles';
 
 interface SuperAdminDashboardProps {
   onNavigate: (view: any) => void;
@@ -46,6 +48,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
     staleTime: 60 * 1000,
     retry: false,
   });
+
+  // Guest visits on the cards (franchise / employee: only their own admins, via the axios rewrite)
+  const visitOverview = useVisitOverview(30);
+  const topVisited = useAdminWiseVisits({ limit: 5, sortBy: 'visits' });
 
   const totalCategories = Array.isArray(categoryList) ? categoryList.length : 0;
   const value = (n: number | undefined) =>
@@ -199,6 +205,52 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             </div>
           );
         })}
+      </div>
+
+      {/* Card visits: totals + most visited businesses */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="border border-[#E0E0E0] bg-[#FAFAFA] p-4 rounded lg:col-span-2">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[14px] font-medium text-[#000000DE] flex items-center gap-1.5">
+              <Eye className="w-4 h-4 text-[#1976D2]" /> Card Visits
+            </h3>
+            {visitOverview.data && (
+              <span className="text-[12px] text-gray-500">Last visit: {fmtLastVisit(visitOverview.data.lastVisitAt)}</span>
+            )}
+          </div>
+          {visitOverview.isLoading ? (
+            <div className="py-6 text-center text-[13px] text-gray-400">Loading visits…</div>
+          ) : visitOverview.isError || !visitOverview.data ? (
+            <div className="py-6 text-center text-[13px] text-gray-400">Visit counts are not available.</div>
+          ) : (
+            <VisitStatTiles stats={visitOverview.data} />
+          )}
+        </div>
+
+        <div className="border border-[#E0E0E0] bg-white p-4 rounded">
+          <h3 className="text-[14px] font-medium text-[#000000DE] mb-3">Most Visited Businesses</h3>
+          {topVisited.isLoading ? (
+            <div className="py-6 text-center text-[13px] text-gray-400">Loading…</div>
+          ) : !topVisited.data || topVisited.data.rows.length === 0 ? (
+            <div className="py-6 text-center text-[13px] text-gray-400">No visits yet.</div>
+          ) : (
+            <ol className="divide-y divide-[#F0F0F0]">
+              {topVisited.data.rows.map((r, i) => (
+                <li key={r.adminId || i} className="flex items-center gap-2 py-2">
+                  <span className="w-5 text-[12px] font-semibold text-gray-400 tabular-nums">{i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13.5px] font-medium text-[#000000DE] truncate">{r.businessName}</div>
+                    <div className="text-[11.5px] text-gray-500 truncate">
+                      Today {fmtCount(r.today)} · 7 days {fmtCount(r.last7Days)}
+                      {r.franchiseName ? ` · ${r.franchiseName}` : ''}
+                    </div>
+                  </div>
+                  <span className="text-[14px] font-bold text-[#1976D2] tabular-nums">{fmtCount(r.totalVisits)}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
       </div>
 
       {/* Quick Launch & Top / Recent Businesses */}

@@ -76,5 +76,7 @@ export type AdminRow = {
   endDate: string;
   dateTime: string;
   isActive: boolean;
+  /** Guest visits on the card (backend `totalVisits`) */
+  totalVisits: number;
   raw?: any;
 };

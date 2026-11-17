@@ -3,7 +3,8 @@ import { ArrowLeft, CalendarDays, ExternalLink, Loader2, Printer, Receipt } from
 import { printElement } from '@/utils/printElement';
 import toast from 'react-hot-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { isFranchiseUser } from '@/utils/axios';
+import { isFranchiseScope } from '@/utils/axios';
+import { useViewLevel } from '@/context/PagePermissionContext';
 import { getTransactions } from '@/lib/api/superadmin/transaction';
 import {
   getFranchiseMonthlyBill,
@@ -153,7 +154,7 @@ const BillPartSection: React.FC<{
 /** One franchise's bill for the month (SuperAdmin can mark each part paid; franchise only views) */
 const FranchiseBillDetail: React.FC<{ franchiseId?: string; franchiseName?: string; month: string; onBack?: () => void }> = ({ franchiseId, franchiseName, month, onBack }) => {
   const queryClient = useQueryClient();
-  const canMark = !isFranchiseUser() && Boolean(franchiseId);
+  const canMark = !isFranchiseScope() && Boolean(franchiseId);
   const { data: bill, isLoading, isError, error } = useQuery({
     queryKey: ['monthly-bill', franchiseId || 'own', month],
     queryFn: () => getFranchiseMonthlyBill(franchiseId, toQuery(month)),
@@ -467,8 +468,11 @@ const PlanTransactions: React.FC = () => {
 
 /** Billing Report: franchise monthly bills (new cards + renewals) and plan transactions */
 export const BillingManagement: React.FC = () => {
-  const franchiseSession = isFranchiseUser();
-  const [tab, setTab] = useState<'monthly' | 'direct' | 'transactions'>('monthly');
+  const franchiseSession = isFranchiseScope();
+  // Employee with BLOCK on the Franchise module: no Franchise Monthly Bills
+  const franchiseLevel = useViewLevel('franchise');
+  const hideFranchiseBills = !franchiseSession && franchiseLevel === 'BLOCK';
+  const [tab, setTab] = useState<'monthly' | 'direct' | 'transactions'>(hideFranchiseBills ? 'direct' : 'monthly');
   const [month, setMonth] = useState(thisMonth());
   const [openBill, setOpenBill] = useState<{ bill: MonthlyBill; name: string } | null>(null);
   const reportRef = useRef<HTMLDivElement | null>(null);
@@ -523,9 +527,11 @@ export const BillingManagement: React.FC = () => {
 
       <div className="border-b border-[#E0E0E0]">
         <div className="flex gap-x-8 gap-y-2 flex-wrap">
-          <button type="button" onClick={() => setTab('monthly')} className={tabClass(tab === 'monthly')}>
-            {franchiseSession ? 'Monthly Bill' : 'Franchise Monthly Bills'}
-          </button>
+          {!hideFranchiseBills && (
+            <button type="button" onClick={() => setTab('monthly')} className={tabClass(tab === 'monthly')}>
+              {franchiseSession ? 'Monthly Bill' : 'Franchise Monthly Bills'}
+            </button>
+          )}
           {!franchiseSession && (
             <button type="button" onClick={() => setTab('direct')} className={tabClass(tab === 'direct')}>
               Direct Businesses
@@ -543,7 +549,7 @@ export const BillingManagement: React.FC = () => {
           <h1 className="text-[18px] font-bold text-[#212121]">{printTitle}</h1>
           <p className="text-[11px] text-gray-500">Printed {new Date().toLocaleString('en-GB')}</p>
         </div>
-      {tab === 'monthly' &&
+      {tab === 'monthly' && !hideFranchiseBills &&
         (franchiseSession ? (
           <FranchiseBillDetail month={month} />
         ) : openBill?.bill.franchise?.id ? (

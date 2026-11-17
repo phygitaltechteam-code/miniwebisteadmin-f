@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Loader2, Phone, X } from 'lucide-react';
-import { api, isFranchiseUser } from '@/utils/axios';
+import { api, isFranchiseScope } from '@/utils/axios';
 
 /** One admin whose plan is expiring / expired */
 export interface ExpiryAlertAdmin {
@@ -26,7 +26,7 @@ export interface ExpiryAlerts {
 
 /** superAdmin/admin/expiry-alerts, or franchise/admins/expiry-alerts (its own admins) */
 export const getExpiryAlerts = async (type: 'expiring' | 'expired'): Promise<ExpiryAlerts> => {
-  const url = isFranchiseUser() ? 'franchise/admins/expiry-alerts' : 'superAdmin/admin/expiry-alerts';
+  const url = isFranchiseScope() ? 'franchise/admins/expiry-alerts' : 'superAdmin/admin/expiry-alerts';
   const res: any = await api.get(url, { params: { type, limit: 50 } });
   const data = res?.data ?? res;
   return {
