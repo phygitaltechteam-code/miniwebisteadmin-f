@@ -13,6 +13,7 @@ import {
 import { employeeLogout } from './lib/api/employee/auth';
 import { useMyEmployeeProfile } from './lib/react-query/employee/auth';
 import { getStoredAccessToken, setEmployeePortal } from './utils/axios';
+import { canUseCard, canUseLeads } from './utils/appAccess';
 import { useQueryClient } from '@tanstack/react-query';
 import QueryProvider from './lib/react-query/QueryProvider';
 import AuthContextProvider from './context/AuthContextProvider';
@@ -67,12 +68,20 @@ import { LeadsPage } from './pages/LeadsPage';
 import { CustomersPage } from './pages/CustomersPage';
 
 type AdminView = 'card' | 'leads' | 'customers';
+
+/** A view the admin's app access allows: card-only -> card; leads-only -> leads / customers (default leads) */
+const allowedAdminView = (view: AdminView): AdminView => {
+  if (!canUseLeads()) return 'card';
+  if (!canUseCard() && view === 'card') return 'leads';
+  return view;
+};
+
 const readAdminView = (): AdminView => {
   try {
     const view = new URLSearchParams(window.location.search).get('view');
-    return view === 'leads' || view === 'customers' ? view : 'card';
+    return allowedAdminView(view === 'leads' || view === 'customers' ? view : 'card');
   } catch {
-    return 'card';
+    return allowedAdminView('card');
   }
 };
 
@@ -476,7 +485,8 @@ function AdminCardBuilder({
   const [isFullCardModalOpen, setIsFullCardModalOpen] = useState<boolean>(false);
   const [modalMode, setModalMode] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  // Card builder, Leads or Customers, kept in ?view= so a reload or a shared link opens the same page
+  // Card builder, Leads or Customers, kept in ?view= so a reload or a shared link opens the same page.
+  // Limited by the admin's app access (readAdminView / changeView); the SuperAdmin's builder is always 'card'.
   const [view, setView] = useState<AdminView>(() => (isInsideSuperAdmin ? 'card' : readAdminView()));
 
   useEffect(() => {
@@ -486,7 +496,8 @@ function AdminCardBuilder({
     return () => window.removeEventListener('popstate', onPop);
   }, [isInsideSuperAdmin]);
 
-  const changeView = (next: AdminView) => {
+  const changeView = (requested: AdminView) => {
+    const next = allowedAdminView(requested);
     setView(next);
     try {
       const url = new URL(window.location.href);

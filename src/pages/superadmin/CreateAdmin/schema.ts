@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { APP_ACCESS_VALUES } from '@/utils/appAccess';
 
 export const formSchema = z
   .object({
@@ -34,6 +35,8 @@ export const formSchema = z
       (val) => (typeof val === 'string' ? new Date(val) : val),
       z.date({ required_error: 'End date is required' }),
     ),
+    /** Leads + card, leads only or card only (SuperAdmin only; hidden for franchises) */
+    appAccess: z.enum(APP_ACCESS_VALUES).default('BOTH'),
   })
   .refine((data) => data.startDate < data.endDate, {
     message: 'Start date must be before end date',
@@ -52,6 +55,7 @@ export const EMPTY_FORM = {
   password: '',
   price: undefined,
   renewalAmount: undefined,
+  appAccess: 'BOTH' as const,
 };
 
 /** One business row in the All Businesses table */

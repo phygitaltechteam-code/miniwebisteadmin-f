@@ -1,8 +1,16 @@
 import React from 'react';
 import { FormProvider, UseFormReturn } from 'react-hook-form';
 import GenericButton from '@/components/Forms/Buttons/GenericButton';
+import GenericDropdown from '@/components/Forms/DropDown/GenericDropDown';
 import GenericInputField from '@/components/Forms/Input/GenericInputField';
 import { FormValues } from './schema';
+
+/** Which apps the admin may use (backend Admin.appAccess) */
+const APP_ACCESS_OPTIONS = [
+  { value: 'BOTH', label: 'Leads + digital card' },
+  { value: 'LEADS', label: 'Leads only' },
+  { value: 'CARD', label: 'Digital card only' },
+];
 
 interface AdminFormProps {
   methods: UseFormReturn<FormValues>;
@@ -12,10 +20,12 @@ interface AdminFormProps {
   isAdding: boolean;
   isUpdating: boolean;
   apiError: string | null;
+  /** App access dropdown: SuperAdmin only (hidden in franchise scope) */
+  showAppAccess?: boolean;
 }
 
 /** Create / edit administrator form */
-export const AdminForm: React.FC<AdminFormProps> = ({ methods, onSubmit, onBack, isEditing, isAdding, isUpdating, apiError }) => (
+export const AdminForm: React.FC<AdminFormProps> = ({ methods, onSubmit, onBack, isEditing, isAdding, isUpdating, apiError, showAppAccess = false }) => (
   <FormProvider {...methods}>
     <form
       onSubmit={methods.handleSubmit(onSubmit)}
@@ -98,6 +108,11 @@ export const AdminForm: React.FC<AdminFormProps> = ({ methods, onSubmit, onBack,
             required={!isEditing}
           />
         </div>
+        {showAppAccess && (
+          <div className="col-span-1">
+            <GenericDropdown name="appAccess" label="App access" options={APP_ACCESS_OPTIONS} />
+          </div>
+        )}
         <div className="col-span-1 md:col-span-2 lg:col-span-3">
           <GenericInputField name="address" label="Office / Facility Address" placeholder="Street, Landmark, City, State" required />
         </div>

@@ -175,6 +175,7 @@ const CreateAdmin: React.FC<CreateAdminProps> = ({ onOpenCardForge }) => {
           isAdding={isAdding}
           isUpdating={isUpdating}
           apiError={apiError}
+          showAppAccess={!isFranchise}
         />
       ) : selectedProjectBusiness ? (
         <ProjectsAndPayments

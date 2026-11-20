@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Copy, Smartphone, Monitor } from 'lucide-react';
 import { ProfileData } from '../types/profile';
 import { PortalThemeId } from '../types/theme';
-import { TemplateWebsitePreview, TEMPLATE_PALETTES, paletteForTheme } from './TemplateWebsitePreview';
+import { TemplateWebsitePreview, paletteFor, paletteForTheme, isHexTheme } from './TemplateWebsitePreview';
 
 // Card theme ids behind the four template colors: Orange, Violet, Blue, Green
 const TEMPLATE_THEME_IDS: PortalThemeId[] = ['navy-orange', 'violet-white', 'sapphire-cyan', 'emerald-obsidian'];
@@ -99,8 +99,9 @@ export const FullCardModal: React.FC<FullCardModalProps> = ({
           {(
             <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-900 p-0.5 sm:p-1 rounded-xl border border-slate-800 shrink-0">
               {TEMPLATE_THEME_IDS.map((thId) => {
-                const pal = TEMPLATE_PALETTES[paletteForTheme(thId)];
-                const isSelected = paletteForTheme(activeTheme) === paletteForTheme(thId);
+                const pal = paletteFor(thId);
+                // A custom hex colour matches none of the four pills
+                const isSelected = !isHexTheme(activeTheme) && paletteForTheme(activeTheme) === paletteForTheme(thId);
                 return (
                   <button
                     key={thId}

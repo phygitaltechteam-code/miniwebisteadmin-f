@@ -6,6 +6,13 @@ import { AdminReviewsButton } from './AdminReviewsButton';
 import { AdminVisitsButton } from './AdminVisitsButton';
 import { LogoutConfirmModal } from './superadmin/SuperAdminSidebar';
 import { useDueTodayCount } from '@/lib/react-query/leads';
+import { canUseCard, canUseLeads } from '@/utils/appAccess';
+
+const VIEW_TABS = [
+  ['card', 'Card Builder', CreditCard],
+  ['leads', 'Leads', Users],
+  ['customers', 'Customers', UserCheck],
+] as const;
 
 interface HeaderProps {
   profile: ProfileData;
@@ -27,8 +34,14 @@ export const Header: React.FC<HeaderProps> = ({
   view = 'card',
   onViewChange,
 }) => {
-  // Follow-ups due today or overdue, shown on the Leads tab
-  const { data: dueCount = 0 } = useDueTodayCount(undefined, !!onViewChange);
+  // Tabs the admin's app access allows (card-only: Card Builder; leads-only: Leads + Customers)
+  const leadsAllowed = canUseLeads();
+  const cardAllowed = canUseCard();
+  const tabs = VIEW_TABS.filter(([id]) => (id === 'card' ? cardAllowed : leadsAllowed));
+  // The switch shows only when given onViewChange and there is more than one tab to switch between
+  const showTabs = Boolean(onViewChange) && tabs.length > 1;
+  // Follow-ups due today or overdue, shown on the Leads tab (not fetched for a card-only admin)
+  const { data: dueCount = 0 } = useDueTodayCount(undefined, !!onViewChange && leadsAllowed);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -87,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[#091426] text-white flex items-center justify-center font-bold text-sm sm:text-base shadow-sm ring-1 ring-black/10 shrink-0">
             CF
           </div>
-          <div className={`${onViewChange ? 'hidden min-[420px]:flex' : 'flex'} flex-col`}>
+          <div className={`${showTabs ? 'hidden min-[420px]:flex' : 'flex'} flex-col`}>
             <span className="text-[13px] sm:text-[15px] font-bold text-[#091426] tracking-tight leading-tight">
               CardForge <span className="hidden sm:inline">Enterprise</span>
             </span>
@@ -98,13 +111,9 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Card builder / Leads / Customers switch */}
-        {onViewChange && (
+        {showTabs && onViewChange && (
           <div className="flex items-center rounded-lg border border-[#c5c6cd]/80 bg-[#f8f9ff] p-0.5 shrink-0" role="tablist" aria-label="Section">
-            {([
-              ['card', 'Card Builder', CreditCard],
-              ['leads', 'Leads', Users],
-              ['customers', 'Customers', UserCheck],
-            ] as const).map(([id, label, Icon]) => (
+            {tabs.map(([id, label, Icon]) => (
               <button
                 key={id}
                 type="button"

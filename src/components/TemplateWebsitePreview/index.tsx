@@ -18,7 +18,7 @@ import { ShareSection } from './sections/ShareCard';
 import { FooterSection } from './sections/FooterSection';
 import { GalleryLightbox, ProductPopup, ImagePopup, ExchangePopup } from './sections/Popups';
 
-export { TEMPLATE_PALETTES, paletteForTheme } from './palette';
+export { TEMPLATE_PALETTES, paletteForTheme, paletteFor, isHexTheme } from './palette';
 export type { TemplatePaletteKey } from './palette';
 
 /** Stable default so the reviews list is not reset on every render */

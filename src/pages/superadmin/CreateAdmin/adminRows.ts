@@ -1,5 +1,7 @@
 import { isRecordActive } from '@/lib/api/superadmin/admin';
 import { isPlanLive, pickPlanTerms } from '@/lib/api/superadmin/plan';
+import { isFranchiseScope } from '@/utils/axios';
+import { toAppAccess } from '@/utils/appAccess';
 import { AdminRow, FormValues } from './schema';
 
 /** List out of the different response shapes ([...] / { data: { admins } } / { admins } / { data: [...] }) */
@@ -176,6 +178,7 @@ export const toFormValues = (toEdit: any) => {
     startDate: startFormatted as any,
     endDate: endFormatted as any,
     password: '',
+    appAccess: toAppAccess(toEdit.appAccess),
   };
 };
 
@@ -209,5 +212,7 @@ export const toAdminPayload = (data: FormValues) => {
     expiryDate: end.toISOString(),
     role: 'ADMIN',
   };
+  // Only the SuperAdmin sets app access (the server drops it from franchise requests)
+  if (!isFranchiseScope()) payload.appAccess = toAppAccess(data.appAccess);
   return payload;
 };

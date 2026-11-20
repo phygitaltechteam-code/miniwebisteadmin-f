@@ -14,7 +14,7 @@ import {
 import { customLinkKeys } from '@/lib/api/customerSocialApi';
 import { sortByOrder } from '@/lib/api/customerSettingsApi';
 import { ProfileData, CardSectionKey, AboutBlockKey, DEFAULT_SECTION_ORDER, DEFAULT_ABOUT_BLOCK_ORDER } from '@/types/profile';
-import { TEMPLATE_PALETTES, paletteForTheme } from './palette';
+import { paletteFor } from './palette';
 import { LINK_DEFS, PREVIEW_DEFAULT_SECTION_ORDER } from './linkDefs';
 import { stripHtml, firstSentences, uniq } from './helpers';
 import { useAutoSlide } from './useAutoSlide';
@@ -39,7 +39,7 @@ export const useTemplateModel = (
   feedbackTarget: string | undefined,
   initialFeedbacks: PublicFeedback[]
 ) => {
-  const palette = TEMPLATE_PALETTES[paletteForTheme(themeId || profile.theme)];
+  const palette = paletteFor(themeId || profile.theme);
   const isMobile = viewMode === 'mobile';
   const isTablet = viewMode === 'tablet';
   const [menuOpen, setMenuOpen] = useState(false);

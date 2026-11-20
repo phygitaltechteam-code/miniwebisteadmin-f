@@ -1,4 +1,5 @@
 import { api, isFranchiseScope } from '@/utils/axios';
+import type { AppAccess } from '@/utils/appAccess';
 
 export interface adminPayload {
   adminCategoryId?: string;
@@ -14,6 +15,8 @@ export interface adminPayload {
   endDate: string | Date;
   plan?: string;
   role?: string;
+  /** SuperAdmin only: BOTH (default), LEADS or CARD; the server drops it from franchise requests */
+  appAccess?: AppAccess;
   user?: {
     fullname: string;
     email: string;
